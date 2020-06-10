@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.io.StringReader;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.sql.Timestamp;
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -33,7 +34,6 @@ import java.util.Map;
 import org.apache.commons.lang.RandomStringUtils;
 import org.apache.ofbiz.base.util.Debug;
 import org.apache.ofbiz.base.util.UtilDateTime;
-import org.apache.ofbiz.base.util.UtilIO;
 import org.apache.ofbiz.base.util.UtilMisc;
 import org.apache.ofbiz.base.util.UtilProperties;
 import org.apache.ofbiz.base.util.UtilValidate;
@@ -244,7 +244,7 @@ public class PromoServices {
         byte[] wrapper = bytebufferwrapper.array();
 
       // read the bytes into a reader
-        BufferedReader reader = new BufferedReader(new StringReader(new String(wrapper, UtilIO.getUtf8())));
+        BufferedReader reader = new BufferedReader(new StringReader(new String(wrapper, StandardCharsets.UTF_8)));
         List<Object> errors = new LinkedList<>();
         int lines = 0;
         String line;
@@ -255,9 +255,37 @@ public class PromoServices {
                 if (line.length() > 0 && !line.startsWith("#")) {
                     if (UtilValidate.isEmail(line)) {
                         // valid email address
-                        Map<String, Object> result = dispatcher.runSync("createProductPromoCodeEmail", UtilMisc.<String, Object>toMap("productPromoCodeId",
-                                productPromoCodeId, "emailAddress", line, "userLogin", userLogin));
-                        if (result != null && ServiceUtil.isError(result)) {
+                        GenericValue contactMech;
+                        String contactMechId;
+                        try {
+                            //check for existing contactMechId
+                            contactMech = EntityQuery.use(dctx.getDelegator()).from("ContactMech")
+                                    .where("infoString", line).queryOne();
+                        } catch (GenericEntityException e) {
+                            Debug.logError(e, module);
+                            errors.add(line + ": Too many contactMechIds found ");
+                            continue;
+                        }
+                        Map<String, Object> result = new HashMap<>();
+                        if (contactMech == null) {
+                            //If no contactMech found create new
+                            result = dispatcher.runSync("createContactMech",
+                                    UtilMisc.toMap("contactMechTypeId", "EMAIL_ADDRESS", "infoString", line,
+                                            "userLogin", userLogin));
+                            if (ServiceUtil.isError(result)) {
+                                errors.add(line + ": " + ServiceUtil.getErrorMessage(result));
+                                continue;
+                            } else {
+                                contactMechId = (String) result.get("contactMechId");
+                            }
+                        } else {
+                            contactMechId = contactMech.getString("contactMechId");
+                        }
+                        result.clear();
+                        result = dispatcher.runSync("createProductPromoCodeContactMech",
+                                UtilMisc.<String, Object>toMap("productPromoCodeId",
+                                productPromoCodeId, "contactMechId", contactMechId, "userLogin", userLogin));
+                        if (ServiceUtil.isError(result)) {
                             errors.add(line + ": " + ServiceUtil.getErrorMessage(result));
                         }
                     } else {

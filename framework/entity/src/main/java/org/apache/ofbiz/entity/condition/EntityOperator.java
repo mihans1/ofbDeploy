@@ -19,6 +19,9 @@
 
 package org.apache.ofbiz.entity.condition;
 
+import static org.apache.ofbiz.entity.condition.EntityConditionUtils.addValue;
+
+import java.io.Serializable;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -39,7 +42,7 @@ import org.apache.ofbiz.entity.model.ModelField;
  *
  */
 @SuppressWarnings("serial")
-public abstract class EntityOperator<L, R, T> extends EntityConditionBase {
+public abstract class EntityOperator<L, R> implements Serializable {
 
     public static final int ID_EQUALS = 1;
     public static final int ID_NOT_EQUAL = 2;
@@ -56,25 +59,25 @@ public abstract class EntityOperator<L, R, T> extends EntityConditionBase {
     public static final int ID_NOT_IN = 13;
     public static final int ID_NOT_LIKE = 14;
 
-    private static HashMap<String, EntityOperator<?,?,?>> registry = new HashMap<>();
+    private static HashMap<String, EntityOperator<?,?>> registry = new HashMap<>();
 
-    private static <L,R,T> void registerCase(String name, EntityOperator<L,R,T> operator) {
+    private static <L,R> void registerCase(String name, EntityOperator<L,R> operator) {
         registry.put(name.toLowerCase(Locale.getDefault()), operator);
         registry.put(name.toUpperCase(Locale.getDefault()), operator);
     }
 
-    public static <L,R,T> void register(String name, EntityOperator<L,R,T> operator) {
+    public static <L,R> void register(String name, EntityOperator<L,R> operator) {
         registerCase(name, operator);
         registerCase(name.replaceAll("-", "_"), operator);
         registerCase(name.replaceAll("_", "-"), operator);
     }
 
-    public static <L,R,T> EntityOperator<L,R,T> lookup(String name) {
+    public static <L,R> EntityOperator<L,R> lookup(String name) {
         return UtilGenerics.cast(registry.get(name));
     }
 
     public static <L,R> EntityComparisonOperator<L,R> lookupComparison(String name) {
-        EntityOperator<?,?,Boolean> operator = lookup(name);
+        EntityOperator<?,?> operator = lookup(name);
         if (!(operator instanceof EntityComparisonOperator<?,?>)) {
             throw new IllegalArgumentException(name + " is not a comparison operator");
         }
@@ -82,7 +85,7 @@ public abstract class EntityOperator<L, R, T> extends EntityConditionBase {
     }
 
     public static EntityJoinOperator lookupJoin(String name) {
-        EntityOperator<?,?,Boolean> operator = lookup(name);
+        EntityOperator<?,?> operator = lookup(name);
         if (!(operator instanceof EntityJoinOperator)) {
             throw new IllegalArgumentException(name + " is not a join operator");
         }
@@ -228,8 +231,8 @@ public abstract class EntityOperator<L, R, T> extends EntityConditionBase {
         if (this == obj) {
             return true;
         }
-        if (obj instanceof EntityOperator<?,?,?>) {
-            EntityOperator<?,?,?> otherOper = UtilGenerics.cast(obj);
+        if (obj instanceof EntityOperator<?,?>) {
+            EntityOperator<?,?> otherOper = UtilGenerics.cast(obj);
             return this.idInt == otherOper.idInt;
         }
         return false;
@@ -290,9 +293,9 @@ public abstract class EntityOperator<L, R, T> extends EntityConditionBase {
 
     public abstract void addSqlValue(StringBuilder sql, ModelEntity entity, List<EntityConditionParam> entityConditionParams, boolean compat, L lhs, R rhs, Datasource datasourceInfo);
     public abstract EntityCondition freeze(L lhs, R rhs);
-    public abstract void visit(EntityConditionVisitor visitor, L lhs, R rhs);
 
     public static final Comparable<?> WILDCARD = new Comparable<Object>() {
+        @Override
         public int compareTo(Object obj) {
             if (obj != WILDCARD) {
                 throw new ClassCastException();

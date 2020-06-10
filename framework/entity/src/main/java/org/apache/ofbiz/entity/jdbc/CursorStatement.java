@@ -46,6 +46,7 @@ public class CursorStatement extends AbstractCursorHandler {
         Debug.logInfo("beganTransaction=" + beganTransaction + ", autoCommit=" + autoCommit, module);
     }
 
+    @Override
     public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
         if ("close".equals(method.getName())) {
             stmt.getConnection().setAutoCommit(autoCommit);
@@ -81,9 +82,9 @@ public class CursorStatement extends AbstractCursorHandler {
         } else if ("setCursorName".equals(method.getName())) {
             setCursorName((String) args[0]);
         } else if ("getFetchSize".equals(method.getName())) {
-            return Integer.valueOf(getFetchSize());
+            return getFetchSize();
         } else if ("setFetchSize".equals(method.getName())) {
-            setFetchSize(((Integer) args[0]).intValue());
+            setFetchSize((Integer) args[0]);
         }
         return super.invoke(stmt, proxy, method, args);
     }

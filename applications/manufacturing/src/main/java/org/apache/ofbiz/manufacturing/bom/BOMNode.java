@@ -40,6 +40,7 @@ import org.apache.ofbiz.entity.util.EntityUtil;
 import org.apache.ofbiz.manufacturing.mrp.ProposedOrder;
 import org.apache.ofbiz.service.GenericServiceException;
 import org.apache.ofbiz.service.LocalDispatcher;
+import org.apache.ofbiz.service.ServiceUtil;
 
 /** An ItemCoinfigurationNode represents a component in a bill of materials.
  */
@@ -72,8 +73,8 @@ public class BOMNode {
         this.delegator = product.getDelegator();
         this.dispatcher = dispatcher;
         this.userLogin = userLogin;
-        children = new LinkedList<GenericValue>();
-        childrenNodes = new LinkedList<BOMNode>();
+        children = new LinkedList<>();
+        childrenNodes = new LinkedList<>();
         parentNode = null;
         productForRules = null;
         bomTypeId = null;
@@ -109,9 +110,9 @@ public class BOMNode {
                     .orderBy("sequenceNum")
                     .filterByDate(inDate).queryList();
         }
-        children = new LinkedList<GenericValue>();
+        children = new LinkedList<>();
         children.addAll(rows);
-        childrenNodes = new LinkedList<BOMNode>();
+        childrenNodes = new LinkedList<>();
         BOMNode oneChildNode = null;
         for (GenericValue oneChild : children) {
             // Configurator
@@ -270,7 +271,7 @@ public class BOMNode {
                         // -----------------------------------------------------------
                         // We try to apply directly the selected features
                         if (newNode.equals(oneChildNode)) {
-                            Map<String, String> selectedFeatures = new HashMap<String, String>();
+                            Map<String, String> selectedFeatures = new HashMap<>();
                             if (productFeatures != null) {
                                 GenericValue feature = null;
                                 for (int j = 0; j < productFeatures.size(); j++) {
@@ -280,14 +281,19 @@ public class BOMNode {
                             }
 
                             if (selectedFeatures.size() > 0) {
-                                Map<String, Object> context = new HashMap<String, Object>();
+                                Map<String, Object> context = new HashMap<>();
                                 context.put("productId", node.get("productIdTo"));
                                 context.put("selectedFeatures", selectedFeatures);
                                 Map<String, Object> storeResult = null;
                                 GenericValue variantProduct = null;
                                 try {
                                     storeResult = dispatcher.runSync("getProductVariant", context);
-                                    List<GenericValue> variantProducts = UtilGenerics.checkList(storeResult.get("products"));
+                                    if (ServiceUtil.isError(storeResult)) {
+                                        String errorMessage = ServiceUtil.getErrorMessage(storeResult);
+                                        Debug.logError(errorMessage, module);
+                                        throw new GenericEntityException(errorMessage);
+                                    }
+                                    List<GenericValue> variantProducts = UtilGenerics.cast(storeResult.get("products"));
                                     if (variantProducts.size() == 1) {
                                         variantProduct = variantProducts.get(0);
                                     }
@@ -335,20 +341,18 @@ public class BOMNode {
                     .orderBy("sequenceNum")
                     .filterByDate(inDate).queryList();
         }
-        children = new LinkedList<GenericValue>();
+        children = new LinkedList<>();
         children.addAll(rows);
-        childrenNodes = new LinkedList<BOMNode>();
+        childrenNodes = new LinkedList<>();
 
         BOMNode oneChildNode = null;
         for (GenericValue oneChild : children) {
             oneChildNode = new BOMNode(oneChild.getString("productId"), delegator, dispatcher, userLogin);
             // Configurator
             // If the node is null this means that the node has been discarded by the rules.
-            if (oneChildNode != null) {
-                oneChildNode.setParentNode(this);
-                oneChildNode.setTree(tree);
-                oneChildNode.loadParents(partBomTypeId, inDate, productFeatures);
-            }
+            oneChildNode.setParentNode(this);
+            oneChildNode.setTree(tree);
+            oneChildNode.loadParents(partBomTypeId, inDate, productFeatures);
             childrenNodes.add(oneChildNode);
         }
     }
@@ -428,6 +432,10 @@ public class BOMNode {
             Map<String, Object> inputContext = UtilMisc.<String, Object>toMap("arguments", arguments, "userLogin", userLogin);
             try {
                 resultContext = dispatcher.runSync(serviceName, inputContext);
+                if (ServiceUtil.isError(resultContext)) {
+                    String errorMessage = ServiceUtil.getErrorMessage(resultContext);
+                    Debug.logError(errorMessage, module);
+                }
                 BigDecimal calcQuantity = (BigDecimal)resultContext.get("quantity");
                 if (calcQuantity != null) {
                     this.quantity = calcQuantity;
@@ -502,7 +510,7 @@ public class BOMNode {
         Timestamp endDate = null;
         if (isManufactured(ignoreSupplierProducts)) {
             BOMNode oneChildNode = null;
-            List<String> childProductionRuns = new LinkedList<String>();
+            List<String> childProductionRuns = new LinkedList<>();
             Timestamp maxEndDate = null;
             for (int i = 0; i < childrenNodes.size(); i++) {
                 oneChildNode = childrenNodes.get(i);
@@ -524,7 +532,7 @@ public class BOMNode {
             }
 
             Timestamp startDate = UtilDateTime.toTimestamp(UtilDateTime.toDateTimeString(date));
-            Map<String, Object> serviceContext = new HashMap<String, Object>();
+            Map<String, Object> serviceContext = new HashMap<>();
             if (!useSubstitute) {
                 serviceContext.put("productId", getProduct().getString("productId"));
                 serviceContext.put("facilityId", getProduct().getString("facilityId"));
@@ -555,11 +563,15 @@ public class BOMNode {
                 serviceContext.put("startDate", startDate);
             }
             serviceContext.put("userLogin", userLogin);
-            Map<String, Object> resultService = null;
+            Map<String, Object> serviceResult = null;
             try {
-                resultService = dispatcher.runSync("createProductionRun", serviceContext);
-                productionRunId = (String)resultService.get("productionRunId");
-                endDate = (Timestamp)resultService.get("estimatedCompletionDate");
+                serviceResult = dispatcher.runSync("createProductionRun", serviceContext);
+                if (ServiceUtil.isError(serviceResult)) {
+                    String errorMessage = ServiceUtil.getErrorMessage(serviceResult);
+                    Debug.logError(errorMessage, module);
+                }
+                productionRunId = (String)serviceResult.get("productionRunId");
+                endDate = (Timestamp)serviceResult.get("estimatedCompletionDate");
             } catch (GenericServiceException e) {
                 Debug.logError("Problem calling the createProductionRun service", module);
             }

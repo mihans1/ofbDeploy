@@ -79,7 +79,7 @@ public class EditRenderSubContentCacheTransform implements TemplateTransformMode
 
     @Override
     @SuppressWarnings("unchecked")
-    public Writer getWriter(final Writer out, Map args) {
+    public Writer getWriter(Writer out, @SuppressWarnings("rawtypes") Map args) {
         final StringBuilder buf = new StringBuilder();
         final Environment env = Environment.getCurrentEnvironment();
         final Map<String, Object> templateCtx = FreeMarkerWorker.getWrappedObject("context", env);
@@ -89,7 +89,7 @@ public class EditRenderSubContentCacheTransform implements TemplateTransformMode
         FreeMarkerWorker.getSiteParameters(request, templateCtx);
         FreeMarkerWorker.overrideWithArgs(templateCtx, args);
         final GenericValue userLogin = FreeMarkerWorker.getWrappedObject("userLogin", env);
-        List<Map<String, ? extends Object>> trail = UtilGenerics.checkList(templateCtx.get("globalNodeTrail"));
+        List<Map<String, ? extends Object>> trail = UtilGenerics.cast(templateCtx.get("globalNodeTrail"));
         String contentAssocPredicateId = (String)templateCtx.get("contentAssocPredicateId");
         String strNullThruDatesOnly = (String)templateCtx.get("nullThruDatesOnly");
         Boolean nullThruDatesOnly = (strNullThruDatesOnly != null && "true".equalsIgnoreCase(strNullThruDatesOnly)) ? Boolean.TRUE :Boolean.FALSE;
@@ -150,7 +150,7 @@ public class EditRenderSubContentCacheTransform implements TemplateTransformMode
                 if (UtilValidate.isNotEmpty(wrapTemplateId)) {
                     templateCtx.put("wrappedContent", wrappedContent);
                     Map<String, Object> templateRoot = null;
-                    Map<String, Object> templateRootTemplate = UtilGenerics.checkMap(templateCtx.get("templateRootTemplate"));
+                    Map<String, Object> templateRootTemplate = UtilGenerics.cast(templateCtx.get("templateRootTemplate"));
                     if (templateRootTemplate == null) {
                         Map<String, Object> templateRootTmp = FreeMarkerWorker.createEnvironmentMap(env);
                         templateRoot = UtilMisc.makeMapWritable(templateRootTmp);
@@ -162,7 +162,7 @@ public class EditRenderSubContentCacheTransform implements TemplateTransformMode
                     templateRoot.put("context", templateCtx);
                     if (Debug.verboseOn()) {
                         for (Entry<String, Object> ky : templateCtx.entrySet()) {
-                            Object val = ky.getValue();;
+                            Object val = ky.getValue();
                             Debug.logVerbose("context key: " + ky + " val: " + val, module);
                         }
                     }

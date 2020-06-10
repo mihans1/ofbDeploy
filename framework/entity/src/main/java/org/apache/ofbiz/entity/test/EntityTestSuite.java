@@ -139,8 +139,6 @@ public class EntityTestSuite extends EntityTestCase {
         testValue.addObserver(observer);
         testValue.put("description", "New Testing Type #Update-1");
         assertEquals("Observer called with original GenericValue field name", "description", observer.arg);
-        observer.observable = null;
-        observer.arg = null;
         GenericValue clonedValue = (GenericValue) testValue.clone();
         clonedValue.put("description", "New Testing Type #Update-1");
         assertTrue("Cloned Observable has changed", clonedValue.hasChanged());
@@ -388,7 +386,7 @@ public class EntityTestSuite extends EntityTestCase {
             testing.put("testingName", "leaf-#" + node.getString("testingNodeId"));
             testing.put("description", "level1 leaf");
             testing.put("comments", "No-comments");
-            testing.put("testingSize", Long.valueOf(10));
+            testing.put("testingSize", 10L);
             testing.put("testingDate", now);
 
             newValues.add(testing);
@@ -484,15 +482,15 @@ public class EntityTestSuite extends EntityTestCase {
         testValue = EntityQuery.use(delegator).from("TestingType").where("testingTypeId", "TEST-DISTINCT-1").cache(true).queryOne();
         assertNotNull("Found newly created type value", testValue);
 
-        delegator.create("Testing", "testingId", "TEST-DISTINCT-1", "testingTypeId", "TEST-DISTINCT-1", "testingSize", Long.valueOf(10), "comments", "No-comments");
-        delegator.create("Testing", "testingId", "TEST-DISTINCT-2", "testingTypeId", "TEST-DISTINCT-1", "testingSize", Long.valueOf(10), "comments", "Some-comments");
-        delegator.create("Testing", "testingId", "TEST-DISTINCT-3", "testingTypeId", "TEST-DISTINCT-1", "testingSize", Long.valueOf(9), "comments", "No-comments");
-        delegator.create("Testing", "testingId", "TEST-DISTINCT-4", "testingTypeId", "TEST-DISTINCT-1", "testingSize", Long.valueOf(11), "comments", "Some-comments");
+        delegator.create("Testing", "testingId", "TEST-DISTINCT-1", "testingTypeId", "TEST-DISTINCT-1", "testingSize", 10L, "comments", "No-comments");
+        delegator.create("Testing", "testingId", "TEST-DISTINCT-2", "testingTypeId", "TEST-DISTINCT-1", "testingSize", 10L, "comments", "Some-comments");
+        delegator.create("Testing", "testingId", "TEST-DISTINCT-3", "testingTypeId", "TEST-DISTINCT-1", "testingSize", 9L, "comments", "No-comments");
+        delegator.create("Testing", "testingId", "TEST-DISTINCT-4", "testingTypeId", "TEST-DISTINCT-1", "testingSize", 11L, "comments", "Some-comments");
 
         List<GenericValue> testingSize10 = EntityQuery.use(delegator)
                                                       .select("testingSize", "comments")
                                                       .from("Testing")
-                                                      .where("testingSize", Long.valueOf(10), "comments", "No-comments")
+                                                      .where("testingSize", 10L, "comments", "No-comments")
                                                       .distinct()
                                                       .cache()
                                                       .queryList();
@@ -927,7 +925,7 @@ public class EntityTestSuite extends EntityTestCase {
     /*
      * This creates an string id from a number
      */
-    private String getTestId(String strTestBase, int iNum) {
+    private static String getTestId(String strTestBase, int iNum) {
         StringBuilder strBufTemp = new StringBuilder(strTestBase);
         if (iNum < 10000) {
            strBufTemp.append("0");
@@ -1198,26 +1196,22 @@ public class EntityTestSuite extends EntityTestCase {
         final AtomicBoolean nullSeqIdReturned = new AtomicBoolean(false);
 
         List<Future<Void>> futures = new ArrayList<>();
-        Callable<Void> getSeqIdTask = new Callable<Void>() {
-                    public Void call() throws Exception {
-                        Long seqId = sequencer.getNextSeqId(sequenceName, 1, null);
-                        if (seqId == null) {
-                            nullSeqIdReturned.set(true);
-                            return null;
-                        }
-                        Long existingValue = seqIds.putIfAbsent(seqId, seqId);
-                        if (existingValue != null) {
-                            duplicateFound.set(true);
-                        }
-                        return null;
-                    }
-                };
-        Callable<Void> refreshTask = new Callable<Void>() {
-                            public Void call() throws Exception {
-                                sequencer.forceBankRefresh(sequenceName, 1);
-                                return null;
-                            }
-                        };
+        Callable<Void> getSeqIdTask = () -> {
+            Long seqId = sequencer.getNextSeqId(sequenceName, 1, null);
+            if (seqId == null) {
+                nullSeqIdReturned.set(true);
+                return null;
+            }
+            Long existingValue = seqIds.putIfAbsent(seqId, seqId);
+            if (existingValue != null) {
+                duplicateFound.set(true);
+            }
+            return null;
+        };
+        Callable<Void> refreshTask = () -> {
+            sequencer.forceBankRefresh(sequenceName, 1);
+            return null;
+        };
         double probabilityOfRefresh = 0.1;
         for (int i = 1; i <= 1000; i++) {
             Callable<Void> randomTask = Math.random() < probabilityOfRefresh ? refreshTask : getSeqIdTask;
@@ -1253,7 +1247,7 @@ public class EntityTestSuite extends EntityTestCase {
         try {
             transactionStarted = TransactionUtil.begin();
             for (int i = 1; i <= numberOfQueries; i++) {
-                List rows = EntityQuery.use(delegator).from("SequenceValueItem").queryList();
+                List<GenericValue> rows = EntityQuery.use(delegator).from("SequenceValueItem").queryList();
                 totalNumberOfRows = totalNumberOfRows + rows.size();
             }
             TransactionUtil.commit(transactionStarted);
@@ -1274,14 +1268,16 @@ public class EntityTestSuite extends EntityTestCase {
         try {
             for (int i = 1; i <= numberOfQueries; i++) {
                 transactionStarted = TransactionUtil.begin();
-                List rows = EntityQuery.use(delegator).from("SequenceValueItem").queryList();
+                List<GenericValue> rows = EntityQuery.use(delegator).from("SequenceValueItem").queryList();
                 totalNumberOfRows = totalNumberOfRows + rows.size();
                 TransactionUtil.commit(transactionStarted);
             }
         } catch (GenericEntityException e) {
             try {
                 TransactionUtil.rollback(transactionStarted, "", e);
-            } catch (Exception e2) {}
+            } catch (Exception e2) {
+                Debug.logError(e2, module);
+            }
             noErrors = false;
         }
         endTime = System.currentTimeMillis();
@@ -1292,12 +1288,10 @@ public class EntityTestSuite extends EntityTestCase {
     }
 
     private final class TestObserver implements Observer {
-        private Observable observable;
         private Object arg;
 
         @Override
         public void update(Observable observable, Object arg) {
-            this.observable = observable;
             this.arg = arg;
         }
     }

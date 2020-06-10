@@ -24,7 +24,6 @@ import java.io.Writer;
 import java.util.HashMap;
 import java.util.Map;
 
-import javax.servlet.ServletContext;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
@@ -104,8 +103,7 @@ public class HtmlMenuWrapper {
 
     public String renderMenuString() throws IOException {
         HttpServletRequest req = ((HtmlMenuRenderer)renderer).request;
-        ServletContext ctx = (ServletContext) req.getAttribute("servletContext");
-        if (ctx == null) {
+        if (req.getServletContext() == null) {
             if (Debug.infoOn()) {
                 Debug.logInfo("in renderMenuString, ctx is null(0)" , "");
             }
@@ -115,8 +113,7 @@ public class HtmlMenuWrapper {
         modelMenu.renderMenuString(writer, context, renderer);
 
         HttpServletRequest req2 = ((HtmlMenuRenderer)renderer).request;
-        ServletContext ctx2 = (ServletContext) req2.getAttribute("servletContext");
-        if (ctx2 == null) {
+        if (req2.getServletContext() == null) {
             if (Debug.infoOn()) {
                 Debug.logInfo("in renderMenuString, ctx is null(2)" , "");
             }
@@ -133,7 +130,7 @@ public class HtmlMenuWrapper {
      * parameters Map instead of the value Map.
      */
     public void setIsError(boolean isError) {
-        this.context.put("isError", Boolean.valueOf(isError));
+        this.context.put("isError", isError);
     }
 
     public boolean getIsError() {
@@ -141,7 +138,7 @@ public class HtmlMenuWrapper {
         if (isErrorBoolean == null) {
             return false;
         } else {
-            return isErrorBoolean.booleanValue();
+            return isErrorBoolean;
         }
     }
 
@@ -154,7 +151,8 @@ public class HtmlMenuWrapper {
     }
 
     public void putInContext(String menuItemName, String valueName,  Object value) {
-        Map<String, Object> valueMap = UtilGenerics.toMap(context.get(menuItemName));
+        Object obj = context.get(menuItemName);
+        Map<String, Object> valueMap = (obj instanceof Map) ? UtilGenerics.cast(obj) : null;
         if (valueMap == null) {
             valueMap = new HashMap<>();
             context.put(menuItemName, valueMap);
@@ -167,7 +165,8 @@ public class HtmlMenuWrapper {
     }
 
     public Object getFromContext(String menuItemName, String valueName) {
-        Map<String, Object> valueMap = UtilGenerics.toMap(context.get(menuItemName));
+        Object obj = context.get(menuItemName);
+        Map<String, Object> valueMap = (obj instanceof Map) ? UtilGenerics.cast(obj) : null;
         if (valueMap == null) {
             valueMap = new HashMap<>();
             context.put(menuItemName, valueMap);
@@ -217,11 +216,11 @@ public class HtmlMenuWrapper {
         if (menuWrapper == null) {
             try {
                 Class<?> cls = Class.forName("org.apache.ofbiz.widget.html." + menuWrapperClassName);
-                menuWrapper = (HtmlMenuWrapper)cls.newInstance();
+                menuWrapper = (HtmlMenuWrapper)cls.getDeclaredConstructor().newInstance();
                 menuWrapper.init(menuDefFile, menuName, request, response);
             } catch (InstantiationException | IllegalAccessException | IOException | SAXException | ParserConfigurationException e) {
                 throw new RuntimeException(e.getMessage());
-            } catch (ClassNotFoundException e) {
+            } catch (ReflectiveOperationException e) {
                 throw new RuntimeException("Class not found:" + e.getMessage());
             }
         } else {

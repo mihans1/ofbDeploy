@@ -16,28 +16,19 @@ KIND, either express or implied.  See the License for the
 specific language governing permissions and limitations
 under the License.
 -->
-<script language="javascript1.2" type="text/javascript">
-function submit_add() {
-    window.close();
-    document.addSubSite.submit();
-}
-function win_cancel() {
-    window.close();
-}
-</script>
 
-<form name="addSubSite" method="post" action="<@ofbizUrl>postNewSubSite?rootForumId=${requestParameters.rootForumId}</@ofbizUrl>">
-<table cellspacing="8">
+<form class="basic-form" name="addSubSite" method="post" action="<@ofbizUrl>postNewSubSite?rootForumId=${requestParameters.rootForumId}</@ofbizUrl>">
+<table>
   <tr>
-    <td align="right">Site Name:</td>
+    <td class="label"><label>Site Name:</label>/td>
     <td><input type="text" size="20" name="contentName"/></td>
   </tr>
   <tr>
-    <td align="right">Site Description:</td>
+    <td class="label"><label>Site Description:</label></td>
     <td><input type="text" size="40" name="description"/></td>
   </tr>
   <tr>
-    <td align="right">Posted Msg Default Status:</td>
+    <td class="label"><label>Posted Msg Default Status:</label></td>
     <td>
       <select name="statusId">
         <option value="CTNT_IN_PROGRESS">Draft - not attached to any site</option>
@@ -47,7 +38,8 @@ function win_cancel() {
     </td>
   </tr>
   <tr>
-    <td colspan="2"><input type="submit" name="submitBtn" value="Create"/></td>
+    <td class="label"/>
+    <td><input type="submit" name="submitBtn" value="Create"/></td>
   </tr>
 </table>
 <input type="hidden" name="contentIdTo" value="${requestParameters.parentForumId}" />

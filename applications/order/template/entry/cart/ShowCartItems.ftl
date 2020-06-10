@@ -19,8 +19,8 @@ under the License.
 
 <#-- Continuation of showcart.ftl:  List of order items and forms to modify them. -->
 <#macro showAssoc productAssoc>
-  <#assign productAssocType = (delegator.findOne("ProductAssocType", {"productAssocTypeId" : productAssoc.productAssocTypeId}, false))/>
-  <#assign assocProduct = (delegator.findOne("Product", {"productId" : productAssoc.productIdTo}, false))/>
+  <#local productAssocType = (delegator.findOne("ProductAssocType", {"productAssocTypeId" : productAssoc.productAssocTypeId}, false))/>
+  <#local assocProduct = (delegator.findOne("Product", {"productId" : productAssoc.productIdTo}, false))/>
   <#if assocProduct?has_content>
     <td><a href="<@ofbizUrl>/product?product_id=${productAssoc.productIdTo}</@ofbizUrl>"class="buttontext">${productAssoc.productIdTo}</a></td>
     <td>- ${(assocProduct.productName)!}<i>(${(productAssocType.description)?default("Unknown")})</i></td>
@@ -109,7 +109,7 @@ under the License.
                     <#if cartLine.getAttribute("surveyResponses")?has_content>
                         <br />Surveys:
                        <#list cartLine.getAttribute("surveyResponses") as surveyResponseId>
-                        <a href="/content/control/ViewSurveyResponses?surveyResponseId=${surveyResponseId}${StringUtil.wrapString(externalKeyParam)}" class="buttontext" style="font-size: xx-small;">${surveyResponseId}</a>
+                        <a href="<@ofbizUrl controlPath="/content/control">ViewSurveyResponses?surveyResponseId=${surveyResponseId}${StringUtil.wrapString(externalKeyParam)}</@ofbizUrl>" class="buttontext" style="font-size: xx-small;">${surveyResponseId}</a>
                        </#list>
                     </#if>
                 </div>
@@ -147,7 +147,7 @@ under the License.
               <tr>
                 <td colspan="2">
                   <div>
-                    <a href="/catalog/control/EditProductInventoryItems?productId=${productId}" class="buttontext"><b>${uiLabelMap.ProductInventory}</b></a>:
+                    <a href="<@ofbizUrl controlPath="/catalog/control">EditProductInventoryItems?productId=${productId}</@ofbizUrl>" class="buttontext"><b>${uiLabelMap.ProductInventory}</b></a>:
                     ${uiLabelMap.ProductAtp} = ${availableToPromiseMap.get(productId)}, ${uiLabelMap.ProductQoh} = ${quantityOnHandMap.get(productId)}
                     <#if Static["org.apache.ofbiz.entity.util.EntityTypeUtil"].hasParentType(delegator, "ProductType", "productTypeId", product.productTypeId, "parentTypeId", "MARKETING_PKG")>
                     ${uiLabelMap.ProductMarketingPackageATP} = ${mktgPkgATPMap.get(productId)}, ${uiLabelMap.ProductMarketingPackageQOH} = ${mktgPkgQOHMap.get(productId)}

@@ -227,7 +227,7 @@ public class ICalConverter {
         }
         Dur dur = iCalObj.getDuration();
         TimeDuration td = new TimeDuration(0, 0, (dur.getWeeks() * 7) + dur.getDays(), dur.getHours(), dur.getMinutes(), dur.getSeconds(), 0);
-        return Double.valueOf(TimeDuration.toLong(td));
+        return (double) TimeDuration.toLong(td);
     }
 
     protected static Timestamp fromLastModified(PropertyList propertyList) {
@@ -259,7 +259,7 @@ public class ICalConverter {
         if (iCalObj == null) {
             return null;
         }
-        return Long.valueOf(iCalObj.getPercentage());
+        return (long) iCalObj.getPercentage();
     }
 
     protected static Double fromPriority(PropertyList propertyList) {
@@ -267,7 +267,7 @@ public class ICalConverter {
         if (iCalObj == null) {
             return null;
         }
-        return Double.valueOf(iCalObj.getLevel());
+        return (double) iCalObj.getLevel();
     }
 
     protected static String fromStatus(PropertyList propertyList) {
@@ -382,7 +382,7 @@ public class ICalConverter {
      * @param context The conversion context
      * @return An iCalendar as a <code>String</code>, or <code>null</code>
      * if <code>workEffortId</code> is invalid.
-     * @throws GenericEntityException
+     * @throws GenericEntityException if communications with the database failed
      */
     public static ResponseProperties getICalendar(String workEffortId, Map<String, Object> context) throws GenericEntityException {
         Delegator delegator = (Delegator) context.get("delegator");
@@ -440,7 +440,7 @@ public class ICalConverter {
     protected static List<GenericValue> getRelatedWorkEfforts(GenericValue workEffort, Map<String, Object> context) {
         Map<String, ? extends Object> serviceMap = UtilMisc.toMap("workEffortId", workEffort.getString("workEffortId"));
         Map<String, Object> resultMap = invokeService("getICalWorkEfforts", serviceMap, context);
-        List<GenericValue> workEfforts = UtilGenerics.checkList(resultMap.get("workEfforts"), GenericValue.class);
+        List<GenericValue> workEfforts = UtilGenerics.checkCollection(resultMap.get("workEfforts"), GenericValue.class);
         if (workEfforts != null) {
             return WorkEffortWorker.removeDuplicateWorkEfforts(workEfforts);
         }
@@ -455,7 +455,7 @@ public class ICalConverter {
         Map<String, Object> serviceResult = invokeService("workEffortICalendarPermission", serviceMap, context);
         Boolean hasPermission = (Boolean) serviceResult.get("hasPermission");
         if (hasPermission != null) {
-            return hasPermission.booleanValue();
+            return hasPermission;
         }
         return false;
     }
@@ -471,7 +471,7 @@ public class ICalConverter {
                 if (serviceMap.containsKey(modelParam.name)) {
                     Object value = serviceMap.get(modelParam.name);
                     if (UtilValidate.isNotEmpty(modelParam.type)) {
-                        value = ObjectType.simpleTypeConvert(value, modelParam.type, null, null, null, true);
+                        value = ObjectType.simpleTypeOrObjectConvert(value, modelParam.type, null, null, null, true);
                     }
                     localMap.put(modelParam.name, value);
                 }
@@ -486,7 +486,11 @@ public class ICalConverter {
         }
         localMap.put("locale", context.get("locale"));
         try {
-            return dispatcher.runSync(serviceName, localMap);
+            Map<String, Object> result = dispatcher.runSync(serviceName, localMap);
+            if (ServiceUtil.isError(result)) {
+                return ServiceUtil.returnError(ServiceUtil.getErrorMessage(result));
+            }
+            return result;
         } catch (GenericServiceException e) {
             String errMsg = UtilProperties.getMessage("WorkEffortUiLabels", "WorkeffortErrorWhileInvokingService", UtilMisc.toMap("serviceName", serviceName), locale);
             Debug.logError(e, errMsg, module);
@@ -675,15 +679,20 @@ public class ICalConverter {
         }
     }
 
-    /** Update work efforts from an incoming iCalendar request.
-     * @param is
-     * @param context
-     * @throws IOException
-     * @throws ParserException
-     * @throws GenericEntityException
-     * @throws GenericServiceException
+    /**
+     * Updates work efforts from an incoming iCalendar request.
+     *
+     * @param is the input feeding the calendar parser
+     * @param context parameters from the execution environment
+     * @return the response from the ICalWorker
+     * @throws IOException if there is an issue with {@code is}
+     * @throws ParserException if the calendar build process failed
+     * @throws GenericEntityException if communications with the database failed
+     * @throws GenericServiceException if {@code createWorkEffortICalData} or {@code updateWorkEffortICalData}
+     *         service invocation failed
      */
-    public static ResponseProperties storeCalendar(InputStream is, Map<String, Object> context) throws IOException, ParserException, GenericEntityException, GenericServiceException {
+    public static ResponseProperties storeCalendar(InputStream is, Map<String, Object> context)
+            throws IOException, ParserException, GenericEntityException, GenericServiceException {
         CalendarBuilder builder = new CalendarBuilder();
         Calendar calendar = null;
         try {
@@ -726,7 +735,7 @@ public class ICalConverter {
                 validWorkEfforts.add(workEffort.getString("workEffortId"));
             }
         }
-        List<Component> components = UtilGenerics.checkList(calendar.getComponents(), Component.class);
+        List<Component> components = UtilGenerics.checkCollection(calendar.getComponents(), Component.class);
         ResponseProperties responseProps = null;
         for (Component component : components) {
             if (Component.VEVENT.equals(component.getName()) || Component.VTODO.equals(component.getName())) {
@@ -775,9 +784,9 @@ public class ICalConverter {
         ResponseProperties responseProps = null;
         Map<String, Object> serviceMap = new HashMap<>();
         List<Property> partyList = new LinkedList<>();
-        partyList.addAll(UtilGenerics.checkList(component.getProperties("ATTENDEE"), Property.class));
-        partyList.addAll(UtilGenerics.checkList(component.getProperties("CONTACT"), Property.class));
-        partyList.addAll(UtilGenerics.checkList(component.getProperties("ORGANIZER"), Property.class));
+        partyList.addAll(UtilGenerics.checkCollection(component.getProperties("ATTENDEE"), Property.class));
+        partyList.addAll(UtilGenerics.checkCollection(component.getProperties("CONTACT"), Property.class));
+        partyList.addAll(UtilGenerics.checkCollection(component.getProperties("ORGANIZER"), Property.class));
         for (Property property : partyList) {
             String partyId = fromXParameter(property.getParameters(), partyIdXParamName);
             if (partyId == null) {

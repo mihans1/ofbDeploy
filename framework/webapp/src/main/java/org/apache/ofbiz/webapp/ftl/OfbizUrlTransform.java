@@ -23,7 +23,6 @@ import java.io.Writer;
 import java.net.URLEncoder;
 import java.util.Map;
 
-import javax.servlet.ServletContext;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
@@ -99,6 +98,7 @@ public class OfbizUrlTransform implements TemplateTransformModel {
         final boolean secure = checkBooleanArg(args, "secure", false);
         final boolean encode = checkBooleanArg(args, "encode", true);
         final String webSiteId = convertToString(args.get("webSiteId"));
+        final String controlPath = convertToString(args.get("controlPath"));
 
         return new Writer(out) {
 
@@ -142,11 +142,11 @@ public class OfbizUrlTransform implements TemplateTransformModel {
                         return;
                     }
                     if (request != null) {
-                        ServletContext ctx = (ServletContext) request.getAttribute("servletContext");
                         HttpServletResponse response = FreeMarkerWorker.unwrap(env.getVariable("response"));
                         String requestUrl = buf.toString();
-                        RequestHandler rh = (RequestHandler) ctx.getAttribute("_REQUEST_HANDLER_");
-                        out.write(rh.makeLink(request, response, requestUrl, fullPath, secure, encode));
+                        RequestHandler rh = RequestHandler.from(request);
+                        String link = (rh.makeLink(request, response, requestUrl, fullPath, secure, encode, controlPath));
+                        out.write(link);
                     } else {
                         out.write(buf.toString());
                     }

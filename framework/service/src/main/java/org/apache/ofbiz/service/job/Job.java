@@ -29,7 +29,7 @@ import java.util.Date;
  */
 public interface Job extends Runnable {
 
-    public static enum State {CREATED, QUEUED, RUNNING, FINISHED, FAILED};
+    public static enum State {CREATED, QUEUED, RUNNING, FINISHED, FAILED}
 
     /**
      * Returns the current state of this job.
@@ -72,5 +72,10 @@ public interface Job extends Runnable {
      * Returns the time this job is scheduled to start.
      */
     Date getStartTime();
+
+    /**
+     * Returns the priority of this job, higher the number the higher the priority
+     */
+    long getPriority();
 }
 

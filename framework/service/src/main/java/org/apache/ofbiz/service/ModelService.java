@@ -23,6 +23,7 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.AbstractMap;
 import java.util.AbstractSet;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
@@ -162,16 +163,10 @@ public class ModelService extends AbstractMap<String, Object> implements Seriali
     public int transactionTimeout;
 
     /** Sets the max number of times this service will retry when failed (persisted async only) */
-    public int maxRetry = -1;
+    public int maxRetry = 0;
 
-    /** Permission service name */
-    public String permissionServiceName;
-
-    /** Permission service main-action */
-    public String permissionMainAction;
-
-    /** Permission service resource-description */
-    public String permissionResourceDesc;
+    /** Permission service*/
+    ModelPermission modelPermission = null;
 
     /** Semaphore setting (wait, fail, none) */
     public String semaphore;
@@ -247,9 +242,9 @@ public class ModelService extends AbstractMap<String, Object> implements Seriali
         }
         this.transactionTimeout = model.transactionTimeout;
         this.maxRetry = model.maxRetry;
-        this.permissionServiceName = model.permissionServiceName;
-        this.permissionMainAction = model.permissionMainAction;
-        this.permissionResourceDesc = model.permissionResourceDesc;
+        if (model.modelPermission != null) {
+            modelPermission = model.modelPermission;
+        }
         this.implServices = model.implServices;
         this.overrideParameters = model.overrideParameters;
         this.inheritedParameters = model.inheritedParameters();
@@ -282,10 +277,12 @@ public class ModelService extends AbstractMap<String, Object> implements Seriali
             this.field = field;
         }
 
+        @Override
         public String getKey() {
             return field.getName();
         }
 
+        @Override
         public Object getValue() {
             try {
                 return field.get(ModelService.this);
@@ -294,6 +291,7 @@ public class ModelService extends AbstractMap<String, Object> implements Seriali
             }
         }
 
+        @Override
         public Object setValue(Object value) {
             throw new UnsupportedOperationException();
         }
@@ -330,10 +328,12 @@ public class ModelService extends AbstractMap<String, Object> implements Seriali
                 return new Iterator<Map.Entry<String, Object>>() {
                     private int i = 0;
 
+                    @Override
                     public boolean hasNext() {
                         return i < MODEL_SERVICE_FIELDS.length;
                     }
 
+                    @Override
                     public Map.Entry<String, Object> next() {
                         if (!hasNext()) {
                             throw new NoSuchElementException();
@@ -341,6 +341,7 @@ public class ModelService extends AbstractMap<String, Object> implements Seriali
                         return new ModelServiceMapEntry(MODEL_SERVICE_FIELDS[i++]);
                     }
 
+                    @Override
                     public void remove() {
                         throw new UnsupportedOperationException();
                     }
@@ -498,8 +499,9 @@ public class ModelService extends AbstractMap<String, Object> implements Seriali
     public void updateDefaultValues(Map<String, Object> context, String mode) {
         List<ModelParam> params = this.getModelParamList();
         for (ModelParam param: params) {
-            if (IN_OUT_PARAM.equals(param.mode) || mode.equals(param.mode)) {
-                Object defaultValueObj = param.getDefaultValue();
+            if (param.getDefaultValue() != null
+                    && (IN_OUT_PARAM.equals(param.mode) || mode.equals(param.mode))) {
+                Object defaultValueObj = param.getDefaultValue(context);
                 if (defaultValueObj != null && context.get(param.name) == null) {
                     context.put(param.name, defaultValueObj);
                     Debug.logInfo("Set default value [" + defaultValueObj + "] for parameter [" + param.name + "]", module);
@@ -612,8 +614,8 @@ public class ModelService extends AbstractMap<String, Object> implements Seriali
                     if ("none".equals(modelParam.allowHtml)) {
                         UtilCodec.checkStringForHtmlStrictNone(modelParam.name, value, errorMessageList, (Locale) context.get("locale"));
                     } else if ("safe".equals(modelParam.allowHtml)) {
-                        UtilCodec.checkStringForHtmlSafe(modelParam.name, value, errorMessageList, 
-                                (Locale) context.get("locale"), 
+                        UtilCodec.checkStringForHtmlSafe(modelParam.name, value, errorMessageList,
+                                (Locale) context.get("locale"),
                                 EntityUtilProperties.getPropertyAsBoolean("owasp", "sanitizer.enable", true));
                     }
                 }
@@ -791,7 +793,7 @@ public class ModelService extends AbstractMap<String, Object> implements Seriali
             // convert to string
             String converted;
             try {
-                converted = (String) ObjectType.simpleTypeConvert(testValue, "String", null, null);
+                converted = (String) ObjectType.simpleTypeOrObjectConvert(testValue, "String", null, null);
             } catch (GeneralException e) {
                 throw new GeneralException("Unable to convert parameter to String");
             }
@@ -811,7 +813,7 @@ public class ModelService extends AbstractMap<String, Object> implements Seriali
             throw new GeneralException("Unable to run validation method [" + vali.getMethodName() + "] in class [" + vali.getClassName() + "]");
         }
 
-        return resultBool.booleanValue();
+        return resultBool;
     }
 
     /**
@@ -930,13 +932,13 @@ public class ModelService extends AbstractMap<String, Object> implements Seriali
 
                 // internal map of strings
                 if (UtilValidate.isNotEmpty(param.stringMapPrefix) && !source.containsKey(key)) {
-                    Map<String, Object> paramMap = this.makePrefixMap(source, param);
+                    Map<String, Object> paramMap = makePrefixMap(source, param);
                     if (UtilValidate.isNotEmpty(paramMap)) {
                         target.put(key, paramMap);
                     }
                 // internal list of strings
                 } else if (UtilValidate.isNotEmpty(param.stringListSuffix) && !source.containsKey(key)) {
-                    List<Object> paramList = this.makeSuffixList(source, param);
+                    List<Object> paramList = makeSuffixList(source, param);
                     if (UtilValidate.isNotEmpty(paramList)) {
                         target.put(key, paramList);
                     }
@@ -948,7 +950,7 @@ public class ModelService extends AbstractMap<String, Object> implements Seriali
 
                             try {
                                 // no need to fail on type conversion; the validator will catch this
-                                value = ObjectType.simpleTypeConvert(value, param.type, null, timeZone, locale, false);
+                                value = ObjectType.simpleTypeOrObjectConvert(value, param.type, null, timeZone, locale, false);
                             } catch (GeneralException e) {
                                 String errMsg = "Type conversion of field [" + key + "] to type [" + param.type + "] failed for value \"" + value + "\": " + e.toString();
                                 Debug.logWarning("[ModelService.makeValid] : " + errMsg, module);
@@ -965,7 +967,7 @@ public class ModelService extends AbstractMap<String, Object> implements Seriali
         return target;
     }
 
-    private Map<String, Object> makePrefixMap(Map<String, ? extends Object> source, ModelParam param) {
+    private static Map<String, Object> makePrefixMap(Map<String, ? extends Object> source, ModelParam param) {
         Map<String, Object> paramMap = new HashMap<>();
         for (Map.Entry<String, ? extends Object> entry: source.entrySet()) {
             String key = entry.getKey();
@@ -977,7 +979,7 @@ public class ModelService extends AbstractMap<String, Object> implements Seriali
         return paramMap;
     }
 
-    private List<Object> makeSuffixList(Map<String, ? extends Object> source, ModelParam param) {
+    private static List<Object> makeSuffixList(Map<String, ? extends Object> source, ModelParam param) {
         List<Object> paramList = new LinkedList<>();
         for (Map.Entry<String, ? extends Object> entry: source.entrySet()) {
             String key = entry.getKey();
@@ -999,55 +1001,14 @@ public class ModelService extends AbstractMap<String, Object> implements Seriali
      * @return result of permission service invocation
      */
     public Map<String, Object> evalPermission(DispatchContext dctx, Map<String, ? extends Object> context) {
-        if (UtilValidate.isNotEmpty(this.permissionServiceName)) {
-            ModelService thisService;
-            ModelService permission;
-            try {
-                thisService = dctx.getModelService(this.name);
-                permission = dctx.getModelService(this.permissionServiceName);
-            } catch (GenericServiceException e) {
-                Debug.logError(e, "Failed to get ModelService: " + e.toString(), module);
-                Map<String, Object> result = ServiceUtil.returnSuccess();
-                result.put("hasPermission", Boolean.FALSE);
-                result.put("failMessage", e.getMessage());
-                return result;
-            }
-            Map<String, Object> ctx = permission.makeValid(context, IN_PARAM);
-            if (UtilValidate.isNotEmpty(this.permissionMainAction)) {
-                ctx.put("mainAction", this.permissionMainAction);
-            }
-            if (UtilValidate.isNotEmpty(this.permissionResourceDesc)) {
-                ctx.put("resourceDescription", this.permissionResourceDesc);
-            }
-            ctx.put("resourceDescription", thisService.name);
-
-            LocalDispatcher dispatcher = dctx.getDispatcher();
-            Map<String, Object> resp;
-            try {
-                resp = dispatcher.runSync(permission.name, ctx, 300, true);
-            } catch (GenericServiceException e) {
-                Debug.logError(e, module);
-                Map<String, Object> result = ServiceUtil.returnSuccess();
-                result.put("hasPermission", Boolean.FALSE);
-                result.put("failMessage", e.getMessage());
-                return result;
-            }
-            if (ServiceUtil.isError(resp) || ServiceUtil.isFailure(resp)) {
-                Map<String, Object> result = ServiceUtil.returnSuccess();
-                result.put("hasPermission", Boolean.FALSE);
-                String failMessage = (String) resp.get("failMessage");
-                if (UtilValidate.isEmpty(failMessage)) {
-                    failMessage = ServiceUtil.getErrorMessage(resp);
-                }
-                result.put("failMessage", failMessage);
-                return result;
-            }
-            return resp;
+        if (this.modelPermission != null) {
+            return modelPermission.evalPermission(dctx, context);
+        } else {
+            Map<String, Object> result = ServiceUtil.returnSuccess();
+            result.put("hasPermission", Boolean.FALSE);
+            result.put("failMessage", UtilProperties.getMessage(resource, "ServicePermissionErrorDefinitionProblem", (Locale) context.get("locale")));
+            return result;
         }
-        Map<String, Object> result = ServiceUtil.returnSuccess();
-        result.put("hasPermission", Boolean.FALSE);
-        result.put("failMessage", "No ModelService found; no service name specified!");
-        return result;
     }
 
     /**
@@ -1063,18 +1024,25 @@ public class ModelService extends AbstractMap<String, Object> implements Seriali
      * Evaluates permissions for a service.
      * @param dctx DispatchContext from the invoked service
      * @param context Map containing userLogin information
-     * @return true if all permissions evaluate true.
+     * @return Map if all permissions evaluate return success else return the error message list.
      */
-    public boolean evalPermissions(DispatchContext dctx, Map<String, ? extends Object> context) {
+    public Map<String, Object> evalPermissions(DispatchContext dctx, Map<String, ? extends Object> context) {
+        List<String> permGroupErrors = new ArrayList<>();
+
         // old permission checking
         if (this.containsPermissions()) {
             for (ModelPermGroup group: this.permissionGroups) {
-                if (!group.evalPermissions(dctx, context)) {
-                    return false;
+                if (Debug.verboseOn()) Debug.logVerbose(" Permission : Analyse " + group.toString(), module);
+                Map<String, Object> permResult = group.evalPermissions(dctx, context);
+                if (! ServiceUtil.isSuccess(permResult)) {
+                    ServiceUtil.addErrors(permGroupErrors, null, permResult);
                 }
             }
         }
-        return true;
+        if (UtilValidate.isEmpty(permGroupErrors)) {
+            return ServiceUtil.returnSuccess();
+        }
+        return ServiceUtil.returnError(permGroupErrors);
     }
 
     /**

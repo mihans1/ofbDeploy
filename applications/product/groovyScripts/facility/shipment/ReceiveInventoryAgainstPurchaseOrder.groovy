@@ -216,8 +216,10 @@ if (productIdToReceive) {
         if (productQtyToReceive) {
             try {
                 quantity = Double.parseDouble(productQtyToReceive)
-            } catch (Exception e) {
-                // Ignore the quantity update if there's a problem parsing it
+            } catch (NumberFormatException nfe) {
+                Debug.logError(nfe, "Caught an exception : " + nfe.toString(), module)
+                request.setAttribute("_ERROR_MESSAGE", "The quantity to update seems non-numeric")
+                return
             }
         }
 

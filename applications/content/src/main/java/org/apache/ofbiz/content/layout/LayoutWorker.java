@@ -56,13 +56,13 @@ public final class LayoutWorker {
     public static Map<String, Object> uploadImageAndParameters(HttpServletRequest request, String uploadField) {
         Locale locale = UtilHttp.getLocale(request);
 
-        Map<String, Object> results = new HashMap<String, Object>();
-        Map<String, String> formInput = new HashMap<String, String>();
+        Map<String, Object> results = new HashMap<>();
+        Map<String, String> formInput = new HashMap<>();
         results.put("formInput", formInput);
         ServletFileUpload fu = new ServletFileUpload(new DiskFileItemFactory(10240, new File(new File("runtime"), "tmp")));
         List<FileItem> lst = null;
         try {
-           lst = UtilGenerics.checkList(fu.parseRequest(request));
+           lst = UtilGenerics.cast(fu.parseRequest(request));
         } catch (FileUploadException e4) {
             return ServiceUtil.returnError(e4.getMessage());
         }

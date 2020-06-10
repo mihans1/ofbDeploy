@@ -18,8 +18,7 @@
  *******************************************************************************/
 package org.apache.ofbiz.entityext.synchronization;
 
-import static org.apache.ofbiz.base.util.UtilGenerics.checkList;
-
+import static org.apache.ofbiz.base.util.UtilGenerics.checkCollection;
 import java.io.IOException;
 import java.net.URL;
 import java.sql.Timestamp;
@@ -240,14 +239,14 @@ public class EntitySyncServices {
             }
 
             Map<String, Object> result = ServiceUtil.returnSuccess();
-            result.put("toCreateInserted", Long.valueOf(toCreateInserted));
-            result.put("toCreateUpdated", Long.valueOf(toCreateUpdated));
-            result.put("toCreateNotUpdated", Long.valueOf(toCreateNotUpdated));
-            result.put("toStoreInserted", Long.valueOf(toStoreInserted));
-            result.put("toStoreUpdated", Long.valueOf(toStoreUpdated));
-            result.put("toStoreNotUpdated", Long.valueOf(toStoreNotUpdated));
-            result.put("toRemoveDeleted", Long.valueOf(toRemoveDeleted));
-            result.put("toRemoveAlreadyDeleted", Long.valueOf(toRemoveAlreadyDeleted));
+            result.put("toCreateInserted", toCreateInserted);
+            result.put("toCreateUpdated", toCreateUpdated);
+            result.put("toCreateNotUpdated", toCreateNotUpdated);
+            result.put("toStoreInserted", toStoreInserted);
+            result.put("toStoreUpdated", toStoreUpdated);
+            result.put("toStoreNotUpdated", toStoreNotUpdated);
+            result.put("toRemoveDeleted", toRemoveDeleted);
+            result.put("toRemoveAlreadyDeleted", toRemoveAlreadyDeleted);
             if (Debug.infoOn()) Debug.logInfo("Finisching storeEntitySyncData (" + entitySyncId + ") - [" + keysToRemove.size() + "] to remove. Actually removed: " + toRemoveDeleted  + " already removed: " + toRemoveAlreadyDeleted, module);
             return result;
         } catch (GenericEntityException e) {
@@ -290,7 +289,7 @@ public class EntitySyncServices {
             gotMoreData = false;
 
             // call pullAndReportEntitySyncData, initially with no results, then with results from last loop
-            Map<String, Object> remoteCallContext = new HashMap<String, Object>();
+            Map<String, Object> remoteCallContext = new HashMap<>();
             remoteCallContext.put("entitySyncId", entitySyncId);
             remoteCallContext.put("delegatorName", context.get("remoteDelegatorName"));
             remoteCallContext.put("userLogin", context.get("userLogin"));
@@ -325,11 +324,11 @@ public class EntitySyncServices {
                         gotMoreData = true;
 
                         // at least one of the is not empty, make sure none of them are null now too...
-                        List<GenericValue> valuesToCreate = checkList(result.get("valuesToCreate"), GenericValue.class);
+                        List<GenericValue> valuesToCreate = checkCollection(result.get("valuesToCreate"), GenericValue.class);
                         if (valuesToCreate == null) valuesToCreate = Collections.emptyList();
-                        List<GenericValue> valuesToStore = checkList(result.get("valuesToStore"), GenericValue.class);
+                        List<GenericValue> valuesToStore = checkCollection(result.get("valuesToStore"), GenericValue.class);
                         if (valuesToStore == null) valuesToStore = Collections.emptyList();
-                        List<GenericEntity> keysToRemove = checkList(result.get("keysToRemove"), GenericEntity.class);
+                        List<GenericEntity> keysToRemove = checkCollection(result.get("keysToRemove"), GenericEntity.class);
                         if (keysToRemove == null) keysToRemove = Collections.emptyList();
 
                         Map<String, Object> callLocalStoreContext = UtilMisc.toMap("entitySyncId", entitySyncId, "delegatorName", context.get("localDelegatorName"),
@@ -557,9 +556,9 @@ public class EntitySyncServices {
 
                     // de-serialize the value lists
                     try {
-                        List<GenericValue> valuesToCreate = checkList(XmlSerializer.deserialize(createString, delegator), GenericValue.class);
-                        List<GenericValue> valuesToStore = checkList(XmlSerializer.deserialize(storeString, delegator), GenericValue.class);
-                        List<GenericEntity> keysToRemove = checkList(XmlSerializer.deserialize(removeString, delegator), GenericEntity.class);
+                        List<GenericValue> valuesToCreate = checkCollection(XmlSerializer.deserialize(createString, delegator), GenericValue.class);
+                        List<GenericValue> valuesToStore = checkCollection(XmlSerializer.deserialize(storeString, delegator), GenericValue.class);
+                        List<GenericEntity> keysToRemove = checkCollection(XmlSerializer.deserialize(removeString, delegator), GenericEntity.class);
 
                         Map<String, Object> storeContext = UtilMisc.toMap("entitySyncId", entitySyncId, "valuesToCreate", valuesToCreate,
                                 "valuesToStore", valuesToStore, "keysToRemove", keysToRemove, "userLogin", userLogin);
@@ -609,7 +608,7 @@ public class EntitySyncServices {
             for (GenericValue entitySyncRemove: entitySyncRemoveList) {
                 Double curKrih = entitySyncRemove.getDouble("keepRemoveInfoHours");
                 if (curKrih != null) {
-                    double curKrihVal = curKrih.doubleValue();
+                    double curKrihVal = curKrih;
                     if (curKrihVal > keepRemoveInfoHours) {
                         keepRemoveInfoHours = curKrihVal;
                     }

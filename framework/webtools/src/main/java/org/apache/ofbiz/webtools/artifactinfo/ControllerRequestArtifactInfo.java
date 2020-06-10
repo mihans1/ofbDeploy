@@ -21,6 +21,7 @@ package org.apache.ofbiz.webtools.artifactinfo;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.TreeSet;
 
@@ -28,7 +29,6 @@ import org.apache.ofbiz.base.util.Debug;
 import org.apache.ofbiz.base.util.GeneralException;
 import org.apache.ofbiz.base.util.UtilGenerics;
 import org.apache.ofbiz.base.util.UtilMisc;
-import org.apache.ofbiz.base.util.UtilObject;
 import org.apache.ofbiz.base.util.UtilURL;
 import org.apache.ofbiz.webapp.control.ConfigXMLReader;
 
@@ -44,8 +44,8 @@ public class ControllerRequestArtifactInfo extends ArtifactInfoBase {
     protected ConfigXMLReader.RequestMap requestInfoMap;
 
     protected ServiceArtifactInfo serviceCalledByRequestEvent = null;
-    protected Set<ControllerRequestArtifactInfo> requestsThatAreResponsesToThisRequest = new TreeSet<ControllerRequestArtifactInfo>();
-    protected Set<ControllerViewArtifactInfo> viewsThatAreResponsesToThisRequest = new TreeSet<ControllerViewArtifactInfo>();
+    protected Set<ControllerRequestArtifactInfo> requestsThatAreResponsesToThisRequest = new TreeSet<>();
+    protected Set<ControllerViewArtifactInfo> viewsThatAreResponsesToThisRequest = new TreeSet<>();
 
     public ControllerRequestArtifactInfo(URL controllerXmlUrl, String requestUri, ArtifactInfoFactory aif) throws GeneralException {
         super(aif);
@@ -72,7 +72,7 @@ public class ControllerRequestArtifactInfo extends ArtifactInfoBase {
             }
         }
 
-        Map<String, ConfigXMLReader.RequestResponse> requestResponseMap = UtilGenerics.checkMap(this.requestInfoMap.requestResponseMap);
+        Map<String, ConfigXMLReader.RequestResponse> requestResponseMap = UtilGenerics.cast(this.requestInfoMap.requestResponseMap);
         for (ConfigXMLReader.RequestResponse response: requestResponseMap.values()) {
             if ("view".equals(response.type)) {
                 String viewUri = response.value;
@@ -154,7 +154,7 @@ public class ControllerRequestArtifactInfo extends ArtifactInfoBase {
     public boolean equals(Object obj) {
         if (obj instanceof ControllerRequestArtifactInfo) {
             ControllerRequestArtifactInfo that = (ControllerRequestArtifactInfo) obj;
-            return UtilObject.equalsHelper(this.controllerXmlUrl, that.controllerXmlUrl) && UtilObject.equalsHelper(this.requestUri, that.requestUri);
+            return Objects.equals(this.controllerXmlUrl, that.controllerXmlUrl) && Objects.equals(this.requestUri, that.requestUri);
         } else {
             return false;
         }

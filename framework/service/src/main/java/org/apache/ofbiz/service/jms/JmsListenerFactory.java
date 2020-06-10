@@ -46,10 +46,10 @@ public class JmsListenerFactory implements Runnable {
     public static final String TOPIC_LISTENER_CLASS = "org.apache.ofbiz.service.jms.JmsTopicListener";
     public static final String QUEUE_LISTENER_CLASS = "org.apache.ofbiz.service.jms.JmsQueueListener";
 
-    protected static Map<String, GenericMessageListener> listeners = new ConcurrentHashMap<String, GenericMessageListener>();
-    protected static Map<String, Server> servers = new ConcurrentHashMap<String, Server>();
+    protected static Map<String, GenericMessageListener> listeners = new ConcurrentHashMap<>();
+    protected static Map<String, Server> servers = new ConcurrentHashMap<>();
 
-    private static final AtomicReference<JmsListenerFactory> jlFactoryRef = new AtomicReference<JmsListenerFactory>(null);
+    private static final AtomicReference<JmsListenerFactory> jlFactoryRef = new AtomicReference<>(null);
 
     protected Delegator delegator;
     protected boolean firstPass = true;
@@ -76,6 +76,7 @@ public class JmsListenerFactory implements Runnable {
         thread.start();
     }
 
+    @Override
     public void run() {
         Debug.logInfo("Starting JMS Listener Factory Thread", module);
         while (firstPass || connected < loadable) {
@@ -88,7 +89,9 @@ public class JmsListenerFactory implements Runnable {
             firstPass = false;
             try {
                 Thread.sleep(20000);
-            } catch (InterruptedException ie) {}
+            } catch (InterruptedException ie) {
+                Debug.logError(ie, module);
+            }
             continue;
         }
         Debug.logInfo("JMS Listener Factory Thread Finished; All listeners connected.", module);

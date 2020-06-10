@@ -22,11 +22,11 @@ import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 
 import org.apache.ofbiz.base.util.Debug;
 import org.apache.ofbiz.base.util.UtilMisc;
-import org.apache.ofbiz.base.util.UtilValidate;
 import org.apache.ofbiz.base.util.UtilXml;
 import org.apache.ofbiz.service.DispatchContext;
 import org.apache.ofbiz.service.GenericServiceException;
@@ -44,8 +44,8 @@ public final class ServiceEcaRule implements java.io.Serializable {
     public final String eventName;
     public final boolean runOnFailure;
     public final boolean runOnError;
-    public final List<ServiceEcaCondition> conditions = new ArrayList<ServiceEcaCondition>();
-    public final List<Object> actionsAndSets = new ArrayList<Object>();
+    public final List<ServiceEcaCondition> conditions = new ArrayList<>();
+    public final List<Object> actionsAndSets = new ArrayList<>();
     public boolean enabled = true;
     public final String definitionLocation;
 
@@ -104,7 +104,7 @@ public final class ServiceEcaRule implements java.io.Serializable {
     }
 
     public List<ServiceEcaAction> getEcaActionList() {
-        List<ServiceEcaAction> actionList = new LinkedList<ServiceEcaAction>();
+        List<ServiceEcaAction> actionList = new LinkedList<>();
         for (Object actionOrSet: this.actionsAndSets) {
             if (actionOrSet instanceof ServiceEcaAction) {
                 actionList.add((ServiceEcaAction) actionOrSet);
@@ -114,7 +114,7 @@ public final class ServiceEcaRule implements java.io.Serializable {
     }
 
     public List<ServiceEcaCondition> getEcaConditionList() {
-        List<ServiceEcaCondition> condList = new LinkedList<ServiceEcaCondition>();
+        List<ServiceEcaCondition> condList = new LinkedList<>();
         condList.addAll(this.conditions);
         return condList;
     }
@@ -196,10 +196,10 @@ public final class ServiceEcaRule implements java.io.Serializable {
     public boolean equals(Object obj) {
         if (obj instanceof ServiceEcaRule) {
             ServiceEcaRule other = (ServiceEcaRule) obj;
-            if (!UtilValidate.areEqual(this.serviceName, other.serviceName)) {
+            if (!Objects.equals(this.serviceName, other.serviceName)) {
                 return false;
             }
-            if (!UtilValidate.areEqual(this.eventName, other.eventName)) {
+            if (!Objects.equals(this.eventName, other.eventName)) {
                 return false;
             }
             if (!this.conditions.equals(other.conditions)) {

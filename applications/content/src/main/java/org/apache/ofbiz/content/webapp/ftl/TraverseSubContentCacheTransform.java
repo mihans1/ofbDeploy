@@ -77,21 +77,22 @@ public class TraverseSubContentCacheTransform implements TemplateTransformModel 
         return FreeMarkerWorker.getArg(args, key, ctx);
     }
 
+    @Override
     @SuppressWarnings("unchecked")
-    public Writer getWriter(final Writer out, Map args) {
+    public Writer getWriter(final Writer out, @SuppressWarnings("rawtypes") Map args) {
         final StringBuilder buf = new StringBuilder();
         final Environment env = Environment.getCurrentEnvironment();
         final Map<String, Object> templateRoot = FreeMarkerWorker.createEnvironmentMap(env);
-        final Map<String, Object> savedValuesUp = new HashMap<String, Object>();
+        final Map<String, Object> savedValuesUp = new HashMap<>();
         FreeMarkerWorker.saveContextValues(templateRoot, upSaveKeyNames, savedValuesUp);
-        final Map<String, Object> savedValues = new HashMap<String, Object>();
+        final Map<String, Object> savedValues = new HashMap<>();
         FreeMarkerWorker.overrideWithArgs(templateRoot, args);
         String startContentAssocTypeId = (String)templateRoot.get("contentAssocTypeId");
         final Delegator delegator = FreeMarkerWorker.getWrappedObject("delegator", env);
         final HttpServletRequest request = FreeMarkerWorker.getWrappedObject("request", env);
         FreeMarkerWorker.getSiteParameters(request, templateRoot);
         final GenericValue userLogin = FreeMarkerWorker.getWrappedObject("userLogin", env);
-        List<Map<String, ? extends Object>> globalNodeTrail = UtilGenerics.checkList(templateRoot.get("globalNodeTrail"));
+        List<Map<String, ? extends Object>> globalNodeTrail = UtilGenerics.cast(templateRoot.get("globalNodeTrail"));
         String strNullThruDatesOnly = (String)templateRoot.get("nullThruDatesOnly");
         String contentAssocPredicateId = (String)templateRoot.get("contentAssocPredicateId");
         Boolean nullThruDatesOnly = (strNullThruDatesOnly != null && "true".equalsIgnoreCase(strNullThruDatesOnly)) ? Boolean.TRUE :Boolean.FALSE;
@@ -104,9 +105,9 @@ public class TraverseSubContentCacheTransform implements TemplateTransformModel 
             throw new RuntimeException("Error getting current content. " + e.toString());
         }
 
-        final Map<String, Object> traverseContext = new HashMap<String, Object>();
+        final Map<String, Object> traverseContext = new HashMap<>();
         traverseContext.put("delegator", delegator);
-        Map<String, Object> whenMap = new HashMap<String, Object>();
+        Map<String, Object> whenMap = new HashMap<>();
         whenMap.put("followWhen", templateRoot.get("followWhen"));
         whenMap.put("pickWhen", templateRoot.get("pickWhen"));
         whenMap.put("returnBeforePickWhen", templateRoot.get("returnBeforePickWhen"));
@@ -148,14 +149,14 @@ public class TraverseSubContentCacheTransform implements TemplateTransformModel 
             public int onStart() throws TemplateModelException, IOException {
                 List<Map<String, ? extends Object>> nodeTrail = null;
                 Map<String, Object> node = null;
-                List<Map<String, ? extends Object>> globalNodeTrail = UtilGenerics.checkList(templateRoot.get("globalNodeTrail"));
+                List<Map<String, ? extends Object>> globalNodeTrail = UtilGenerics.cast(templateRoot.get("globalNodeTrail"));
                 if (globalNodeTrail.size() > 0) {
                     int sz = globalNodeTrail.size() ;
-                    nodeTrail = new LinkedList<Map<String,? extends Object>>();
-                    node = UtilGenerics.checkMap(globalNodeTrail.get(sz - 1));
+                    nodeTrail = new LinkedList<>();
+                    node = UtilGenerics.cast(globalNodeTrail.get(sz - 1));
                     Boolean checkedObj = (Boolean)node.get("checked");
-                    Map<String, Object> whenMap = UtilGenerics.checkMap(templateRoot.get("whenMap"));
-                    if (checkedObj == null || !checkedObj.booleanValue()) {
+                    Map<String, Object> whenMap = UtilGenerics.cast(templateRoot.get("whenMap"));
+                    if (checkedObj == null || !checkedObj) {
                         ContentWorker.checkConditions(delegator, node, null, whenMap);
                     }
                 } else {
@@ -163,7 +164,7 @@ public class TraverseSubContentCacheTransform implements TemplateTransformModel 
                 }
 
                 Boolean isReturnBeforePickBool = (Boolean)node.get("isReturnBeforePick");
-                if (isReturnBeforePickBool != null && isReturnBeforePickBool.booleanValue()) {
+                if (isReturnBeforePickBool != null && isReturnBeforePickBool) {
                     return TransformControl.SKIP_BODY;
                 }   
 
@@ -173,8 +174,8 @@ public class TraverseSubContentCacheTransform implements TemplateTransformModel 
                 Boolean isPickBool = (Boolean)node.get("isPick");
                 Boolean isFollowBool = (Boolean)node.get("isFollow");
                 boolean isPick = true;
-                if ((isPickBool == null || !isPickBool.booleanValue())
-                   && (isFollowBool != null && isFollowBool.booleanValue())) {
+                if ((isPickBool == null || !isPickBool)
+                   && (isFollowBool != null && isFollowBool)) {
                     isPick = ContentWorker.traverseSubContent(traverseContext);
                 }
                 if (isPick) {
@@ -207,7 +208,7 @@ public class TraverseSubContentCacheTransform implements TemplateTransformModel 
             }
 
             public void populateContext(Map<String, Object> traverseContext, Map<String, Object> templateContext) {
-                List<Map<String, ? extends Object>> nodeTrail = UtilGenerics.checkList(traverseContext.get("nodeTrail"));
+                List<Map<String, ? extends Object>> nodeTrail = UtilGenerics.cast(traverseContext.get("nodeTrail"));
                 int sz = nodeTrail.size();
                 Map<String, ? extends Object> node = nodeTrail.get(sz - 1);
                 GenericValue content = (GenericValue)node.get("value");
@@ -219,7 +220,7 @@ public class TraverseSubContentCacheTransform implements TemplateTransformModel 
                 String mapKey = (String)node.get("mapKey");
                 envWrap("mapKey", mapKey);
                 envWrap("subContentDataResourceView", null);
-                List<Map<String, ? extends Object>> globalNodeTrail = UtilGenerics.checkList(templateContext.get("nodeTrail"));
+                List<Map<String, ? extends Object>> globalNodeTrail = UtilGenerics.cast(templateContext.get("nodeTrail"));
                 String contentIdEnd = null;
                 String contentIdStart = null;
                 if (globalNodeTrail != null) {
@@ -228,7 +229,7 @@ public class TraverseSubContentCacheTransform implements TemplateTransformModel 
                     Map<String, ? extends Object> ndStart = nodeTrail.get(0);
                     contentIdStart = (String)ndStart.get("contentId");
                 } else {
-                    globalNodeTrail = new LinkedList<Map<String,? extends Object>>();
+                    globalNodeTrail = new LinkedList<>();
                     contentIdStart = "";
                 }
                 boolean bIdEnd = UtilValidate.isNotEmpty(contentIdEnd);
@@ -241,7 +242,7 @@ public class TraverseSubContentCacheTransform implements TemplateTransformModel 
                     globalNodeTrail.addAll(nodeTrail);
                 }
                 int indentSz = globalNodeTrail.size();
-                envWrap("indent", Integer.valueOf(indentSz));
+                envWrap("indent", indentSz);
                 String trailCsv = ContentWorker.nodeTrailToCsv(globalNodeTrail);
                 envWrap("nodeTrailCsv", trailCsv);
                 envWrap("globalNodeTrail", globalNodeTrail);

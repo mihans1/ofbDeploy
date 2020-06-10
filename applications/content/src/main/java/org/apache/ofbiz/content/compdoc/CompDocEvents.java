@@ -43,7 +43,6 @@ import org.apache.ofbiz.entity.util.EntityQuery;
 import org.apache.ofbiz.service.GenericServiceException;
 import org.apache.ofbiz.service.LocalDispatcher;
 import org.apache.ofbiz.service.ModelService;
-import org.apache.ofbiz.service.ServiceAuthException;
 import org.apache.ofbiz.service.ServiceUtil;
 import org.apache.ofbiz.webapp.event.CoreEvents;
 import org.apache.ofbiz.webapp.website.WebSiteWorker;
@@ -101,6 +100,12 @@ public class CompDocEvents {
         persistMap.put("userLogin", userLogin);
         try {
             Map<String, Object> persistResult = dispatcher.runSync("persistContentAndAssoc", persistMap);
+            if (ServiceUtil.isError(persistResult)) {
+                String errMsg = "Error running serviceName, 'persistContentAndAssoc'. " + ServiceUtil.getErrorMessage(persistResult);
+                request.setAttribute("_ERROR_MESSAGE_",  "<li>" + errMsg + "</li>");
+                Debug.logError(errMsg, module);
+                return "error";
+            }
             contentId = (String)persistResult.get("contentId");
             //request.setAttribute("contentId", contentId);
             for (Entry<String, Object> entry : persistResult.entrySet()) {
@@ -109,24 +114,22 @@ public class CompDocEvents {
                 request.setAttribute(obj.toString(), val);
             }
             // Update ContentRevision and ContentRevisonItem
-            Map<String, Object> contentRevisionMap = new HashMap<String, Object>();
+            Map<String, Object> contentRevisionMap = new HashMap<>();
             contentRevisionMap.put("itemContentId", contentId);
             contentRevisionMap.put("contentId", contentId);
             contentRevisionMap.put("userLogin", userLogin);
             Map<String, Object> result = dispatcher.runSync("persistContentRevisionAndItem", contentRevisionMap);
+            if (ServiceUtil.isError(result)) {
+                String errMsg = "Error running serviceName, 'persistContentRevisionAndItem'. " + ServiceUtil.getErrorMessage(result);
+                request.setAttribute("_ERROR_MESSAGE_",  "<li>" + errMsg + "</li>");
+                Debug.logError(errMsg, module);
+                return "error";
+            }
             for (Entry<String, Object> entry : result.entrySet()) {
                 Object obj = entry.getValue();
                 Object val = result.get(obj);
                 request.setAttribute(obj.toString(), val);
             }
-            String errorMsg = ServiceUtil.getErrorMessage(result);
-            if (UtilValidate.isNotEmpty(errorMsg)) {
-                String errMsg = "Error running serviceName, 'persistContentRevisionAndItem'. " + errorMsg;
-                Debug.logError(errMsg, module);
-                request.setAttribute("_ERROR_MESSAGE_", "<li>" + errMsg + "</li>");
-                return "error";
-            }
-
         } catch (GenericServiceException e) {
             String errMsg = "Error running serviceName, 'persistContentAndAssoc'. " + e.toString();
             Debug.logError(errMsg, module);
@@ -137,7 +140,7 @@ public class CompDocEvents {
     }
 
     public static String padNumberWithLeadingZeros(Long num, Integer padLen) {
-        String s = UtilFormatOut.formatPaddedNumber(num.longValue(), padLen.intValue());
+        String s = UtilFormatOut.formatPaddedNumber(num, padLen);
         return s;
     }
 
@@ -155,7 +158,7 @@ public class CompDocEvents {
         String rootDir = servletContext.getRealPath("/");
         String https = (String) servletContext.getAttribute("https");
 
-        Map<String, Object> mapIn = new HashMap<String, Object>();
+        Map<String, Object> mapIn = new HashMap<>();
         mapIn.put("contentId", contentId);
         mapIn.put("locale", locale);
         mapIn.put("rootDir", rootDir);
@@ -166,19 +169,14 @@ public class CompDocEvents {
         Map<String, Object> results = null;
         try {
             results = dispatcher.runSync("renderCompDocPdf", mapIn);
-        } catch (ServiceAuthException e) {
-            request.setAttribute("_ERROR_MESSAGE_", e.toString());
-            return "error";
+            if (ServiceUtil.isError(results)) {
+                String errorMessage = ServiceUtil.getErrorMessage(results);
+                request.setAttribute("_ERROR_MESSAGE_", errorMessage);
+                Debug.logError(errorMessage, module);
+                return "error";
+            }
         } catch (GenericServiceException e) {
             request.setAttribute("_ERROR_MESSAGE_", e.toString());
-            return "error";
-        } catch (Exception e) {
-            request.setAttribute("_ERROR_MESSAGE_", e.toString());
-            return "error";
-        }
-
-        if (ServiceUtil.isError(results)) {
-            request.setAttribute("_ERROR_MESSAGE_", ServiceUtil.getErrorMessage(results));
             return "error";
         }
 
@@ -187,9 +185,7 @@ public class CompDocEvents {
         // setup content type
         String contentType = "application/pdf; charset=ISO-8859-1";
 
-        ByteArrayInputStream bais = new ByteArrayInputStream(outByteBuffer.array());
-
-        try {
+        try (ByteArrayInputStream bais = new ByteArrayInputStream(outByteBuffer.array())) {
             UtilHttp.streamContentToBrowser(response, bais, outByteBuffer.limit(), contentType);
         } catch (IOException e) {
             request.setAttribute("_ERROR_MESSAGE_", e.toString());
@@ -211,7 +207,7 @@ public class CompDocEvents {
         String rootDir = servletContext.getRealPath("/");
         String https = (String) servletContext.getAttribute("https");
 
-        Map<String, Object> mapIn = new HashMap<String, Object>();
+        Map<String, Object> mapIn = new HashMap<>();
         mapIn.put("contentId", contentId);
         mapIn.put("locale", locale);
         mapIn.put("rootDir", rootDir);
@@ -222,19 +218,14 @@ public class CompDocEvents {
         Map<String, Object> results = null;
         try {
             results = dispatcher.runSync("renderContentPdf", mapIn);
-        } catch (ServiceAuthException e) {
-            request.setAttribute("_ERROR_MESSAGE_", e.toString());
-            return "error";
+            if (ServiceUtil.isError(results)) {
+                String errorMessage = ServiceUtil.getErrorMessage(results);
+                request.setAttribute("_ERROR_MESSAGE_", errorMessage);
+                Debug.logError(errorMessage, module);
+                return "error";
+            }
         } catch (GenericServiceException e) {
             request.setAttribute("_ERROR_MESSAGE_", e.toString());
-            return "error";
-        } catch (Exception e) {
-            request.setAttribute("_ERROR_MESSAGE_", e.toString());
-            return "error";
-        }
-
-        if (ServiceUtil.isError(results)) {
-            request.setAttribute("_ERROR_MESSAGE_", ServiceUtil.getErrorMessage(results));
             return "error";
         }
 
@@ -243,9 +234,7 @@ public class CompDocEvents {
         // setup content type
         String contentType = "application/pdf; charset=ISO-8859-1";
 
-        ByteArrayInputStream bais = new ByteArrayInputStream(outByteBuffer.array());
-
-        try {
+        try (ByteArrayInputStream bais = new ByteArrayInputStream(outByteBuffer.array())) {
             UtilHttp.streamContentToBrowser(response, bais, outByteBuffer.limit(), contentType);
         } catch (IOException e) {
             request.setAttribute("_ERROR_MESSAGE_", e.toString());

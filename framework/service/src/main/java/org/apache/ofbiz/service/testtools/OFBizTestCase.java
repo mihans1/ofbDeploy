@@ -19,7 +19,10 @@
 
 package org.apache.ofbiz.service.testtools;
 
+import org.apache.ofbiz.entity.GenericEntityException;
+import org.apache.ofbiz.entity.GenericValue;
 import org.apache.ofbiz.entity.testtools.EntityTestCase;
+import org.apache.ofbiz.entity.util.EntityQuery;
 import org.apache.ofbiz.service.LocalDispatcher;
 
 public class OFBizTestCase extends EntityTestCase {
@@ -36,5 +39,18 @@ public class OFBizTestCase extends EntityTestCase {
 
     public void setDispatcher(LocalDispatcher dispatcher) {
         this.dispatcher = dispatcher;
+    }
+
+    // Retrieves a particular login record.
+    protected GenericValue getUserLogin(String userLoginId) throws GenericEntityException {
+        return EntityQuery.use(delegator)
+                .from("UserLogin")
+                .where("userLoginId", userLoginId)
+                .queryOne();
+    }
+
+    // Retrieves the default login record.
+    protected GenericValue getUserLogin() throws GenericEntityException {
+        return getUserLogin("system");
     }
 }

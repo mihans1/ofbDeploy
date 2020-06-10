@@ -58,6 +58,7 @@ import org.w3c.dom.Element;
  * An object that models the <code>&lt;entity&gt;</code> element.
  *
  */
+@SuppressWarnings("serial")
 public class ModelEntity implements Comparable<ModelEntity>, Serializable {
 
     public static final String module = ModelEntity.class.getName();
@@ -675,7 +676,7 @@ public class ModelEntity implements Comparable<ModelEntity>, Serializable {
         return getFieldNamesFromFieldVector(getNopksCopy());
     }
 
-    private List<String> getFieldNamesFromFieldVector(List<ModelField> modelFields) {
+    private static List<String> getFieldNamesFromFieldVector(List<ModelField> modelFields) {
         List<String> nameList = new ArrayList<>(modelFields.size());
         for (ModelField field: modelFields) {
             nameList.add(field.getName());
@@ -1301,6 +1302,7 @@ public class ModelEntity implements Comparable<ModelEntity>, Serializable {
         return returnString.toString();
     }
 
+    @Override
     public int compareTo(ModelEntity otherModelEntity) {
 
         /* This DOESN'T WORK, so forget it... using two passes
@@ -1375,7 +1377,7 @@ public class ModelEntity implements Comparable<ModelEntity>, Serializable {
             throw new IllegalArgumentException(errMsg);
         }
         try {
-            return ObjectType.simpleTypeConvert(value, fieldJavaType, null, null, false);
+            return ObjectType.simpleTypeOrObjectConvert(value, fieldJavaType, null, null, false);
         } catch (GeneralException e) {
             String errMsg = "Could not convert field value for the field: [" + modelField.getName() + "] on the [" + this.getEntityName() + "] entity to the [" + fieldJavaType + "] type for the value [" + value + "]: " + e.toString();
             Debug.logError(e, errMsg, module);
@@ -1403,7 +1405,7 @@ public class ModelEntity implements Comparable<ModelEntity>, Serializable {
         }
         String fieldJavaType = modelFieldTypeReader.getModelFieldType(modelField.getType()).getJavaType();
         try {
-            return ObjectType.simpleTypeConvert(value, fieldJavaType, null, (TimeZone) context.get("timeZone"), (Locale) context.get("locale"), true);
+            return ObjectType.simpleTypeOrObjectConvert(value, fieldJavaType, null, (TimeZone) context.get("timeZone"), (Locale) context.get("locale"), true);
         } catch (GeneralException e) {
             String errMsg = "Could not convert field value for the field: [" + modelField.getName() + "] on the [" + this.getEntityName() + "] entity to the [" + fieldJavaType + "] type for the value [" + value + "]: " + e.toString();
             Debug.logError(e, errMsg, module);

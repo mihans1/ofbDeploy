@@ -16,7 +16,7 @@ KIND, either express or implied.  See the License for the
 specific language governing permissions and limitations
 under the License.
 -->
-<script language="JavaScript" type="text/javascript">
+<script type="application/javascript">
 function insertNowTimestamp(field) {
   eval('document.productForm.' + field + '.value="${nowTimestamp?string}";');
 }
@@ -67,7 +67,7 @@ function insertImageName(size,nameValue) {
               <input name="fromDate" type="hidden" value="${productContent.fromDate}"/>
               <input type="submit" value="${uiLabelMap.CommonDelete}"/>
             </form>
-            <td><a href="/content/control/EditContent?contentId=${productContent.contentId}&amp;externalLoginKey=${requestAttributes.externalLoginKey!}" class="buttontext">${uiLabelMap.ProductEditContent} ${entry.content.contentId}</td>
+            <td><a href="<@ofbizUrl controlPath="/content/control">EditContent?contentId=${productContent.contentId}&amp;externalLoginKey=${requestAttributes.externalLoginKey!}</@ofbizUrl>" class="buttontext">${uiLabelMap.ProductEditContent} ${entry.content.contentId}</td>
          </tr>
          <#-- toggle the row color -->
          <#if "2" == rowClass>

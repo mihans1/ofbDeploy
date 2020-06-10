@@ -21,7 +21,6 @@ package org.apache.ofbiz.base.util;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.ObjectOutputStream;
 import java.lang.reflect.Array;
 import java.util.Iterator;
@@ -40,21 +39,6 @@ public final class UtilObject {
     }
 
     public static final String module = UtilObject.class.getName();
-
-    public static byte[] getBytes(InputStream is) {
-        byte[] buffer = new byte[4 * 1024];
-        byte[] data = null;
-        try (ByteArrayOutputStream bos = new ByteArrayOutputStream()){
-            int numBytesRead;
-            while ((numBytesRead = is.read(buffer)) != -1) {
-                bos.write(buffer, 0, numBytesRead);
-            }
-            data = bos.toByteArray();
-        } catch (IOException e) {
-            Debug.logError(e, module);
-        }
-        return data;
-    }
 
     /** Serialize an object to a byte array */
     public static byte[] getBytes(Object obj) {
@@ -111,32 +95,6 @@ public final class UtilObject {
         try (ByteArrayInputStream bis = new ByteArrayInputStream(bytes);
                 SafeObjectInputStream wois = new SafeObjectInputStream(bis)) {
             return wois.readObject();
-        }
-    }
-
-    public static boolean equalsHelper(Object o1, Object o2) {
-        if (o1 == o2) {
-            // handles same-reference, or null
-            return true;
-        } else if (o1 == null || o2 == null) {
-            // either o1 or o2 is null, but not both
-            return false;
-        } else {
-            return o1.equals(o2);
-        }
-    }
-
-    public static <T> int compareToHelper(Comparable<T> o1, T o2) {
-        if (o1 == o2) {
-            // handles same-reference, or null
-            return 0;
-        } else if (o1 == null) {
-            return -1;
-        } else if (o2 == null) {
-            // either o1 or o2 is null, but not both
-            return 1;
-        } else {
-            return o1.compareTo(o2);
         }
     }
 

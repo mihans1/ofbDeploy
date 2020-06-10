@@ -21,15 +21,15 @@ under the License.
 <#if (externalLoginKey)?exists><#assign externalKeyParam = "?externalLoginKey=" + requestAttributes.externalLoginKey?if_exists></#if>
 <#assign ofbizServerName = application.getAttribute("_serverId")?default("default-server")>
 <#assign contextPath = request.getContextPath()>
-<#assign displayApps = Static["org.apache.ofbiz.base.component.ComponentConfig"].getAppBarWebInfos(ofbizServerName, "main")>
-<#assign displaySecondaryApps = Static["org.apache.ofbiz.base.component.ComponentConfig"].getAppBarWebInfos(ofbizServerName, "secondary")>
+<#assign displayApps = Static["org.apache.ofbiz.webapp.WebAppCache"].getShared().getAppBarWebInfos(ofbizServerName, "main")>
+<#assign displaySecondaryApps = Static["org.apache.ofbiz.webapp.WebAppCache"].getShared().getAppBarWebInfos(ofbizServerName, "secondary")>
 <#assign avatarList = EntityQuery.use(delegator).from("PartyContent").where("partyId", person.partyId!, "partyContentTypeId", "LGOIMGURL").queryList()!>
 <#if avatarList?has_content>
     <#assign avatar = Static["org.apache.ofbiz.entity.util.EntityUtil"].getFirst(avatarList)>
     <#assign avatarDetail = EntityQuery.use(delegator).from("PartyContentDetail").where("partyId", person.partyId!, "contentId", avatar.contentId!).queryFirst()!>
 </#if>
 <body onpageshow="showHideFavorites()">
-<script type="text/javascript">
+<script type="application/javascript">
     function showHideFavorites() {
         var showHideStatus = document.getElementById("showHideBtn");
         var normalItems = document.getElementsByClassName("normalItem");

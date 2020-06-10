@@ -27,7 +27,9 @@ import java.io.RandomAccessFile;
 import java.io.StringWriter;
 import java.io.Writer;
 import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 import java.sql.Timestamp;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
@@ -36,7 +38,6 @@ import org.apache.ofbiz.base.util.Debug;
 import org.apache.ofbiz.base.util.GeneralException;
 import org.apache.ofbiz.base.util.UtilDateTime;
 import org.apache.ofbiz.base.util.UtilGenerics;
-import org.apache.ofbiz.base.util.UtilIO;
 import org.apache.ofbiz.base.util.UtilMisc;
 import org.apache.ofbiz.base.util.UtilProperties;
 import org.apache.ofbiz.base.util.UtilValidate;
@@ -48,8 +49,6 @@ import org.apache.ofbiz.service.DispatchContext;
 import org.apache.ofbiz.service.GenericServiceException;
 import org.apache.ofbiz.service.ModelService;
 import org.apache.ofbiz.service.ServiceUtil;
-
-import edu.emory.mathcs.backport.java.util.Arrays;
 
 /**
  * DataServices Class
@@ -245,7 +244,7 @@ public class DataServices {
         // write the data to the file
         if (UtilValidate.isNotEmpty(textData)) {
             try (
-                OutputStreamWriter out = new OutputStreamWriter(new FileOutputStream(file), UtilIO.getUtf8());
+                OutputStreamWriter out = new OutputStreamWriter(new FileOutputStream(file), StandardCharsets.UTF_8);
             ) {
                 out.write(textData);
             } catch (IOException e) {
@@ -434,7 +433,7 @@ public class DataServices {
             // write the data to the file
             if (UtilValidate.isNotEmpty(textData)) {
                 try (
-                        OutputStreamWriter out = new OutputStreamWriter(new FileOutputStream(file),UtilIO.getUtf8());
+                        OutputStreamWriter out = new OutputStreamWriter(new FileOutputStream(file),StandardCharsets.UTF_8);
                 ) {
                     out.write(textData);
                 } catch (IOException e) {
@@ -470,7 +469,7 @@ public class DataServices {
         Map<String, Object> results = new HashMap<>();
         //LocalDispatcher dispatcher = dctx.getDispatcher();
         Writer out = (Writer) context.get("outWriter");
-        Map<String, Object> templateContext = UtilGenerics.checkMap(context.get("templateContext"));
+        Map<String, Object> templateContext = UtilGenerics.cast(context.get("templateContext"));
         //GenericValue userLogin = (GenericValue) context.get("userLogin");
         String dataResourceId = (String) context.get("dataResourceId");
         if (templateContext != null && UtilValidate.isEmpty(dataResourceId)) {
@@ -663,7 +662,6 @@ public class DataServices {
                 if (Debug.infoOn()) {
                     Debug.logInfo("in updateBinaryFileMethod, length:" + file.length(), module);
                 }
-                out.close();
             } catch (IOException e) {
                 Debug.logWarning(e, module);
                 throw new GenericServiceException(e.getMessage());

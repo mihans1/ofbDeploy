@@ -218,7 +218,7 @@ under the License.
         </field>
         <field name="workEffortId" title="${uiLabelMap.OrderOrderQuoteWorkEffortId}"></field>
         <field name="quantity" title="${uiLabelMap.CommonQuantity}"></field>
-        <field name="quoteUnitPrice" title="${uiLabelMap.OrderOrderQuoteUnitPrice}"></field>
+        <field name="quoteUnitPrice" title="${uiLabelMap.OrderOrderQuoteUnitPrice}"><display type="number" format="amount"/></field>
         <field name="estimatedDeliveryDate" title="${uiLabelMap.OrderOrderQuoteEstimatedDeliveryDate}"></field>
         <field name="productFeatureId"><hidden/></field>
         <field name="skillTypeId"><hidden/></field>
@@ -227,7 +227,7 @@ under the License.
         <field name="leadTimeDays"></field>
         <field name="uomId"><hidden/></field>
         <!--<field name="custRequestId"><display description="${custRequestId} - ${custRequestItemSeqId}"/></field>-->
-        <field name="custRequestId" title="${uiLabelMap.CommonViewRequest}" widget-style="buttontext">
+        <field name="custRequestId" use-when="custRequestId!=null" title="${uiLabelMap.CommonViewRequest}" widget-style="buttontext">
             <hyperlink description="${custRequestId}-${custRequestItemSeqId}" target="requestitem" also-hidden="false">
                 <parameter param-name="custRequestId"/>
                 <parameter param-name="custRequestItemSeqId"/>
@@ -273,8 +273,8 @@ under the License.
             </drop-down>
         </field>
         <field name="workEffortId" title="${uiLabelMap.OrderOrderQuoteWorkEffortId}"></field>
-        <field name="quantity" title="${uiLabelMap.CommonQuantity}"></field>
-        <field name="quoteUnitPrice" title="${uiLabelMap.OrderOrderQuoteUnitPrice}"></field>
+        <field name="quantity" title="${uiLabelMap.CommonQuantity}"><display type="number" format="quantity"/></field>
+        <field name="quoteUnitPrice" title="${uiLabelMap.OrderOrderQuoteUnitPrice}"><display type="number" format="amount"/></field>
         <field name="estimatedDeliveryDate" title="${uiLabelMap.OrderOrderQuoteEstimatedDeliveryDate}"></field>
         <field name="comments" title="${uiLabelMap.CommonComments}"></field>
         <!--
@@ -364,14 +364,14 @@ under the License.
         <field name="productId" title="${uiLabelMap.ProductProductId}">
             <display-entity entity-name="Product" key-field-name="productId" description="${productId} - ${internalName}"/>
         </field>
-        <field name="quantity" title="${uiLabelMap.CommonQuantity}"><display/></field>
-        <field name="averageCost" title="${uiLabelMap.OrderOrderQuoteAverageCost}"><display/></field>
-        <field name="costToPriceMult" title="${uiLabelMap.OrderOrderQuoteCostToPrice}"><display/></field>
-        <field name="defaultQuoteUnitPrice" title="${uiLabelMap.OrderOrderQuoteDefaultUnitPrice}"><display/></field>
-        <field name="quoteUnitPrice" title="${uiLabelMap.OrderOrderQuoteUnitPrice}"><display/></field>
+        <field name="quantity" title="${uiLabelMap.CommonQuantity}"><display type="number" format="quantity"/></field>
+        <field name="averageCost" title="${uiLabelMap.OrderOrderQuoteAverageCost}"><display type="number" format="amount"/></field>
+        <field name="costToPriceMult" title="${uiLabelMap.OrderOrderQuoteCostToPrice}"><display type="number" format="amount"/></field>
+        <field name="defaultQuoteUnitPrice" title="${uiLabelMap.OrderOrderQuoteDefaultUnitPrice}"><display type="number" format="amount"/></field>
+        <field name="quoteUnitPrice" title="${uiLabelMap.OrderOrderQuoteUnitPrice}"><display type="number" format="amount"/></field>
         <field name="manualQuoteUnitPrice" title="${uiLabelMap.OrderOrderQuoteManualUnitPrice}"><text/></field>
         <field name="_rowSubmit" title="${uiLabelMap.CommonSelected}"><check/></field>
-        <field name="submitButton" title="${uiLabelMap.CommonSubmit}" widget-style="smallSubmit"><submit/></field>
+        <field name="submitButton" title="${uiLabelMap.CommonSubmit}" use-when="quoteItemAndCostInfos!=[]" widget-style="smallSubmit"><submit/></field>
     </form>
     <form name="ListQuoteAdjustments" target="" title="" type="list" list-name="quoteAdjustments"
         odd-row-style="alternate-row" default-table-style="basic-table hover-bar" paginate-target="ListQuoteAdjustments">
@@ -453,9 +453,9 @@ under the License.
         <field name="productId" title="${uiLabelMap.ProductProductId}">
             <display-entity entity-name="Product" key-field-name="productId" description="${productId} - ${internalName}"/>
         </field>
-        <field name="quantity" title="${uiLabelMap.CommonQuantity}"><display/></field>
+        <field name="quantity" title="${uiLabelMap.CommonQuantity}"><display type="number" format="quantity"/></field>
         <field name="averageCost" title="${uiLabelMap.OrderOrderQuoteAverageCost}"><display/></field>
-        <field name="quoteUnitPrice" title="${uiLabelMap.OrderOrderQuoteUnitPrice}"><display/></field>
+        <field name="quoteUnitPrice" title="${uiLabelMap.OrderOrderQuoteUnitPrice}"><display type="number" format="amount"/></field>
         <field name="profit" title="${uiLabelMap.OrderOrderQuoteProfit}"><display/></field>
         <field name="percProfit" title="${uiLabelMap.OrderOrderQuotePercProfit}"><display/></field>
     </form>

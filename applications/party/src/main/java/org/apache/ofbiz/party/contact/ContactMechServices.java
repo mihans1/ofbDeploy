@@ -19,6 +19,7 @@
 
 package org.apache.ofbiz.party.contact;
 
+import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
 import java.sql.Timestamp;
 import java.util.Date;
@@ -33,7 +34,6 @@ import org.apache.ofbiz.base.crypto.HashCrypt;
 import org.apache.ofbiz.base.util.Debug;
 import org.apache.ofbiz.base.util.UtilDateTime;
 import org.apache.ofbiz.base.util.UtilGenerics;
-import org.apache.ofbiz.base.util.UtilIO;
 import org.apache.ofbiz.base.util.UtilMisc;
 import org.apache.ofbiz.base.util.UtilProperties;
 import org.apache.ofbiz.base.util.UtilValidate;
@@ -157,7 +157,7 @@ public class ContactMechServices {
         }
 
         String contactMechId = (String) context.get("contactMechId");
-        GenericValue contactMech = null;
+        GenericValue contactMech;
         GenericValue partyContactMech = null;
 
         try {
@@ -427,7 +427,7 @@ public class ContactMechServices {
         }
 
         String contactMechId = (String) context.get("contactMechId");
-        GenericValue contactMech = null;
+        GenericValue contactMech;
         GenericValue partyContactMech = null;
 
         try {
@@ -469,8 +469,7 @@ public class ContactMechServices {
         GenericValue relatedEntityToSet = null;
 
         if ("POSTAL_ADDRESS".equals(contactMech.getString("contactMechTypeId"))) {
-            GenericValue addr = null;
-
+            GenericValue addr;
             try {
                 addr = EntityQuery.use(delegator).from("PostalAddress").where("contactMechId", contactMechId).queryOne();
             } catch (GenericEntityException e) {
@@ -669,7 +668,6 @@ public class ContactMechServices {
         } catch (GenericEntityException e) {
             Debug.logWarning(e.getMessage(), module);
             contactMech = null;
-            partyContactMech = null;
         }
         if (contactMech == null) {
             return ServiceUtil.returnError(UtilProperties.getMessage(resourceError,
@@ -687,8 +685,7 @@ public class ContactMechServices {
         GenericValue relatedEntityToSet = null;
 
         if ("TELECOM_NUMBER".equals(contactMech.getString("contactMechTypeId"))) {
-            GenericValue telNum = null;
-
+            GenericValue telNum;
             try {
                 telNum = EntityQuery.use(delegator).from("TelecomNumber").where("contactMechId", contactMechId).queryOne();
             } catch (GenericEntityException e) {
@@ -834,7 +831,7 @@ public class ContactMechServices {
         String contactMechPurposeTypeId = (String) context.get("contactMechPurposeTypeId");
         Timestamp fromDate = (Timestamp) context.get("fromDate");
 
-        GenericValue tempVal = null;
+        GenericValue tempVal;
         try {
             tempVal = EntityQuery.use(delegator).from("PartyContactWithPurpose")
                     .where("partyId", partyId, "contactMechId", contactMechId, "contactMechPurposeTypeId", contactMechPurposeTypeId)
@@ -875,109 +872,6 @@ public class ContactMechServices {
         return result;
     }
 
-    public static Map<String, Object> deletePartyContactMechPurposeIfExists(DispatchContext ctx, Map<String, ? extends Object> context) {
-        Map<String, Object> result = new HashMap<>();
-        Delegator delegator = ctx.getDelegator();
-        Security security = ctx.getSecurity();
-        GenericValue userLogin = (GenericValue) context.get("userLogin");
-        Locale locale = (Locale) context.get("locale");
-
-        String partyId = ServiceUtil.getPartyIdCheckSecurity(userLogin, security, context, result, "PARTYMGR", "_PCM_DELETE");
-
-        if (result.size() > 0) {
-            return result;
-        }
-
-        // required parameters
-        String contactMechId = (String) context.get("contactMechId");
-        String contactMechPurposeTypeId = (String) context.get("contactMechPurposeTypeId");
-
-        GenericValue tempVal = null;
-        try {
-            tempVal = EntityQuery.use(delegator).from("PartyContactWithPurpose")
-                    .where("partyId", partyId, "contactMechId", contactMechId, "contactMechPurposeTypeId", contactMechPurposeTypeId)
-                    .filterByDate("contactFromDate", "contactThruDate", "purposeFromDate", "purposeThruDate")
-                    .queryFirst();
-        } catch (GenericEntityException e) {
-            Debug.logWarning(e.getMessage(), module);
-            tempVal = null;
-        }
-        if (tempVal != null) {
-            Map<String, Object> deletePcmCtx = UtilMisc.toMap("contactMechId", context.get("contactMechId"));
-            deletePcmCtx.put("contactMechPurposeTypeId", context.get("contactMechPurposeTypeId"));
-            deletePcmCtx.put("fromDate", tempVal.get("purposeFromDate"));
-            deletePcmCtx.put("userLogin", context.get("userLogin"));
-            deletePcmCtx.put("partyId", partyId);
-            try {
-                Map<String, Object> deletePcmResult = ctx.getDispatcher().runSync("deletePartyContactMechPurpose", deletePcmCtx);
-                if (ServiceUtil.isError(deletePcmResult)) {
-                    return deletePcmResult;
-                }
-            } catch (GenericServiceException e) {
-                Debug.logWarning(e.getMessage(), module);
-                return ServiceUtil.returnError(UtilProperties.getMessage(resourceError,
-                        "contactmechservices.could_not_delete_purpose_from_contact_mechanism_read",
-                        UtilMisc.toMap("errMessage", e.getMessage()), locale));
-            }
-        }
-        result.put(ModelService.RESPONSE_MESSAGE, ModelService.RESPOND_SUCCESS);
-        return result;
-
-    }
-    /**
-     * Deletes the PartyContactMechPurpose corresponding to the parameters in the context
-     * <b>security check</b>: userLogin partyId must equal partyId, or must have PARTYMGR_DELETE permission
-     *@param ctx The DispatchContext that this service is operating in
-     *@param context Map containing the input parameters
-     *@return Map with the result of the service, the output parameters
-     */
-    public static Map<String, Object> deletePartyContactMechPurpose(DispatchContext ctx, Map<String, ? extends Object> context) {
-        Map<String, Object> result = new HashMap<>();
-        Delegator delegator = ctx.getDelegator();
-        Security security = ctx.getSecurity();
-        GenericValue userLogin = (GenericValue) context.get("userLogin");
-        Locale locale = (Locale) context.get("locale");
-
-        String partyId = ServiceUtil.getPartyIdCheckSecurity(userLogin, security, context, result, "PARTYMGR", "_PCM_DELETE");
-
-        if (result.size() > 0) {
-            return result;
-        }
-
-        // required parameters
-        String contactMechId = (String) context.get("contactMechId");
-        String contactMechPurposeTypeId = (String) context.get("contactMechPurposeTypeId");
-        Timestamp fromDate = (Timestamp) context.get("fromDate");
-
-        GenericValue pcmp = null;
-
-        try {
-            pcmp = EntityQuery.use(delegator).from("PartyContactMechPurpose").where("partyId", partyId, "contactMechId", contactMechId, "contactMechPurposeTypeId", contactMechPurposeTypeId, "fromDate", fromDate).queryOne();
-            if (pcmp == null) {
-                return ServiceUtil.returnError(UtilProperties.getMessage(resourceError,
-                        "contactmechservices.could_not_delete_purpose_from_contact_mechanism_not_found", locale));
-            }
-        } catch (GenericEntityException e) {
-            Debug.logWarning(e.getMessage(), module);
-            return ServiceUtil.returnError(UtilProperties.getMessage(resourceError,
-                    "contactmechservices.could_not_delete_purpose_from_contact_mechanism_read",
-                    UtilMisc.toMap("errMessage", e.getMessage()), locale));
-        }
-
-        pcmp.set("thruDate", UtilDateTime.nowTimestamp());
-        try {
-            pcmp.store();
-        } catch (GenericEntityException e) {
-            Debug.logWarning(e.getMessage(), module);
-            return ServiceUtil.returnError(UtilProperties.getMessage(resourceError,
-                    "contactmechservices.could_not_delete_purpose_from_contact_mechanism_write",
-                    UtilMisc.toMap("errMessage", e.getMessage()), locale));
-        }
-
-        result.put(ModelService.SUCCESS_MESSAGE, UtilProperties.getMessage(resource, "PartyContactMechanismSuccessfullyDeleted", locale));
-        return result;
-    }
-
     /**
      * Just wraps the ContactMechWorker method of the same name.
      *
@@ -1000,7 +894,7 @@ public class ContactMechServices {
             }
         }
         Boolean bShowOld = (Boolean)context.get("showOld");
-        boolean showOld = (bShowOld != null && bShowOld.booleanValue()) ? true : false;
+        boolean showOld = (bShowOld != null && bShowOld) ? true : false;
         String contactMechTypeId = (String)context.get("contactMechTypeId");
         List<Map<String, Object>> valueMaps = ContactMechWorker.getPartyContactMechValueMaps(delegator, partyId, showOld, contactMechTypeId);
         result.put("valueMaps", valueMaps);
@@ -1027,7 +921,7 @@ public class ContactMechServices {
             for (Map<String, Object> thisMap: valueMaps) {
                 GenericValue contactMech = (GenericValue) thisMap.get("contactMech");
                 GenericValue partyContactMech = (GenericValue) thisMap.get("partyContactMech");
-                List<GenericValue> partyContactMechPurposes = UtilGenerics.checkList(thisMap.get("partyContactMechPurposes"));
+                List<GenericValue> partyContactMechPurposes = UtilGenerics.cast(thisMap.get("partyContactMechPurposes"));
 
                 // get the contactMechId
                 String contactMechId = contactMech.getString("contactMechId");
@@ -1037,7 +931,7 @@ public class ContactMechServices {
                             "contactMechId", contactMechId, "contactMechTypeId", contactMech.getString("contactMechTypeId"), "fromDate", UtilDateTime.nowTimestamp(),
                             "allowSolicitation", partyContactMech.getString("allowSolicitation"), "extension", partyContactMech.getString("extension")));
                 if (ServiceUtil.isError(serviceResults)) {
-                    return serviceResults;
+                    return ServiceUtil.returnError(ServiceUtil.getErrorMessage(serviceResults));
                 }
 
                 // loop through purposes and copy each as a new purpose for the partyIdTo
@@ -1046,7 +940,7 @@ public class ContactMechServices {
                     input.put("contactMechPurposeTypeId", purpose.getString("contactMechPurposeTypeId"));
                     serviceResults = dispatcher.runSync("createPartyContactMechPurpose", input);
                     if (ServiceUtil.isError(serviceResults)) {
-                        return serviceResults;
+                        return ServiceUtil.returnError(ServiceUtil.getErrorMessage(serviceResults));
                     }
                 }
             }
@@ -1070,7 +964,7 @@ public class ContactMechServices {
         String expireTime = EntityUtilProperties.getPropertyValue("security", "email_verification.expire.hours", delegator);
         Integer expTime = Integer.valueOf(expireTime);
         Calendar calendar = Calendar.getInstance();
-        calendar.add(Calendar.HOUR, expTime.intValue());
+        calendar.add(Calendar.HOUR, expTime);
         Date date = calendar.getTime();
         Timestamp expireDate = UtilDateTime.toTimestamp(date);
 
@@ -1079,7 +973,7 @@ public class ContactMechServices {
         synchronized(ContactMechServices.class) {
             while (true) {
                 Long random = secureRandom.nextLong();
-                verifyHash = HashCrypt.digestHash("MD5", Long.toString(random).getBytes(UtilIO.getUtf8()));
+                verifyHash = HashCrypt.digestHash("MD5", Long.toString(random).getBytes(StandardCharsets.UTF_8));
                 List<GenericValue> emailAddVerifications = null;
                 try {
                     emailAddVerifications = EntityQuery.use(delegator).from("EmailAddressVerification").where("verifyHash", verifyHash).queryList();

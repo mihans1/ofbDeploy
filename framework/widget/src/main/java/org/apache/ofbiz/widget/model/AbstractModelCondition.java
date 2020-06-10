@@ -170,6 +170,7 @@ public abstract class AbstractModelCondition implements Serializable, ModelCondi
             }
         };
 
+        @Override
         public ModelCondition newInstance(ModelWidget modelWidget, Element conditionElement) {
             return newInstance(this, modelWidget, conditionElement);
         }
@@ -262,7 +263,7 @@ public abstract class AbstractModelCondition implements Serializable, ModelCondi
                 Debug.logWarning(fullString.toString(), module);
                 throw new IllegalArgumentException(fullString.toString());
             }
-            return resultBool.booleanValue();
+            return resultBool;
         }
 
         public FlexibleMapAccessor<Object> getFieldAcsr() {
@@ -344,7 +345,7 @@ public abstract class AbstractModelCondition implements Serializable, ModelCondi
                 Debug.logWarning(fullString.toString(), module);
                 throw new IllegalArgumentException(fullString.toString());
             }
-            return resultBool.booleanValue();
+            return resultBool;
         }
 
         public FlexibleMapAccessor<Object> getFieldAcsr() {
@@ -520,7 +521,7 @@ public abstract class AbstractModelCondition implements Serializable, ModelCondi
             }
             String fieldString = null;
             try {
-                fieldString = (String) ObjectType.simpleTypeConvert(fieldVal, "String", null, (TimeZone) context.get("timeZone"),
+                fieldString = (String) ObjectType.simpleTypeOrObjectConvert(fieldVal, "String", null, (TimeZone) context.get("timeZone"),
                         (Locale) context.get("locale"), true);
             } catch (GeneralException e) {
                 Debug.logError(e, "Could not convert object to String, using empty String", module);
@@ -582,7 +583,8 @@ public abstract class AbstractModelCondition implements Serializable, ModelCondi
                     Debug.logWarning("No permission service-name specified!", module);
                     return false;
                 }
-                Map<String, Object> serviceContext = UtilGenerics.toMap(context.get(contextMap));
+                Object obj = context.get(contextMap);
+                Map<String, Object> serviceContext = (obj instanceof Map) ? UtilGenerics.cast(obj) : null;
                 if (serviceContext != null) {
                     // copy the required internal fields
                     serviceContext.put("userLogin", context.get("userLogin"));
@@ -622,7 +624,7 @@ public abstract class AbstractModelCondition implements Serializable, ModelCondi
                 }
                 Boolean hasPermission = (Boolean) resp.get("hasPermission");
                 if (hasPermission != null) {
-                    return hasPermission.booleanValue();
+                    return hasPermission;
                 }
             }
             return false;
@@ -679,7 +681,7 @@ public abstract class AbstractModelCondition implements Serializable, ModelCondi
             String fieldString = null;
             if (fieldVal != null) {
                 try {
-                    fieldString = (String) ObjectType.simpleTypeConvert(fieldVal, "String", null,
+                    fieldString = (String) ObjectType.simpleTypeOrObjectConvert(fieldVal, "String", null,
                             (TimeZone) context.get("timeZone"), (Locale) context.get("locale"), true);
                 } catch (GeneralException e) {
                     Debug.logError(e, "Could not convert object to String, using empty String", module);
@@ -689,7 +691,7 @@ public abstract class AbstractModelCondition implements Serializable, ModelCondi
             if (fieldString == null) {
                 fieldString = "";
             }
-            Class<?>[] paramTypes = new Class[] { String.class };
+            Class<?>[] paramTypes = { String.class };
             Object[] params = new Object[] { fieldString };
             Class<?> valClass;
             try {
@@ -712,7 +714,7 @@ public abstract class AbstractModelCondition implements Serializable, ModelCondi
                 Debug.logError(e, "Error in IfValidationMethod " + methodName + " of class " + className
                         + ", defaulting to false ", module);
             }
-            return resultBool.booleanValue();
+            return resultBool;
         }
 
         public FlexibleStringExpander getClassExdr() {

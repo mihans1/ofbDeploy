@@ -1922,7 +1922,7 @@ under the License.
     
     <!-- Get Values options associated with a Price Rule Condition Input -->
     <request-map uri="getAssociatedPriceRulesConds">
-        <security https="true" auth="false"/>
+        <security https="true" auth="true"/>
         <event type="service" invoke="getAssociatedPriceRulesConds"/>
         <response name="success" type="request" value="json"/>
         <response name="error" type="request" value="json"/>
@@ -1965,7 +1965,7 @@ under the License.
     </request-map>
     <request-map uri="deleteProductPromoCodeEmail">
         <security https="true" auth="true"/>
-        <event type="service" path="" invoke="deleteProductPromoCodeEmail"/>
+        <event type="service" path="" invoke="deleteProductPromoCodeContactMech"/>
         <response name="success" type="view" value="EditProductPromoCode"/>
         <response name="error" type="view" value="EditProductPromoCode"/>
     </request-map>
@@ -2092,6 +2092,7 @@ under the License.
         <security https="true" auth="true"/>
         <response name="success" type="view" value="EditProductStoreShipmentCostEstimates"/>
     </request-map>
+    <request-map uri="EditProductStoreShipmentTimeEstimates"><security https="true" auth="true"/><response name="success" type="view" value="EditProductStoreShipmentCostEstimates"/></request-map>
     <request-map uri="storeCreateShipRate">
         <security https="true" auth="true"/>
         <event type="service" invoke="createShipmentEstimate"/>
@@ -2199,6 +2200,33 @@ under the License.
         <event type="service" invoke="deleteCarrierShipmentMethod"/>
         <response name="success" type="view" value="ListCarrierShipmentMethods"/>
         <response name="error" type="view" value="ListCarrierShipmentMethods"/>
+    </request-map>
+
+    <!-- ================ ShipmentTimeEstimate Requests ================= -->
+    <request-map uri="ListShipmentTimeEstimates"><security https="true" auth="true"/><response name="success" type="view" value="ListShipmentTimeEstimates"/></request-map>
+    <request-map uri="prepareCreateShipmentTimeEstimate">
+        <security https="true" auth="true"/>
+        <event type="groovy" path="component://product/groovyScripts/catalog/PrepareCreateShipmentTimeEstimate.groovy"/>
+        <response name="success" type="view" value="ListShipmentTimeEstimates"/>
+        <response name="error" type="view" value="ListShipmentTimeEstimates"/>
+    </request-map>
+    <request-map uri="createShipmentTimeEstimate">
+        <security https="true" auth="true"/>
+        <event type="service" invoke="createShipmentTimeEstimate"/>
+        <response name="success" type="view" value="ListShipmentTimeEstimates"/>
+        <response name="error" type="view" value="ListShipmentTimeEstimates"/>
+    </request-map>
+    <request-map uri="updateShipmentTimeEstimate">
+        <security https="true" auth="true"/>
+        <event type="service" invoke="updateShipmentTimeEstimate"/>
+        <response name="success" type="view" value="ListShipmentTimeEstimates"/>
+        <response name="error" type="view" value="ListShipmentTimeEstimates"/>
+    </request-map>
+    <request-map uri="expireShipmentTimeEstimate">
+        <security https="true" auth="true"/>
+        <event type="service" invoke="expireShipmentTimeEstimate"/>
+        <response name="success" type="view" value="ListShipmentTimeEstimates"/>
+        <response name="error" type="view" value="ListShipmentTimeEstimates"/>
     </request-map>
 
     <!-- ================ ProductStore Survey Requests ================= -->
@@ -2521,19 +2549,19 @@ under the License.
     </request-map>
     <request-map uri="createProductConfigItem">
         <security auth="true" https="true"/>
-        <event invoke="createProductConfigItem" path="" type="service"/>
+        <event type="service" invoke="createProductConfigItem" path=""/>
         <response name="success" type="view" value="EditProductConfigItem"/>
         <response name="error" type="view" value="EditProductConfigItem"/>
     </request-map>
     <request-map uri="updateProductConfigItem">
         <security auth="true" https="true"/>
-        <event invoke="updateProductConfigItem" path="" type="service"/>
+        <event type="service" invoke="updateProductConfigItem" path=""/>
         <response name="success" type="view" value="EditProductConfigItem"/>
         <response name="error" type="view" value="EditProductConfigItem"/>
     </request-map>
     <request-map uri="deleteProductConfigItem">
         <security auth="true" https="true"/>
-        <event invoke="deleteProductConfigItem" path="" type="service"/>
+        <event type="service" invoke="deleteProductConfigItem" path=""/>
         <response name="success" type="view" value="EditProductConfigItem"/>
         <response name="error" type="view" value="EditProductConfigItem"/>
     </request-map>
@@ -2545,19 +2573,19 @@ under the License.
     </request-map>
     <request-map uri="createProductConfigOption">
         <security auth="true" https="true"/>
-        <event invoke="createProductConfigOption" type="service"/>
+        <event type="service" invoke="createProductConfigOption"/>
         <response name="success" type="view" value="EditProductConfigOptions"/>
         <response name="error" type="view" value="EditProductConfigOptions"/>
     </request-map>
     <request-map uri="updateProductConfigOption">
         <security auth="true" https="true"/>
-        <event invoke="updateProductConfigOption" type="service"/>
+        <event type="service" invoke="updateProductConfigOption"/>
         <response name="success" type="view" value="EditProductConfigOptions"/>
         <response name="error" type="view" value="EditProductConfigOptions"/>
     </request-map>
     <request-map uri="deleteProductConfigOption">
         <security auth="true" https="true"/>
-        <event invoke="deleteProductConfigOption" type="service"/>
+        <event type="service" invoke="deleteProductConfigOption"/>
         <response name="success" type="view" value="EditProductConfigOptions"/>
         <response name="error" type="view" value="EditProductConfigOptions"/>
     </request-map>
@@ -2565,19 +2593,19 @@ under the License.
     <!-- Product Config Product Requests -->
     <request-map uri="createProductConfigProduct">
         <security auth="true" https="true"/>
-        <event invoke="createProductConfigProduct" type="service"/>
+        <event type="service" invoke="createProductConfigProduct"/>
         <response name="success" type="view" value="EditProductConfigOptions"/>
         <response name="error" type="view" value="EditProductConfigOptions"/>
     </request-map>
     <request-map uri="updateProductConfigProduct">
         <security auth="true" https="true"/>
-        <event invoke="updateProductConfigProduct" type="service"/>
+        <event type="service" invoke="updateProductConfigProduct"/>
         <response name="success" type="view" value="EditProductConfigOptions"/>
         <response name="error" type="view" value="EditProductConfigOptions"/>
     </request-map>
     <request-map uri="deleteProductConfigProduct">
         <security auth="true" https="true"/>
-        <event invoke="deleteProductConfigProduct" type="service"/>
+        <event type="service" invoke="deleteProductConfigProduct"/>
         <response name="success" type="view" value="EditProductConfigOptions"/>
         <response name="error" type="view" value="EditProductConfigOptions"/>
     </request-map>
@@ -2808,7 +2836,7 @@ under the License.
         </response>
     </request-map>
     <request-map uri="viewImage">
-        <security https="false" auth="false"/>
+        <security https="true" auth="true"/>
         <response name="success" type="view" value="viewImage"/>
         <response name="error" type="view" value="viewImage"/>
     </request-map>
@@ -3003,7 +3031,7 @@ under the License.
         <response name="error" type="request" value="json"/>
     </request-map>
     <request-map uri="listMiniproduct">
-        <security auth="false" https="true"/>
+        <security auth="true" https="true"/>
         <response name="success" type="view" value="listMiniproduct"/>
     </request-map>
 
@@ -3211,6 +3239,7 @@ under the License.
     <view-map name="ListQuantityBreaks" type="screen" page="component://product/widget/catalog/ShippingScreens.xml#ListQuantityBreaks"/>
     <view-map name="ListShipmentMethodTypes" type="screen" page="component://product/widget/catalog/ShippingScreens.xml#ListShipmentMethodTypes"/>
     <view-map name="ListCarrierShipmentMethods" type="screen" page="component://product/widget/catalog/ShippingScreens.xml#ListCarrierShipmentMethods"/>
+    <view-map name="ListShipmentTimeEstimates" type="screen" page="component://product/widget/catalog/ShippingScreens.xml#ListShipmentTimeEstimates"/>
 
     <view-map name="EditProductTag" type="screen" page="component://product/widget/catalog/ProductScreens.xml#EditProductTag"/>
 

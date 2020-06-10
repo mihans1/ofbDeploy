@@ -47,11 +47,13 @@ public class FreeMarkerViewHandler extends AbstractViewHandler {
     public static final String module = FreeMarkerViewHandler.class.getName();
     protected Configuration config = (Configuration) FreeMarkerWorker.getDefaultOfbizConfig().clone();
 
+    @Override
     public void init(ServletContext context) throws ViewHandlerException {
         config.setCacheStorage(new OfbizCacheStorage("unknown"));
         config.setServletContextForTemplateLoading(context, "/");
     }
 
+    @Override
     public void render(String name, String page, String info, String contentType, String encoding,
             HttpServletRequest request, HttpServletResponse response) throws ViewHandlerException {
         if (UtilValidate.isEmpty(page))
@@ -79,7 +81,7 @@ public class FreeMarkerViewHandler extends AbstractViewHandler {
     }
 
     public static void prepOfbizRoot(Map<String, Object> root, HttpServletRequest request, HttpServletResponse response) {
-        ServletContext servletContext = (ServletContext) request.getAttribute("servletContext");
+        ServletContext servletContext = request.getServletContext();
         HttpSession session = request.getSession();
 
         // add in the OFBiz objects

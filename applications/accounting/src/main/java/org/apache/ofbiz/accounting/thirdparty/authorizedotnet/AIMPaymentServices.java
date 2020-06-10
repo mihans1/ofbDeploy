@@ -81,7 +81,7 @@ public class AIMPaymentServices {
         Delegator delegator = ctx.getDelegator();
         Locale locale = (Locale) context.get("locale");
         Map<String, Object> results = ServiceUtil.returnSuccess();
-        Map<String, Object> request = new HashMap<String, Object>();
+        Map<String, Object> request = new HashMap<>();
         Properties props = buildAIMProperties(context, delegator);
         buildMerchantInfo(context, props, request);
         buildGatewayResponeConfig(context, props, request);
@@ -122,7 +122,7 @@ public class AIMPaymentServices {
         context.put("creditCard", creditCard);
         context.put("authTransaction", authTransaction);
         Map<String, Object> results = ServiceUtil.returnSuccess();
-        Map<String, Object> request = new HashMap<String, Object>();
+        Map<String, Object> request = new HashMap<>();
         Properties props = buildAIMProperties(context, delegator);
         buildMerchantInfo(context, props, request);
         buildGatewayResponeConfig(context, props, request);
@@ -169,7 +169,7 @@ public class AIMPaymentServices {
         context.put("creditCard",creditCard);
         context.put("authTransaction",authTransaction);
         Map<String, Object> results = ServiceUtil.returnSuccess();
-        Map<String, Object> request = new HashMap<String, Object>();
+        Map<String, Object> request = new HashMap<>();
         Properties props = buildAIMProperties(context, delegator);
         buildMerchantInfo(context, props, request);
         buildGatewayResponeConfig(context, props, request);
@@ -187,7 +187,7 @@ public class AIMPaymentServices {
         }
         Map<String, Object> reply = processCard(request, props, locale);
         results.putAll(processRefundTransResult(request, reply));
-        boolean refundResult = ((Boolean)results.get("refundResult")).booleanValue();
+        boolean refundResult = (Boolean) results.get("refundResult");
         String refundFlag = (String)results.get("refundFlag");
         // Since the refund failed, we are going to void the previous authorization against
         // which ccRefunds attempted to issue the refund.  This happens because Authorize.NET requires
@@ -260,7 +260,7 @@ public class AIMPaymentServices {
         Locale locale = (Locale) context.get("locale");
         context.put("authTransaction", authTransaction);
         Map<String, Object> results = ServiceUtil.returnSuccess();
-        Map<String, Object> request = new HashMap<String, Object>();
+        Map<String, Object> request = new HashMap<>();
         Properties props = buildAIMProperties(context, delegator);
         buildMerchantInfo(context, props, request);
         buildGatewayResponeConfig(context, props, request);
@@ -278,7 +278,7 @@ public class AIMPaymentServices {
 
     public static Map<String, Object> ccCredit(DispatchContext ctx, Map<String, Object> context) {
     	Locale locale = (Locale) context.get("locale");
-        Map<String, Object> results = new HashMap<String, Object>();
+        Map<String, Object> results = new HashMap<>();
         results.put(ModelService.RESPONSE_MESSAGE, ModelService.RESPOND_ERROR);
         results.put(ModelService.ERROR_MESSAGE, UtilProperties.getMessage(resource, "AccountingAuthorizeNetccCreditUnsupported", locale));
         return results;
@@ -288,7 +288,7 @@ public class AIMPaymentServices {
         Delegator delegator = ctx.getDelegator();
         Locale locale = (Locale) context.get("locale");
         Map<String, Object> results = ServiceUtil.returnSuccess();
-        Map<String, Object> request = new HashMap<String, Object>();
+        Map<String, Object> request = new HashMap<>();
         Properties props = buildAIMProperties(context, delegator);
         buildMerchantInfo(context, props, request);
         buildGatewayResponeConfig(context, props, request);
@@ -314,7 +314,7 @@ public class AIMPaymentServices {
     }
 
     private static Map<String, Object> processCard(Map<String, Object> request, Properties props, Locale locale) {
-        Map<String, Object> result = new HashMap<String, Object>();
+        Map<String, Object> result = new HashMap<>();
         String url = props.getProperty("url");
         if (UtilValidate.isEmpty(url)) {
             return ServiceUtil.returnError(UtilProperties.getMessage(resource, 
@@ -642,7 +642,7 @@ public class AIMPaymentServices {
     }
 
     private static Map<String, Object> validateRequest(Map<String, Object> params, Properties props, Map<String, Object> AIMRequest) {
-        Map<String, Object> result = new HashMap<String, Object>();
+        Map<String, Object> result = new HashMap<>();
         result.put(ModelService.RESPONSE_MESSAGE, ModelService.RESPOND_SUCCESS);
         return result;
     }
@@ -651,10 +651,10 @@ public class AIMPaymentServices {
         AuthorizeResponse ar = (AuthorizeResponse) reply.get("authorizeResponse");
         try {
             Boolean authResult = (Boolean) reply.get("authResult");
-            results.put("authResult", new Boolean(authResult.booleanValue()));
+            results.put("authResult", authResult);
             results.put("authFlag", ar.getReasonCode());
             results.put("authMessage", ar.getReasonText());
-            if (authResult.booleanValue()) { //passed
+            if (authResult) { //passed
                 results.put("authCode", ar.getAuthorizationCode());
                 results.put("authRefNum", ar.getTransactionId());
                 results.put("cvCode", ar.getCvResult());
@@ -682,11 +682,11 @@ public class AIMPaymentServices {
         AuthorizeResponse ar = (AuthorizeResponse) reply.get("authorizeResponse");
         try {
             Boolean captureResult = (Boolean) reply.get("authResult");
-            results.put("captureResult", new Boolean(captureResult.booleanValue()));
+            results.put("captureResult", captureResult);
             results.put("captureFlag", ar.getReasonCode());
             results.put("captureMessage", ar.getReasonText());
             results.put("captureRefNum", ar.getTransactionId());
-            if (captureResult.booleanValue()) { //passed
+            if (captureResult) { //passed
                 results.put("captureCode", ar.getAuthorizationCode());
                 if (BigDecimal.ZERO.compareTo(ar.getAmount()) == 0) {
                     results.put("captureAmount", getXAmount(request));
@@ -704,15 +704,15 @@ public class AIMPaymentServices {
     }
 
     private static Map<String, Object> processRefundTransResult(Map<String, Object> request, Map<String, Object> reply) {
-        Map<String, Object> results = new HashMap<String, Object>();
+        Map<String, Object> results = new HashMap<>();
         AuthorizeResponse ar = (AuthorizeResponse) reply.get("authorizeResponse");
         try {
             Boolean captureResult = (Boolean) reply.get("authResult");
-            results.put("refundResult", new Boolean(captureResult.booleanValue()));
+            results.put("refundResult", captureResult);
             results.put("refundFlag", ar.getReasonCode());
             results.put("refundMessage", ar.getReasonText());
             results.put("refundRefNum", ar.getTransactionId());
-            if (captureResult.booleanValue()) { //passed
+            if (captureResult) { //passed
                 results.put("refundCode", ar.getAuthorizationCode());
                 if (BigDecimal.ZERO.compareTo(ar.getAmount()) == 0) {
                     results.put("refundAmount", getXAmount(request));
@@ -731,15 +731,15 @@ public class AIMPaymentServices {
     }
 
     private static Map<String, Object> processReleaseTransResult(Map<String, Object> request, Map<String, Object> reply) {
-        Map<String, Object> results = new HashMap<String, Object>();
+        Map<String, Object> results = new HashMap<>();
         AuthorizeResponse ar = (AuthorizeResponse) reply.get("authorizeResponse");
         try {
             Boolean captureResult = (Boolean) reply.get("authResult");
-            results.put("releaseResult", new Boolean(captureResult.booleanValue()));
+            results.put("releaseResult", captureResult);
             results.put("releaseFlag", ar.getReasonCode());
             results.put("releaseMessage", ar.getReasonText());
             results.put("releaseRefNum", ar.getTransactionId());
-            if (captureResult.booleanValue()) { //passed
+            if (captureResult) { //passed
                 results.put("releaseCode", ar.getAuthorizationCode());
                 if (BigDecimal.ZERO.compareTo(ar.getAmount()) == 0) {
                     results.put("releaseAmount", getXAmount(request));
@@ -761,14 +761,14 @@ public class AIMPaymentServices {
         AuthorizeResponse ar = (AuthorizeResponse) reply.get("authorizeResponse");
         try {
         Boolean authResult = (Boolean) reply.get("authResult");
-        results.put("authResult", new Boolean(authResult.booleanValue()));
+        results.put("authResult", authResult);
         results.put("authFlag", ar.getReasonCode());
         results.put("authMessage", ar.getReasonText());
-        results.put("captureResult", new Boolean(authResult.booleanValue()));
+        results.put("captureResult", authResult);
         results.put("captureFlag", ar.getReasonCode());
         results.put("captureMessage", ar.getReasonText());
         results.put("captureRefNum", ar.getTransactionId());
-        if (authResult.booleanValue()) { //passed
+        if (authResult) { //passed
             results.put("authCode", ar.getAuthorizationCode());
             results.put("authRefNum", ar.getTransactionId());
             results.put("cvCode", ar.getCvResult());

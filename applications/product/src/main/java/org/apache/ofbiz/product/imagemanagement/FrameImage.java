@@ -128,6 +128,9 @@ public class FrameImage {
             Map<String, Object> contentResult = new HashMap<>();
             try {
                 contentResult = dispatcher.runSync("createContent", contentCtx);
+                if (ServiceUtil.isError(contentResult)) {
+                    return ServiceUtil.returnError(ServiceUtil.getErrorMessage(contentResult));
+                }
             } catch (GenericServiceException e) {
                 Debug.logError(e, module);
                 result =  ServiceUtil.returnError(e.getMessage());
@@ -140,6 +143,9 @@ public class FrameImage {
             Map<String, Object> contentThumbResult = new HashMap<>();
             try {
                 contentThumbResult = dispatcher.runSync("createContent", contentThumb);
+                if (ServiceUtil.isError(contentThumbResult)) {
+                    return ServiceUtil.returnError(ServiceUtil.getErrorMessage(contentThumbResult));
+                }
             } catch (GenericServiceException e) {
                 Debug.logError(e, module);
                 result =  ServiceUtil.returnError(e.getMessage());
@@ -176,7 +182,10 @@ public class FrameImage {
             createContentAssocMap.put("userLogin", userLogin);
             createContentAssocMap.put("mapKey", "100");
             try {
-                dispatcher.runSync("createContentAssoc", createContentAssocMap);
+                Map<String, Object> serviceResult = dispatcher.runSync("createContentAssoc", createContentAssocMap);
+                if (ServiceUtil.isError(serviceResult)) {
+                    return ServiceUtil.returnError(ServiceUtil.getErrorMessage(serviceResult));
+                }
             } catch (GenericServiceException e) {
                 Debug.logError(e, module);
                 result =  ServiceUtil.returnError(e.getMessage());
@@ -191,7 +200,10 @@ public class FrameImage {
             productContentCtx.put("contentId", contentId);
             productContentCtx.put("statusId", "IM_PENDING");
             try {
-                dispatcher.runSync("createProductContent", productContentCtx);
+                Map<String, Object> serviceResult = dispatcher.runSync("createProductContent", productContentCtx);
+                if (ServiceUtil.isError(serviceResult)) {
+                    return ServiceUtil.returnError(ServiceUtil.getErrorMessage(serviceResult));
+                }
             } catch (GenericServiceException e) {
                 Debug.logError(e, module);
                 result =  ServiceUtil.returnError(e.getMessage());
@@ -202,7 +214,10 @@ public class FrameImage {
             contentApprovalCtx.put("contentId", contentId);
             contentApprovalCtx.put("userLogin", userLogin);
             try {
-                dispatcher.runSync("createImageContentApproval", contentApprovalCtx);
+                Map<String, Object> serviceResult = dispatcher.runSync("createImageContentApproval", contentApprovalCtx);
+                if (ServiceUtil.isError(serviceResult)) {
+                    return ServiceUtil.returnError(ServiceUtil.getErrorMessage(serviceResult));
+                }
             } catch (GenericServiceException e) {
                 Debug.logError(e, module);
                 result =  ServiceUtil.returnError(e.getMessage());
@@ -252,7 +267,7 @@ public class FrameImage {
         HttpSession session = request.getSession();
         GenericValue userLogin = (GenericValue)session.getAttribute("userLogin");
 
-        Map<String, ? extends Object> context = UtilGenerics.checkMap(request.getParameterMap());
+        Map<String, ? extends Object> context = UtilGenerics.cast(request.getParameterMap());
         String imageServerPath = FlexibleStringExpander.expandString(EntityUtilProperties.getPropertyValue("catalog", "image.management.path", delegator), context);
         String imageServerUrl = FlexibleStringExpander.expandString(EntityUtilProperties.getPropertyValue("catalog", "image.management.url", delegator), context);
         Map<String, Object> tempFile = LayoutWorker.uploadImageAndParameters(request, "uploadedFile");
@@ -276,7 +291,7 @@ public class FrameImage {
         String dataResourceId = null;
         try {
             String dirPath = "/frame/";
-            File dir = FileUtil.normalizeFilePath(imageServerPath + dirPath);
+            File dir = FileUtil.createFileWithNormalizedPath(imageServerPath + dirPath);
             if (!dir.exists()) {
                 boolean createDir = dir.mkdir();
                 if (!createDir) {
@@ -285,7 +300,7 @@ public class FrameImage {
                 }
             }
             String imagePath = "/frame/" + imageName;
-            File file = FileUtil.normalizeFilePath(imageServerPath + imagePath); // cf. OFBIZ-9973
+            File file = FileUtil.createFileWithNormalizedPath(imageServerPath + imagePath); // cf. OFBIZ-9973
             if (file.exists()) {
                 request.setAttribute("_ERROR_MESSAGE_", "There is an existing frame, please select from the existing frame.");
                 return "error";
@@ -303,6 +318,12 @@ public class FrameImage {
             dataResourceCtx.put("mimeTypeId", "image/png");
             dataResourceCtx.put("isPublic", "Y");
             Map<String, Object> dataResourceResult = dispatcher.runSync("createDataResource", dataResourceCtx);
+            if (ServiceUtil.isError(dataResourceResult)) {
+                String errorMessage = ServiceUtil.getErrorMessage(dataResourceResult);
+                request.setAttribute("_ERROR_MESSAGE_", errorMessage);
+                Debug.logError(errorMessage, module);
+                return "error";
+            }
             dataResourceId = dataResourceResult.get("dataResourceId").toString();
             //create content
             Map<String, Object> contentCtx = new HashMap<>();
@@ -312,6 +333,12 @@ public class FrameImage {
             contentCtx.put("fromDate", UtilDateTime.nowTimestamp());
             contentCtx.put("userLogin", userLogin);
             Map<String, Object> contentResult = dispatcher.runSync("createContent", contentCtx);
+            if (ServiceUtil.isError(contentResult)) {
+                String errorMessage = ServiceUtil.getErrorMessage(contentResult);
+                request.setAttribute("_ERROR_MESSAGE_", errorMessage);
+                Debug.logError(errorMessage, module);
+                return "error";
+            }
             contentId = contentResult.get("contentId").toString();
         } catch (GenericServiceException | IOException gse) {
             request.setAttribute("_ERROR_MESSAGE_", gse.getMessage());
@@ -325,7 +352,7 @@ public class FrameImage {
 
     public static String previewFrameImage(HttpServletRequest request, HttpServletResponse response) throws IOException, JDOMException {
         Delegator delegator = (Delegator) request.getAttribute("delegator");
-        Map<String, ? extends Object> context = UtilGenerics.checkMap(request.getParameterMap());
+        Map<String, ? extends Object> context = UtilGenerics.cast(request.getParameterMap());
         HttpSession session = request.getSession();
         String imageServerPath = FlexibleStringExpander.expandString(EntityUtilProperties.getPropertyValue("catalog", "image.management.path", delegator), context);
 
@@ -372,7 +399,7 @@ public class FrameImage {
                 Debug.logError("File :" + file.getName() + ", couldn't be loaded", module);
             }
             // Image Frame
-            BufferedImage bufImg1 = ImageIO.read(FileUtil.normalizeFilePath(imageServerPath + "/" + productId + "/" + imageName)); // cf. OFBIZ-9973
+            BufferedImage bufImg1 = ImageIO.read(FileUtil.createFileWithNormalizedPath(imageServerPath + "/" + productId + "/" + imageName)); // cf. OFBIZ-9973
             BufferedImage bufImg2 = ImageIO.read(new File(imageServerPath + "/frame/" + frameImageName));
 
             int bufImgType;
@@ -428,7 +455,7 @@ public class FrameImage {
     }
 
     public static String deleteFrameImage(HttpServletRequest request, HttpServletResponse response) throws IOException {
-        Map<String, ? extends Object> context = UtilGenerics.checkMap(request.getParameterMap());
+        Map<String, ? extends Object> context = UtilGenerics.cast(request.getParameterMap());
         String imageServerPath = FlexibleStringExpander.expandString(EntityUtilProperties.getPropertyValue("catalog", "image.management.path", (Delegator) context.get("delegator")), context);
         File file = new File(imageServerPath + "/preview/" + "/previewImage.jpg");
         if (file.exists()) {

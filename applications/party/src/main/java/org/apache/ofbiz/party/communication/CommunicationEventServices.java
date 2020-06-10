@@ -203,8 +203,14 @@ public class CommunicationEventServices {
                 Map<String, Object> tmpResult = null;
                 if (isMultiPart) {
                     tmpResult = dispatcher.runSync("sendMailMultiPart", sendMailParams, 360, true);
+                    if (ServiceUtil.isError(tmpResult)) {
+                        return ServiceUtil.returnError(ServiceUtil.getErrorMessage(tmpResult));
+                    }
                 } else {
                     tmpResult = dispatcher.runSync("sendMail", sendMailParams, 360, true);
+                    if (ServiceUtil.isError(tmpResult)) {
+                        return ServiceUtil.returnError(ServiceUtil.getErrorMessage(tmpResult));
+                    }
                 }
 
                 if (ServiceUtil.isError(tmpResult)) {
@@ -262,6 +268,139 @@ public class CommunicationEventServices {
             result = ServiceUtil.returnError(errorMessages);
         }
         return result;
+    }
+
+    /**
+     * Service to send all content associated to a FILE_TRANSFER_COMM CommunicationEvent,
+     * with contactMechIdTo as a FtpAdress contactMech
+     *
+     * @param ctx
+     * @param context
+     * @return
+     */
+    public static Map<String, Object> sendCommEventAsFtp(DispatchContext ctx, Map<String, ?> context) {
+        Delegator delegator = ctx.getDelegator();
+        LocalDispatcher dispatcher = ctx.getDispatcher();
+        Locale locale = (Locale) context.get("locale");
+        GenericValue userLogin = (GenericValue) context.get("userLogin");
+
+        String communicationEventId = (String) context.get("communicationEventId");
+        List<String> errorMessages = new ArrayList<>();
+        try {
+            GenericValue communicationEvent = EntityQuery.use(delegator).from("CommunicationEvent").where("communicationEventId", communicationEventId).queryOne();
+            if (communicationEvent == null) {
+                String errMsg = UtilProperties.getMessage(resource, "commeventservices.communication_event_not_found_failure", locale);
+                return ServiceUtil.returnError(errMsg + " " + communicationEventId);
+            }
+
+            if ("COM_COMPLETE".equals(communicationEvent.getString("statusId"))) return ServiceUtil.returnSuccess();
+
+            String communicationEventType = communicationEvent.getString("communicationEventTypeId");
+            if (communicationEventType == null || !"FILE_TRANSFER_COMM".equals(communicationEventType)) {
+                String errMsg = UtilProperties.getMessage(resource, "commeventservices.communication_event_must_be_ftp_for_ftp", locale);
+                return ServiceUtil.returnError(errMsg + " " + communicationEventId);
+            }
+
+            String contactMechId = communicationEvent.getString("contactMechIdTo");
+
+            // Check contactMech type to FTP_ADDRESS
+            GenericValue contactMech = EntityQuery.use(delegator).from("ContactMech").cache().where("contactMechId",contactMechId).queryOne();
+            GenericValue ftpAddress = EntityQuery.use(delegator).from("FtpAddress").cache().where("contactMechId",contactMechId).queryOne();
+            if (null == contactMech || null == ftpAddress || !"FTP_ADDRESS".equals(contactMech.getString("contactMechTypeId"))) {
+                String errMsg = UtilProperties.getMessage(resource, "commeventservices.communication_event_to_contact_mech_must_be_ftp", locale);
+                return ServiceUtil.returnError(errMsg + " " + communicationEventId);
+            }
+
+            // Get list of children communication events, to avoid same content multi-send
+            List<GenericValue> childrenCommunicationEvent = EntityQuery.use(delegator).select("communicationEventId", "statusId")
+                    .from("CommunicationEvent").where("parentCommEventId", communicationEventId).cache().queryList();
+            List<String> childrenCommunicationEventIds = EntityUtil.getFieldListFromEntityList(childrenCommunicationEvent, "communicationEventId", true);
+            // Retrieve all contents to send
+            List<GenericValue> contents = EntityQuery.use(delegator).from("CommEventContentDataResource").where("communicationEventId", communicationEventId).cache().queryList();
+
+            if (UtilValidate.isNotEmpty(contents)) {
+                if (UtilValidate.isEmpty(communicationEvent.getTimestamp("datetimeStarted"))) {
+                    //store the startDate into the communication
+                    Map<String, Object> updateCommEventResult = dispatcher.runSync("updateCommunicationEvent",
+                            UtilMisc.toMap("communicationEventId", communicationEventId, "datetimeStarted", UtilDateTime.nowTimestamp(), "userLogin", userLogin), 600, true);
+                    if (ServiceUtil.isError(updateCommEventResult)) {
+                        errorMessages.add(ServiceUtil.getErrorMessage(updateCommEventResult));
+                    }
+                }
+
+                for (GenericValue content : contents) {
+                    Map<String, Object> ftpServiceMap = new HashMap<>();
+                    //store the child Communication Event, to keep track of errorMessages in note field
+                    String childCommunicationEventId = "";
+                    ftpServiceMap.put("userLogin", userLogin);
+                    ftpServiceMap.put("contentId", content.getString("contentId"));
+                    ftpServiceMap.put("partyId", communicationEvent.getString("partyIdTo"));
+                    ftpServiceMap.put("contactMechId", contactMechId);
+                    // no need to create a child CommEvent if it is a single content transfer
+                    if (contents.size() == 1)
+                        ftpServiceMap.put("communicationEventId", communicationEvent.get("communicationEventId"));
+                    else {
+                        // check if currentContent is already sent by an existing children communicationEvent
+                        EntityCondition sentCond = EntityCondition.makeCondition(UtilMisc.toList(
+                                EntityCondition.makeCondition("communicationEventId", EntityOperator.IN, childrenCommunicationEventIds),
+                                EntityCondition.makeCondition("contentId", content.getString("contentId"))));
+                        GenericValue alreadySent = EntityQuery.use(delegator).from("CommEventContentAssoc").where(sentCond).cache().queryFirst();
+
+                        if (null != alreadySent) {
+                            GenericValue childCommEvent = EntityUtil.getFirst(EntityUtil.filterByCondition(childrenCommunicationEvent,
+                                    EntityCondition.makeCondition("communicationEventId", alreadySent.getString("communicationEventId"))));
+                            // if completely sent, continue to next content
+                            if ("COM_COMPLETE".equals(childCommEvent.getString("statusId"))) continue;
+                            ftpServiceMap.put("communicationEventId", childCommEvent.getString("communicationEventId"));
+                        }
+                    }
+
+                    Map<String, Object> resultTmp = dispatcher.runSync("sendContentToFtp", ftpServiceMap, 600, true);
+                    if (ServiceUtil.isError(resultTmp)) {
+                        errorMessages.add(ServiceUtil.getErrorMessage(resultTmp));
+                    }
+
+                    // attach the parent communication event to the new event created when sending the content, and store error if needed
+                    if (UtilValidate.isNotEmpty(resultTmp.get("communicationEventId"))) childCommunicationEventId = (String) resultTmp.get("communicationEventId");
+                    if (UtilValidate.isNotEmpty(childCommunicationEventId) && !childCommunicationEventId.equals(communicationEventId)) {
+                        GenericValue childCommunicationEvent = EntityQuery.use(delegator).from("CommunicationEvent").where("communicationEventId", childCommunicationEventId).queryOne();
+                        childCommunicationEvent.set("parentCommEventId", communicationEventId);
+                        if (ServiceUtil.isError(resultTmp)) {
+                            childCommunicationEvent.set("statusId", "COM_BOUNCED");
+                            childCommunicationEvent.set("note", ServiceUtil.getErrorMessage(resultTmp));
+                        }
+                        childCommunicationEvent.store();
+                    }
+                }
+            } else {
+                errorMessages.add(UtilProperties.getMessage(resource, "commeventservices.communication_event_not_without_content", locale));
+            }
+
+            if (errorMessages.size() > 0) {
+                communicationEvent.set("statusId", "COM_BOUNCED");
+                communicationEvent.set("note", errorMessages.toString());
+                communicationEvent.store();
+            } else {
+                //Update content status
+                for (GenericValue content : contents) {
+                    Map<String, Object> updateContentResult = dispatcher.runSync("setContentStatus", UtilMisc.<String, Object>toMap("contentId", content.getString("contentId"), "statusId", "CTNT_PUBLISHED", "userLogin", userLogin));
+                    if (ServiceUtil.isError(updateContentResult)) {
+                        errorMessages.add(ServiceUtil.getErrorMessage(updateContentResult));
+                    }
+                }
+
+                Map<String, Object> completeResult = dispatcher.runSync("setCommEventComplete", UtilMisc.<String, Object>toMap("communicationEventId", communicationEventId, "userLogin", userLogin));
+                if (ServiceUtil.isError(completeResult)) {
+                    errorMessages.add(ServiceUtil.getErrorMessage(completeResult));
+                }
+            }
+        } catch (GenericEntityException | GenericServiceException e) {
+            return ServiceUtil.returnError(e.getMessage());
+        }
+        if (errorMessages.size() > 0) {
+            return ServiceUtil.returnFailure(errorMessages);
+        }
+        return ServiceUtil.returnSuccess();
     }
 
     public static Map<String, Object> sendEmailToContactList(DispatchContext ctx, Map<String, ? extends Object> context) {
@@ -401,6 +540,9 @@ public class CommunicationEventServices {
                                         sendMailParams.put("bodyParameters", bodyParameters);
                                         sendMailParams.remove("body");
                                         tmpResult = dispatcher.runSync("sendMailFromScreen", sendMailParams, 360, true);
+                                        if (ServiceUtil.isError(tmpResult)) {
+                                            return ServiceUtil.returnError(ServiceUtil.getErrorMessage(tmpResult));
+                                        }
                                     }
                                 }
                             }
@@ -410,6 +552,9 @@ public class CommunicationEventServices {
                         if (UtilValidate.isEmpty(tmpResult)) {
                             sendMailParams.put("body", communicationEvent.getString("content"));
                             tmpResult = dispatcher.runSync("sendMail", sendMailParams, 360, true);
+                            if (ServiceUtil.isError(tmpResult)) {
+                                return ServiceUtil.returnError(ServiceUtil.getErrorMessage(tmpResult));
+                            }
                         }
 
                         if (tmpResult == null || ServiceUtil.isError(tmpResult)) {
@@ -496,21 +641,85 @@ public class CommunicationEventServices {
 
     public static Map<String, Object> setCommEventComplete(DispatchContext dctx, Map<String, ? extends Object> context) {
         LocalDispatcher dispatcher = dctx.getDispatcher();
+        Delegator delegator = dctx.getDelegator();
         GenericValue userLogin = (GenericValue) context.get("userLogin");
         String communicationEventId = (String) context.get("communicationEventId");
         String partyIdFrom = (String) context.get("partyIdFrom");
 
         try {
+            GenericValue communicationEvent = EntityQuery.use(delegator).from("CommunicationEvent").where("communicationEventId", communicationEventId).cache().queryOne();
+            if (communicationEvent == null) {
+                return ServiceUtil.returnError(UtilProperties.getMessage("PartyUiLabels", "PartyCommunicationEventNotFound",
+                        UtilMisc.toMap("communicationEventId", communicationEventId), (Locale) context.get("locale")));
+            }
+            Timestamp endDate = communicationEvent.getTimestamp("datetimeEnded");
+            if (endDate == null) {
+                endDate = UtilDateTime.nowTimestamp();
+            }
             Map<String, Object> result = dispatcher.runSync("updateCommunicationEvent", UtilMisc.<String, Object>toMap("communicationEventId", communicationEventId,
-                    "partyIdFrom", partyIdFrom, "statusId", "COM_COMPLETE", "userLogin", userLogin));
+                    "partyIdFrom", partyIdFrom, "statusId", "COM_COMPLETE", "datetimeEnded", endDate, "userLogin", userLogin));
             if (ServiceUtil.isError(result)) {
                 return ServiceUtil.returnError(ServiceUtil.getErrorMessage(result));
             }
-        } catch (GenericServiceException esx) {
+        } catch (GeneralException esx) {
             return ServiceUtil.returnError(esx.getMessage());
         }
 
         return ServiceUtil.returnSuccess();
+    }
+
+    /*
+     * Store an outgoing file transfer as a communication event;
+     * runs as a pre-invoke ECA on sendContentToFtp service
+     * - service should run as the 'system' user
+     */
+    public static Map<String, Object> createCommEventFromFtpTransfer(DispatchContext dctx, Map<String, ? extends Object> context) {
+        LocalDispatcher dispatcher = dctx.getDispatcher();
+
+        GenericValue userLogin = (GenericValue) context.get("userLogin");
+        String contentId = (String) context.get("contentId");
+        String contactMechId = (String) context.get("contactMechId");
+        String partyId = (String) context.get("partyId");
+        String communicationEventId;
+
+        Timestamp now = UtilDateTime.nowTimestamp();
+
+        Map<String, Object> commEventMap = new HashMap<>();
+        commEventMap.put("communicationEventTypeId", "FILE_TRANSFER_COMM");
+        commEventMap.put("contactMechTypeId", "FTP_ADDRESS");
+        commEventMap.put("contactMechIdTo", contactMechId);
+        commEventMap.put("statusId", "COM_PENDING");
+        commEventMap.put("datetimeStarted", now);
+        commEventMap.put("entryDate", now);
+        commEventMap.put("userLogin", userLogin);
+        if (UtilValidate.isNotEmpty(partyId)) {
+            commEventMap.put("partyIdTo", partyId);
+        }
+
+        Map<String, Object> createResult;
+        try {
+            createResult = dispatcher.runSync("createCommunicationEvent", commEventMap);
+            if (ServiceUtil.isError(createResult)) {
+                return createResult;
+            }
+            communicationEventId = (String) createResult.get("communicationEventId");
+
+            //add content to newly created commEvent
+            Map<String, Object> createCommEventContentMap = new HashMap<>();
+            createCommEventContentMap.put("userLogin", userLogin);
+            createCommEventContentMap.put("contentId", contentId);
+            createCommEventContentMap.put("communicationEventId", communicationEventId);
+            createResult = dispatcher.runSync("createCommEventContentAssoc", createCommEventContentMap);
+            if (ServiceUtil.isError(createResult)) {
+                return createResult;
+            }
+        } catch (GenericServiceException e) {
+            Debug.logError(e, module);
+            return ServiceUtil.returnError(e.getMessage());
+        }
+        Map<String, Object> result = ServiceUtil.returnSuccess();
+        result.put("communicationEventId", communicationEventId);
+        return result;
     }
 
     /*
@@ -530,6 +739,7 @@ public class CommunicationEventServices {
         String contentType = (String) context.get("contentType");
         String statusId = (String) context.get("statusId");
         String orderId = (String) context.get("orderId");
+        String returnId = (String) context.get("returnId");
         if (statusId == null) {
             statusId = "COM_PENDING";
         }
@@ -582,10 +792,16 @@ public class CommunicationEventServices {
         if (UtilValidate.isNotEmpty(orderId)) {
             commEventMap.put("orderId", orderId);
         }
+        if (UtilValidate.isNotEmpty(returnId)) {
+            commEventMap.put("returnId", returnId);
+        }
 
         Map<String, Object> createResult;
         try {
             createResult = dispatcher.runSync("createCommunicationEvent", commEventMap);
+            if (ServiceUtil.isError(createResult)) {
+                return ServiceUtil.returnError(ServiceUtil.getErrorMessage(createResult));
+            }
         } catch (GenericServiceException e) {
             Debug.logError(e, module);
             return ServiceUtil.returnError(e.getMessage());
@@ -627,7 +843,10 @@ public class CommunicationEventServices {
 
         // save the communication event
         try {
-            dispatcher.runSync("updateCommunicationEvent", commEventMap);
+            Map<String, Object> result = dispatcher.runSync("updateCommunicationEvent", commEventMap);
+            if (ServiceUtil.isError(result)) {
+                return ServiceUtil.returnError(ServiceUtil.getErrorMessage(result));
+            }
         } catch (GenericServiceException e) {
             return ServiceUtil.returnError(e.getMessage());
         }
@@ -758,6 +977,9 @@ public class CommunicationEventServices {
             // if partyIdTo not found try to find the "to" address using the delivered-to header
             if ((partyIdTo == null) && (deliveredTo != null)) {
                 result = dispatcher.runSync("findPartyFromEmailAddress", UtilMisc.<String, Object>toMap("address", deliveredTo, "userLogin", userLogin));
+                if (ServiceUtil.isError(result)) {
+                    return ServiceUtil.returnError(ServiceUtil.getErrorMessage(result));
+                }
                 partyIdTo = (String)result.get("partyId");
                 contactMechIdTo = (String)result.get("contactMechId");
             }
@@ -886,6 +1108,9 @@ public class CommunicationEventServices {
             commEventMap.put("headerString", header.replaceAll("[<>]", ""));
 
             result = dispatcher.runSync("createCommunicationEvent", commEventMap);
+            if (ServiceUtil.isError(result)) {
+                return ServiceUtil.returnError(ServiceUtil.getErrorMessage(result));
+            }
             communicationEventId = (String)result.get("communicationEventId");
             Debug.logInfo("Persisting New Email: " + aboutThisEmail + " into CommunicationEventId: " + communicationEventId, module);
 
@@ -944,10 +1169,10 @@ public class CommunicationEventServices {
                 emailAddressesBCC.add(((InternetAddress) element).getAddress());
             }
         }
-        String fromString = StringUtil.join(UtilMisc.toList(emailAddressesFrom), ",");
-        String toString = StringUtil.join(UtilMisc.toList(emailAddressesTo), ",");
-        String ccString = StringUtil.join(UtilMisc.toList(emailAddressesCC), ",");
-        String bccString = StringUtil.join(UtilMisc.toList(emailAddressesBCC), ",");
+        String fromString = StringUtil.join(emailAddressesFrom, ",");
+        String toString = StringUtil.join(emailAddressesTo, ",");
+        String ccString = StringUtil.join(emailAddressesCC, ",");
+        String bccString = StringUtil.join(emailAddressesBCC, ",");
 
         if (UtilValidate.isNotEmpty(fromString)) {
             commEventMap.put("fromString", fromString);
@@ -1032,7 +1257,12 @@ public class CommunicationEventServices {
                 }
 
                 // save the content
-                dispatcher.runSync("createCommContentDataResource", attachmentMap);
+                Map<String, Object> result = dispatcher.runSync("createCommContentDataResource", attachmentMap);
+                if (ServiceUtil.isError(result)) {
+                    String errorMessage = ServiceUtil.getErrorMessage(result);
+                    Debug.logError(errorMessage, module);
+                    throw new GenericServiceException(errorMessage);
+                }
             }
         }
     }
@@ -1051,7 +1281,11 @@ public class CommunicationEventServices {
                             "partyId", partyId, "roleTypeId", roleTypeId, "userLogin", userLogin,
                             "contactMechId", (String) result.get("contactMechId"),
                             "statusId", "COM_ROLE_CREATED");
-                    dispatcher.runSync("createCommunicationEventRole", input);
+                    Map<String, Object> resultMap = dispatcher.runSync("createCommunicationEventRole", input);
+                    if (ServiceUtil.isError(resultMap)) {
+                        String errorMessage = ServiceUtil.getErrorMessage(resultMap);
+                        Debug.logError(errorMessage, module);
+                    }
                 }
             }
         } catch (GenericServiceException | GenericEntityException e) {
@@ -1064,7 +1298,11 @@ public class CommunicationEventServices {
         try {
             for (Map<String, Object> result : workEffortInfos) {
                 String workEffortId = (String) result.get("workEffortId");
-                dispatcher.runSync("createCommunicationEventWorkEff", UtilMisc.toMap("workEffortId", workEffortId, "communicationEventId", communicationEventId, "userLogin", userLogin));
+                Map<String, Object> resultMap = dispatcher.runSync("createCommunicationEventWorkEff", UtilMisc.toMap("workEffortId", workEffortId, "communicationEventId", communicationEventId, "userLogin", userLogin));
+                if (ServiceUtil.isError(resultMap)) {
+                    String errorMessage = ServiceUtil.getErrorMessage(resultMap);
+                    Debug.logError(errorMessage, module);
+                }
             }
         } catch (GenericServiceException e) {
             Debug.logError(e, module);
@@ -1095,6 +1333,11 @@ public class CommunicationEventServices {
             map.put("address", emailAddress.getAddress());
             map.put("userLogin", userLogin);
             result = dispatcher.runSync("findPartyFromEmailAddress", map);
+            if (ServiceUtil.isError(result)) {
+                String errorMessage = ServiceUtil.getErrorMessage(result);
+                Debug.logError(errorMessage, module);
+                throw new GenericServiceException(errorMessage);
+            }
         }
 
         return result;
@@ -1115,6 +1358,11 @@ public class CommunicationEventServices {
 
                     result = dispatcher.runSync("findPartyFromEmailAddress",
                             UtilMisc.toMap("address", emailAddress.getAddress(), "userLogin", userLogin));
+                    if (ServiceUtil.isError(result)) {
+                        String errorMessage = ServiceUtil.getErrorMessage(result);
+                        Debug.logError(errorMessage, module);
+                        throw new GenericServiceException(errorMessage);
+                    }
                     if (result.get("partyId") != null) {
                         tempResults.add(result);
                     }
@@ -1143,6 +1391,11 @@ public class CommunicationEventServices {
                     inputFields.put("infoString_ic", caseInsensitiveEmail);
                     result = dispatcher.runSync("performFind", UtilMisc.<String, Object>toMap("entityName",
                             "WorkEffortContactMechView", "inputFields", inputFields, "userLogin", userLogin));
+                    if (ServiceUtil.isError(result)) {
+                        String errorMessage = ServiceUtil.getErrorMessage(result);
+                        Debug.logError(errorMessage, module);
+                        throw new GenericServiceException(errorMessage);
+                    }
                     try (EntityListIterator listIt = (EntityListIterator) result.get("listIt")) {
                         List<GenericValue> list = listIt.getCompleteList();
                         List<GenericValue> filteredList = EntityUtil.filterByDate(list);
@@ -1232,6 +1485,10 @@ public class CommunicationEventServices {
                             Map<String, Object> result;
                             try {
                                 result = dispatcher.runSync("updateCommunicationEvent", updateCtx);
+                                if (ServiceUtil.isError(result)) {
+                                    String errorMessage = ServiceUtil.getErrorMessage(result);
+                                    Debug.logError(errorMessage, module);
+                                }
                             } catch (GenericServiceException e) {
                                 Debug.logError(e, module);
                                 return ServiceUtil.returnError(e.getMessage());

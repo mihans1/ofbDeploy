@@ -66,7 +66,7 @@ public final class ModelDataFileReader {
         this.modelDataFiles = Collections.unmodifiableMap(createModelDataFiles());
     }
 
-    private ModelDataFile createModelDataFile(Element dataFileElement) {
+    private static ModelDataFile createModelDataFile(Element dataFileElement) {
         ModelDataFile dataFile = new ModelDataFile();
         String tempStr;
 
@@ -74,6 +74,7 @@ public final class ModelDataFileReader {
         dataFile.typeCode = UtilXml.checkEmpty(dataFileElement.getAttribute("type-code"));
         dataFile.sender = UtilXml.checkEmpty(dataFileElement.getAttribute("sender"));
         dataFile.receiver = UtilXml.checkEmpty(dataFileElement.getAttribute("receiver"));
+        dataFile.setEncodingType(UtilXml.checkEmpty(dataFileElement.getAttribute("encoding-type")));
 
         tempStr = UtilXml.checkEmpty(dataFileElement.getAttribute("record-length"));
         if (UtilValidate.isNotEmpty(tempStr)) {
@@ -163,7 +164,7 @@ public final class ModelDataFileReader {
         return result;
     }
 
-    private ModelField createModelField(Element fieldElement) {
+    private static ModelField createModelField(Element fieldElement) {
         ModelField field = new ModelField();
         String tempStr;
 
@@ -203,7 +204,7 @@ public final class ModelDataFileReader {
         return field;
     }
 
-    private ModelRecord createModelRecord(Element recordElement) {
+    private static ModelRecord createModelRecord(Element recordElement) {
         ModelRecord record = new ModelRecord();
         String tempStr;
 

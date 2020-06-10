@@ -51,8 +51,9 @@ public class RenderSubContentAsText implements TemplateTransformModel {
     public static final String [] upSaveKeyNames = {"globalNodeTrail"};
     public static final String [] saveKeyNames = {"contentId", "subContentId", "subDataResourceTypeId", "mimeTypeId", "whenMap", "locale",  "wrapTemplateId", "encloseWrapText", "nullThruDatesOnly", "globalNodeTrail"};
 
+    @Override
     @SuppressWarnings("unchecked")
-    public Writer getWriter(final Writer out, Map args) {
+    public Writer getWriter(Writer out, @SuppressWarnings("rawtypes") Map args) {
         final Environment env = Environment.getCurrentEnvironment();
         final LocalDispatcher dispatcher = FreeMarkerWorker.getWrappedObject("dispatcher", env);
         final HttpServletRequest request = FreeMarkerWorker.getWrappedObject("request", env);
@@ -61,7 +62,7 @@ public class RenderSubContentAsText implements TemplateTransformModel {
             Debug.logInfo("in RenderSubContent, contentId(0):" + templateRoot.get("contentId"), module);
         }
         FreeMarkerWorker.getSiteParameters(request, templateRoot);
-        final Map<String, Object> savedValuesUp = new HashMap<String, Object>();
+        final Map<String, Object> savedValuesUp = new HashMap<>();
         FreeMarkerWorker.saveContextValues(templateRoot, upSaveKeyNames, savedValuesUp);
         FreeMarkerWorker.overrideWithArgs(templateRoot, args);
         if (Debug.infoOn()) {
@@ -78,7 +79,7 @@ public class RenderSubContentAsText implements TemplateTransformModel {
             Debug.logInfo("in Render(0), directAssocMode ." + directAssocMode , module);
         }
 
-        final Map<String, Object> savedValues = new HashMap<String, Object>();
+        final Map<String, Object> savedValues = new HashMap<>();
 
         return new Writer(out) {
 
@@ -93,7 +94,7 @@ public class RenderSubContentAsText implements TemplateTransformModel {
 
             @Override
             public void close() throws IOException {
-                List<Map<String, ? extends Object>> globalNodeTrail = UtilGenerics.checkList(templateRoot.get("globalNodeTrail"));
+                List<Map<String, ? extends Object>> globalNodeTrail = UtilGenerics.cast(templateRoot.get("globalNodeTrail"));
                 if (Debug.infoOn()) {
                     Debug.logInfo("Render close, globalNodeTrail(2a):" + ContentWorker.nodeTrailToCsv(globalNodeTrail), "");
                 }

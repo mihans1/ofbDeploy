@@ -185,7 +185,7 @@
     </property>
     <property key="FormFieldTitle_entityGroupId">
         <value xml:lang="de">Entität Gruppen ID</value>
-        <value xml:lang="en">Entity Group Id</value>
+        <value xml:lang="en">Entity Group ID</value>
         <value xml:lang="fr">Réf du groupe d'entité</value>
         <value xml:lang="it">Gruppo entità</value>
         <value xml:lang="ja">エンティテイグループID</value>
@@ -196,7 +196,7 @@
     </property>
     <property key="FormFieldTitle_entitySyncId">
         <value xml:lang="de">Entität Synch. ID</value>
-        <value xml:lang="en">Entity Sync Id</value>
+        <value xml:lang="en">Entity Sync ID</value>
         <value xml:lang="fr">Réf. de synchro. d'entités</value>
         <value xml:lang="it">Codice entità Sincr.</value>
         <value xml:lang="ja">エンティテイ同期ID</value>
@@ -354,7 +354,7 @@
     </property>
     <property key="FormFieldTitle_runStatusId">
         <value xml:lang="de">Laufzeitstatus ID</value>
-        <value xml:lang="en">Run Status Id</value>
+        <value xml:lang="en">Run Status ID</value>
         <value xml:lang="fr">Réf. de statut en cours</value>
         <value xml:lang="it">Stato Esecuzione</value>
         <value xml:lang="ja">実行ステータスID</value>
@@ -1150,6 +1150,9 @@
         <value xml:lang="zh">清除这个缓存</value>
         <value xml:lang="zh-TW">清除這個快取</value>
     </property>
+    <property key="WebtoolsClearSelectedCaches">
+        <value xml:lang="en">Clear Selected Caches</value>
+    </property>
     <property key="WebtoolsCompanyName">
         <value xml:lang="de">OFBiz: Web Tools</value>
         <value xml:lang="en">OFBiz: Web Tools</value>
@@ -1597,6 +1600,18 @@
         <value xml:lang="zh">定义位置</value>
         <value xml:lang="zh-TW">定義位置</value>
     </property>
+    <property key="WebtoolsDelegatorName">
+        <value xml:lang="de">Name Delegator:</value>
+        <value xml:lang="en">Delegator Name:</value>
+        <value xml:lang="fr">Nom du délégateur :</value>
+        <value xml:lang="it">Nome Delegator:</value>
+        <value xml:lang="ja">対象デリゲータ名称:</value>
+        <value xml:lang="pt">Name do Delegator:</value>
+        <value xml:lang="ro">Nume Delegator:</value>
+        <value xml:lang="vi">Tên Ủy quyền (delegator) Đích:</value>
+        <value xml:lang="zh">目标代表名称: </value>
+        <value xml:lang="zh-TW">目標代表名稱:  </value>
+    </property>    
     <property key="WebtoolsDeleteFiles">
         <value xml:lang="de">Dateien nachher löschen?</value>
         <value xml:lang="en">Delete Files Afterwards?</value>
@@ -4012,7 +4027,7 @@
     </property>
     <property key="WebtoolsParent">
         <value xml:lang="de">Elternreferenz</value>
-        <value xml:lang="en">Parent Id</value>
+        <value xml:lang="en">Parent ID</value>
         <value xml:lang="fr">Réf. du parent</value>
         <value xml:lang="it">Padre</value>
         <value xml:lang="ja">上位(親)ID</value>
@@ -4531,6 +4546,9 @@
         <value xml:lang="vi">Kết quả</value>
         <value xml:lang="zh">结果</value>
         <value xml:lang="zh-TW">結果</value>
+    </property>
+    <property key="WebtoolsRunAsSystem">
+        <value xml:lang="en">Run As System</value>
     </property>
     <property key="WebtoolsRunGC">
         <value xml:lang="de">GC starten</value>
@@ -5970,5 +5988,17 @@
         <value xml:lang="vi">Bạn có thể tạo Thực thể ${entityName} sau khi nhập các giá trị mong muốn và bấm vào Tạo mới.</value>
         <value xml:lang="zh">创建一个实体 ${entityName} ：输入值，然后点击新建.</value>
         <value xml:lang="zh-TW">新建一個資料實體 ${entityName} :輸入值,然後點擊新建.</value>
+    </property>
+    <property key="WebtoolsReaderImportNotice">
+        <value xml:lang="de">Eingabe Readers (Komma getrennt,keine Leerzeichen; aus entityengine.xml und ofbiz-component.xml Dateien; common ones include seed,ext,demo)</value>
+        <value xml:lang="en">Enter Readers (comma separated, no spaces; from entityengine.xml and ofbiz-component.xml files; common ones include seed,ext,demo)</value>
+    </property>
+    <property key="WebtoolsSearchLocName">
+        <value xml:lang="de">Ort/Namen Suchen</value>
+        <value xml:lang="en">Search Names/Locations</value>
+    </property>
+    <property key="WebtoolsType">
+        <value xml:lang="de">Typ</value>
+        <value xml:lang="en">Type</value>
     </property>
 </resource>

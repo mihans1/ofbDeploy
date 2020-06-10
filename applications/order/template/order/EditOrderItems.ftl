@@ -104,8 +104,8 @@ under the License.
                                   </div>
                                   <#if productId??>
                                   <div>
-                                      <a href="/catalog/control/EditProduct?productId=${productId}" class="buttontext" target="_blank">${uiLabelMap.ProductCatalog}</a>
-                                      <a href="/ecommerce/control/product?product_id=${productId}" class="buttontext" target="_blank">${uiLabelMap.OrderEcommerce}</a>
+                                      <a href="<@ofbizUrl controlPath="/catalog/control">EditProduct?productId=${productId}</@ofbizUrl>" class="buttontext" target="_blank">${uiLabelMap.ProductCatalog}</a>
+                                      <a href="<@ofbizUrl controlPath="/ecommerce/control">product?product_id=${productId}</@ofbizUrl>" class="buttontext" target="_blank">${uiLabelMap.OrderEcommerce}</a>
                                       <#if orderItemContentWrapper.get("IMAGE_URL", "url")?has_content>
                                       <a href="<@ofbizUrl>viewimage?orderId=${orderId}&amp;orderItemSeqId=${orderItem.orderItemSeqId}&amp;orderContentTypeId=IMAGE_URL</@ofbizUrl>" target="_orderImage" class="buttontext">${uiLabelMap.OrderViewImage}</a>
                                       </#if>
@@ -116,6 +116,18 @@ under the License.
                               <#-- now show status details per line item -->
                               <#assign currentItemStatus = orderItem.getRelatedOne("StatusItem", false)>
                               <td>
+                                  <#if "SALES_ORDER" == orderHeader.orderTypeId>
+                                      <table>
+                                          <tr>
+                                              <td class="label">
+                                                  <span class="label">${uiLabelMap.OrderReserveAfterDate}</span>
+                                              </td>
+                                              <td>
+                                                  <@htmlTemplate.renderDateTimeField name="iradm_${orderItem.orderItemSeqId!}" event="" action="" value="${orderItem.reserveAfterDate!}" className="" alert="" title="Format: yyyy-MM-dd HH:mm:ss.SSS" size="25" maxlength="30" id="reserveAfterDate_${orderItem.orderItemSeqId!}" dateType="date" shortDateInput=false timeDropdownParamName="" defaultDateTimeString="" localizedIconTitle="" timeDropdown="" timeHourName="" classString="" hour1="" hour2="" timeMinutesName="" minutes="" isTwelveHour="" ampmName="" amSelected="" pmSelected="" compositeType="" formName=""/>
+                                              </td>
+                                          </tr>
+                                      </table>
+                                   </#if>
                                   ${uiLabelMap.CommonCurrent}&nbsp;${currentItemStatus.get("description",locale)?default(currentItemStatus.statusId)}<br />
                                   <#assign orderItemStatuses = orderReadHelper.getOrderItemStatuses(orderItem)>
                                   <#list orderItemStatuses as orderItemStatus>
@@ -163,7 +175,7 @@ under the License.
                               <td class="align-text" valign="top" nowrap="nowrap">
                                   <#-- check for permission to modify price -->
                                   <#if (allowPriceChange) && !("ITEM_CANCELLED" == orderItem.statusId || "ITEM_COMPLETED" == orderItem.statusId)>
-                                      <input type="text" size="8" name="ipm_${orderItem.orderItemSeqId}" value="<@ofbizAmount amount=orderItem.unitPrice/>"/>
+                                      <input type="text" size="8" name="ipm_${orderItem.orderItemSeqId}" value="<@ofbizNumber number=orderItem.unitPrice format="quantity"/>"/>
                                       &nbsp;<input type="checkbox" name="opm_${orderItem.orderItemSeqId}" value="Y"/>
                                   <#else>
                                       <div><@ofbizCurrency amount=orderItem.unitPrice isoCode=currencyUomId/> / <@ofbizCurrency amount=orderItem.unitListPrice isoCode=currencyUomId/></div>

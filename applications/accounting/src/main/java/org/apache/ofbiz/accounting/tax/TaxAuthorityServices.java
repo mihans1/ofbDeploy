@@ -60,7 +60,7 @@ public class TaxAuthorityServices {
     public static final BigDecimal PERCENT_SCALE = new BigDecimal("100.000");
     public static final int salestaxFinalDecimals = UtilNumber.getBigDecimalScale("salestax.final.decimals");
     public static final int salestaxCalcDecimals = UtilNumber.getBigDecimalScale("salestax.calc.decimals");
-    public static final int salestaxRounding = UtilNumber.getBigDecimalRoundingMode("salestax.rounding");
+    public static final RoundingMode salestaxRounding = UtilNumber.getRoundingMode("salestax.rounding");
     public static final String resource = "AccountingUiLabels";
 
     public static Map<String, Object> rateProductTaxCalcForDisplay(DispatchContext dctx, Map<String, ? extends Object> context) {
@@ -169,11 +169,11 @@ public class TaxAuthorityServices {
         String facilityId = (String) context.get("facilityId");
         String payToPartyId = (String) context.get("payToPartyId");
         String billToPartyId = (String) context.get("billToPartyId");
-        List<GenericValue> itemProductList = UtilGenerics.checkList(context.get("itemProductList"));
-        List<BigDecimal> itemAmountList = UtilGenerics.checkList(context.get("itemAmountList"));
-        List<BigDecimal> itemPriceList = UtilGenerics.checkList(context.get("itemPriceList"));
-        List<BigDecimal> itemQuantityList = UtilGenerics.checkList(context.get("itemQuantityList"));
-        List<BigDecimal> itemShippingList = UtilGenerics.checkList(context.get("itemShippingList"));
+        List<GenericValue> itemProductList = UtilGenerics.cast(context.get("itemProductList"));
+        List<BigDecimal> itemAmountList = UtilGenerics.cast(context.get("itemAmountList"));
+        List<BigDecimal> itemPriceList = UtilGenerics.cast(context.get("itemPriceList"));
+        List<BigDecimal> itemQuantityList = UtilGenerics.cast(context.get("itemQuantityList"));
+        List<BigDecimal> itemShippingList = UtilGenerics.cast(context.get("itemShippingList"));
         BigDecimal orderShippingAmount = (BigDecimal) context.get("orderShippingAmount");
         BigDecimal orderPromotionsAmount = (BigDecimal) context.get("orderPromotionsAmount");
         GenericValue shippingAddress = (GenericValue) context.get("shippingAddress");
@@ -441,17 +441,17 @@ public class TaxAuthorityServices {
                 BigDecimal taxable = ZERO_BASE;
 
                 if (product != null && (product.get("taxable") == null || (product.get("taxable") != null && product
-                        .getBoolean("taxable").booleanValue()))) {
+                        .getBoolean("taxable")))) {
                     taxable = taxable.add(itemAmount);
                 }
                 if (shippingAmount != null && (taxAuthorityRateProduct.get("taxShipping") == null
                         || (taxAuthorityRateProduct.get("taxShipping") != null && taxAuthorityRateProduct.getBoolean(
-                                "taxShipping").booleanValue()))) {
+                        "taxShipping")))) {
                     taxable = taxable.add(shippingAmount);
                 }
                 if (orderPromotionsAmount != null && (taxAuthorityRateProduct.get("taxPromotions") == null
                         || (taxAuthorityRateProduct.get("taxPromotions") != null && taxAuthorityRateProduct.getBoolean(
-                                "taxPromotions").booleanValue()))) {
+                        "taxPromotions")))) {
                     taxable = taxable.add(orderPromotionsAmount);
                 }
 

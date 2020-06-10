@@ -160,6 +160,7 @@ public abstract class ModelWidgetCondition implements Serializable {
             }
         };
 
+        @Override
         public Condition newInstance(ModelWidget modelWidget, Element conditionElement) {
             if (conditionElement == null) {
                 return TRUE;
@@ -241,7 +242,7 @@ public abstract class ModelWidgetCondition implements Serializable {
                 Debug.logWarning(fullString.toString(), module);
                 throw new IllegalArgumentException(fullString.toString());
             }
-            return resultBool.booleanValue();
+            return resultBool;
         }
     }
 
@@ -298,7 +299,7 @@ public abstract class ModelWidgetCondition implements Serializable {
                 Debug.logWarning(fullString.toString(), module);
                 throw new IllegalArgumentException(fullString.toString());
             }
-            return resultBool.booleanValue();
+            return resultBool;
         }
     }
 
@@ -417,7 +418,7 @@ public abstract class ModelWidgetCondition implements Serializable {
             }
             String fieldString = null;
             try {
-                fieldString = (String) ObjectType.simpleTypeConvert(fieldVal, "String", null, (TimeZone) context.get("timeZone"),
+                fieldString = (String) ObjectType.simpleTypeOrObjectConvert(fieldVal, "String", null, (TimeZone) context.get("timeZone"),
                         (Locale) context.get("locale"), true);
             } catch (GeneralException e) {
                 Debug.logError(e, "Could not convert object to String, using empty String", module);
@@ -466,7 +467,8 @@ public abstract class ModelWidgetCondition implements Serializable {
                     Debug.logWarning("No permission service-name specified!", module);
                     return false;
                 }
-                Map<String, Object> serviceContext = UtilGenerics.toMap(context.get(contextMap));
+                Object obj = context.get(contextMap);
+                Map<String, Object> serviceContext = (obj instanceof Map) ? UtilGenerics.cast(obj) : null;
                 if (serviceContext != null) {
                     // copy the required internal fields
                     serviceContext.put("userLogin", context.get("userLogin"));
@@ -506,7 +508,7 @@ public abstract class ModelWidgetCondition implements Serializable {
                 }
                 Boolean hasPermission = (Boolean) resp.get("hasPermission");
                 if (hasPermission != null) {
-                    return hasPermission.booleanValue();
+                    return hasPermission;
                 }
             }
             return false;
@@ -542,7 +544,7 @@ public abstract class ModelWidgetCondition implements Serializable {
             String fieldString = null;
             if (fieldVal != null) {
                 try {
-                    fieldString = (String) ObjectType.simpleTypeConvert(fieldVal, "String", null,
+                    fieldString = (String) ObjectType.simpleTypeOrObjectConvert(fieldVal, "String", null,
                             (TimeZone) context.get("timeZone"), (Locale) context.get("locale"), true);
                 } catch (GeneralException e) {
                     Debug.logError(e, "Could not convert object to String, using empty String", module);
@@ -552,7 +554,7 @@ public abstract class ModelWidgetCondition implements Serializable {
             if (fieldString == null) {
                 fieldString = "";
             }
-            Class<?>[] paramTypes = new Class[] { String.class };
+            Class<?>[] paramTypes = { String.class };
             Object[] params = new Object[] { fieldString };
             Class<?> valClass;
             try {
@@ -575,7 +577,7 @@ public abstract class ModelWidgetCondition implements Serializable {
                 Debug.logError(e, "Error in IfValidationMethod " + methodName + " of class " + className
                         + ", defaulting to false ", module);
             }
-            return resultBool.booleanValue();
+            return resultBool;
         }
     }
 

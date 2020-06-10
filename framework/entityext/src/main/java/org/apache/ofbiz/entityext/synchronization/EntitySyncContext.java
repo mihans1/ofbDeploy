@@ -106,8 +106,8 @@ public class EntitySyncContext {
     //results for a given time block, we will do a query to find the next create/update/remove
     //time for that entity, and also keep track of a global next with the lowest future next value;
     //using these we can skip a lot of queries and speed this up significantly
-    public Map<String, Timestamp> nextEntityCreateTxTime = new HashMap<String, Timestamp>();
-    public Map<String, Timestamp> nextEntityUpdateTxTime = new HashMap<String, Timestamp>();
+    public Map<String, Timestamp> nextEntityCreateTxTime = new HashMap<>();
+    public Map<String, Timestamp> nextEntityUpdateTxTime = new HashMap<>();
     public Timestamp nextCreateTxTime = null;
     public Timestamp nextUpdateTxTime = null;
     public Timestamp nextRemoveTxTime = null;
@@ -266,7 +266,7 @@ public class EntitySyncContext {
         long splitMillis = defaultSyncSplitMillis;
         Long syncSplitMillis = entitySync.getLong("syncSplitMillis");
         if (syncSplitMillis != null) {
-            splitMillis = syncSplitMillis.longValue();
+            splitMillis = syncSplitMillis;
         }
         return splitMillis;
     }
@@ -275,7 +275,7 @@ public class EntitySyncContext {
         long splitMillis = defaultOfflineSyncSplitMillis;
         Long syncSplitMillis = entitySync.getLong("offlineSyncSplitMillis");
         if (syncSplitMillis != null) {
-            splitMillis = syncSplitMillis.longValue();
+            splitMillis = syncSplitMillis;
         }
         return splitMillis;
     }
@@ -284,7 +284,7 @@ public class EntitySyncContext {
         long syncEndBufferMillis = defaultSyncEndBufferMillis;
         Long syncEndBufferMillisLong = entitySync.getLong("syncEndBufferMillis");
         if (syncEndBufferMillisLong != null) {
-            syncEndBufferMillis = syncEndBufferMillisLong.longValue();
+            syncEndBufferMillis = syncEndBufferMillisLong;
         }
         return syncEndBufferMillis;
     }
@@ -293,7 +293,7 @@ public class EntitySyncContext {
         long maxRunningNoUpdateMillis = defaultMaxRunningNoUpdateMillis;
         Long maxRunningNoUpdateMillisLong = entitySync.getLong("maxRunningNoUpdateMillis");
         if (maxRunningNoUpdateMillisLong != null) {
-            maxRunningNoUpdateMillis = maxRunningNoUpdateMillisLong.longValue();
+            maxRunningNoUpdateMillis = maxRunningNoUpdateMillisLong;
         }
         return maxRunningNoUpdateMillis;
     }
@@ -320,7 +320,7 @@ public class EntitySyncContext {
 
     public ArrayList<GenericValue> assembleValuesToCreate() throws SyncDataErrorException {
         // first grab all values inserted in the date range, then get the updates (leaving out all values inserted in the data range)
-        ArrayList<GenericValue> valuesToCreate = new ArrayList<GenericValue>(); // make it an ArrayList to easily merge in sorted lists
+        ArrayList<GenericValue> valuesToCreate = new ArrayList<>(); // make it an ArrayList to easily merge in sorted lists
 
         if (this.nextCreateTxTime != null && (this.nextCreateTxTime.equals(currentRunEndTime) || this.nextCreateTxTime.after(currentRunEndTime))) {
             // this means that for all entities in this pack we found on the last pass that there would be nothing for this one, so just return nothing...
@@ -409,7 +409,7 @@ public class EntitySyncContext {
                         }
                         throw new SyncDataErrorException("Error getting values to create from the datasource", e);
                     }
-
+                    
                     Timestamp nextTxTime;
                     if (firstVal != null) {
                         nextTxTime = firstVal.getTimestamp(ModelEntity.CREATE_STAMP_TX_FIELD);
@@ -421,7 +421,7 @@ public class EntitySyncContext {
                         this.nextCreateTxTime = nextTxTime;
                         Debug.logInfo("EntitySync: Set nextCreateTxTime to [" + nextTxTime + "]", module);
                     }
-
+                    
                     Timestamp curEntityNextTxTime = this.nextEntityCreateTxTime.get(modelEntity.getEntityName());
                     if (curEntityNextTxTime == null || nextTxTime.before(curEntityNextTxTime)) {
                         this.nextEntityCreateTxTime.put(modelEntity.getEntityName(), nextTxTime);
@@ -436,7 +436,7 @@ public class EntitySyncContext {
                 }
                 throw new SyncDataErrorException("Caught runtime error while getting values to create", t);
             }
-
+            
             try {
                 TransactionUtil.commit(beganTransaction);
             } catch (GenericTransactionException e) {
@@ -474,7 +474,7 @@ public class EntitySyncContext {
 
     public ArrayList<GenericValue> assembleValuesToStore() throws SyncDataErrorException {
         // simulate two ordered lists and merge them on-the-fly for faster combined sorting
-        ArrayList<GenericValue> valuesToStore = new ArrayList<GenericValue>(); // make it an ArrayList to easily merge in sorted lists
+        ArrayList<GenericValue> valuesToStore = new ArrayList<>(); // make it an ArrayList to easily merge in sorted lists
 
         if (this.nextUpdateTxTime != null && (this.nextUpdateTxTime.equals(currentRunEndTime) || this.nextUpdateTxTime.after(currentRunEndTime))) {
             // this means that for all entities in this pack we found on the last pass that there would be nothing for this one, so just return nothing...
@@ -514,10 +514,10 @@ public class EntitySyncContext {
                         EntityCondition.makeCondition(ModelEntity.STAMP_TX_FIELD, EntityOperator.LESS_THAN, currentRunEndTime),
                         createdBeforeStartCond);
                 EntityListIterator eli = EntityQuery.use(delegator)
-                        .from(modelEntity.getEntityName())
-                        .where(findValCondition)
-                        .orderBy(ModelEntity.STAMP_TX_FIELD, ModelEntity.STAMP_FIELD)
-                        .queryIterator();
+                                                    .from(modelEntity.getEntityName())
+                                                    .where(findValCondition)
+                                                    .orderBy(ModelEntity.STAMP_TX_FIELD, ModelEntity.STAMP_FIELD)
+                                                    .queryIterator();
                 GenericValue nextValue = null;
                 long valuesPerEntity = 0;
                 while ((nextValue = eli.next()) != null) {
@@ -549,10 +549,10 @@ public class EntitySyncContext {
                             EntityCondition.makeCondition(ModelEntity.CREATE_STAMP_TX_FIELD, EntityOperator.NOT_EQUAL, null),
                             EntityCondition.makeCondition(ModelEntity.CREATE_STAMP_TX_FIELD, EntityOperator.LESS_THAN, currentRunEndTime));
                     EntityListIterator eliNext = EntityQuery.use(delegator)
-                            .from(modelEntity.getEntityName())
-                            .where(findNextCondition)
-                            .orderBy(ModelEntity.STAMP_TX_FIELD)
-                            .queryIterator();
+                                                            .from(modelEntity.getEntityName())
+                                                            .where(findNextCondition)
+                                                            .orderBy(ModelEntity.STAMP_TX_FIELD)
+                                                            .queryIterator();
                     // get the first element and it's tx time value...
                     GenericValue firstVal = eliNext.next();
                     eliNext.close();
@@ -614,19 +614,19 @@ public class EntitySyncContext {
             }
             Debug.logInfo(toStoreInfo.toString(), module);
         }
-
+        
         // As the this.nextUpdateTxTime calculation is only based on entities without values to store, if there at least one value to store returned
         // this calculation is false, so it needs to be nullified
         if (valuesToStore.size() > 0) {
             this.nextUpdateTxTime = null;
-        }
+        }        
 
         return valuesToStore;
     }
 
     public LinkedList<GenericEntity> assembleKeysToRemove() throws SyncDataErrorException {
         // get all removed items from the given time range, add to list for those
-        LinkedList<GenericEntity> keysToRemove = new LinkedList<GenericEntity>();
+        LinkedList<GenericEntity> keysToRemove = new LinkedList<>();
 
         if (this.nextRemoveTxTime != null && (this.nextRemoveTxTime.equals(currentRunEndTime) || this.nextRemoveTxTime.after(currentRunEndTime))) {
             // this means that for all entities in this pack we found on the last pass that there would be nothing for this one, so just return nothing...
@@ -648,10 +648,10 @@ public class EntitySyncContext {
                     EntityCondition.makeCondition(ModelEntity.STAMP_TX_FIELD, EntityOperator.GREATER_THAN_EQUAL_TO, currentRunStartTime),
                     EntityCondition.makeCondition(ModelEntity.STAMP_TX_FIELD, EntityOperator.LESS_THAN, currentRunEndTime));
             EntityListIterator removeEli = EntityQuery.use(delegator)
-                    .from("EntitySyncRemove")
-                    .where(findValCondition)
-                    .orderBy(ModelEntity.STAMP_TX_FIELD, ModelEntity.STAMP_FIELD)
-                    .queryIterator();
+                                                      .from("EntitySyncRemove")
+                                                      .where(findValCondition)
+                                                      .orderBy(ModelEntity.STAMP_TX_FIELD, ModelEntity.STAMP_FIELD)
+                                                      .queryIterator();
             GenericValue entitySyncRemove = null;
             while ((entitySyncRemove = removeEli.next()) != null) {
                 // pull the PK from the EntitySyncRemove in the primaryKeyRemoved field, de-XML-serialize it
@@ -659,19 +659,7 @@ public class EntitySyncContext {
                 GenericEntity pkToRemove = null;
                 try {
                     pkToRemove = (GenericEntity) XmlSerializer.deserialize(primaryKeyRemoved, delegator);
-                } catch (IOException e) {
-                    String errorMsg = "Error deserializing GenericPK to remove in Entity Sync Data for entitySyncId [" + entitySyncId + "] and entitySyncRemoveId [" + entitySyncRemove.getString("entitySyncRemoveId") + "]: " + e.toString();
-                    Debug.logError(e, errorMsg, module);
-                    throw new SyncDataErrorException(errorMsg, e);
-                } catch (SAXException e) {
-                    String errorMsg = "Error deserializing GenericPK to remove in Entity Sync Data for entitySyncId [" + entitySyncId + "] and entitySyncRemoveId [" + entitySyncRemove.getString("entitySyncRemoveId") + "]: " + e.toString();
-                    Debug.logError(e, errorMsg, module);
-                    throw new SyncDataErrorException(errorMsg, e);
-                } catch (ParserConfigurationException e) {
-                    String errorMsg = "Error deserializing GenericPK to remove in Entity Sync Data for entitySyncId [" + entitySyncId + "] and entitySyncRemoveId [" + entitySyncRemove.getString("entitySyncRemoveId") + "]: " + e.toString();
-                    Debug.logError(e, errorMsg, module);
-                    throw new SyncDataErrorException(errorMsg, e);
-                } catch (SerializeException e) {
+                } catch (IOException | SAXException | ParserConfigurationException | SerializeException e) {
                     String errorMsg = "Error deserializing GenericPK to remove in Entity Sync Data for entitySyncId [" + entitySyncId + "] and entitySyncRemoveId [" + entitySyncRemove.getString("entitySyncRemoveId") + "]: " + e.toString();
                     Debug.logError(e, errorMsg, module);
                     throw new SyncDataErrorException(errorMsg, e);
@@ -693,10 +681,10 @@ public class EntitySyncContext {
             if (keysToRemove.size() == 0) {
                 EntityCondition findNextCondition = EntityCondition.makeCondition(ModelEntity.STAMP_TX_FIELD, EntityOperator.GREATER_THAN_EQUAL_TO, currentRunEndTime);
                 EntityListIterator eliNext = EntityQuery.use(delegator)
-                        .from("EntitySyncRemove")
-                        .where(findNextCondition)
-                        .orderBy(ModelEntity.STAMP_TX_FIELD)
-                        .queryIterator();
+                                                        .from("EntitySyncRemove")
+                                                        .where(findNextCondition)
+                                                        .orderBy(ModelEntity.STAMP_TX_FIELD)
+                                                        .queryIterator();
                 // get the first element and it's tx time value...
                 GenericValue firstVal = eliNext.next();
                 eliNext.close();
@@ -749,7 +737,7 @@ public class EntitySyncContext {
         if (keysToRemove.size() > 0) {
             this.nextRemoveTxTime = null;
         }
-
+        
         return keysToRemove;
     }
 
@@ -829,6 +817,7 @@ public class EntitySyncContext {
                     throw new SyncDataErrorException(errorMsg, null, null, updateEsHistRunResult, null);
                 }
             }
+
         } catch (GenericServiceException | GenericEntityException e) {
             throw new SyncServiceErrorException("Error saving results reported from data store", e);
         }
@@ -878,11 +867,11 @@ public class EntitySyncContext {
             }
         }
 
-        if (Debug.infoOn()) Debug.logInfo("Finished saveFinalSyncResults [" + entitySyncId + "]: totalRows=" + totalRows + ", totalRowsToCreate=" + totalRowsToCreate + ", totalRowsToStore=" + totalRowsToStore + ", totalRowsToRemove=" + totalRowsToRemove, module);
+        if (Debug.infoOn()) Debug.logInfo("Finished save Final Sync Results [" + entitySyncId + "]: totalRows=" + totalRows + ", totalRowsToCreate=" + totalRowsToCreate + ", totalRowsToStore=" + totalRowsToStore + ", totalRowsToRemove=" + totalRowsToRemove, module);
     }
 
     public Set<String> makeEntityNameToUseSet() {
-        Set<String> entityNameToUseSet = new HashSet<String>();
+        Set<String> entityNameToUseSet = new HashSet<>();
         for (ModelEntity modelEntity: this.entityModelToUseList) {
             entityNameToUseSet.add(modelEntity.getEntityName());
         }
@@ -912,11 +901,11 @@ public class EntitySyncContext {
                 // find all instances of this entity with the STAMP_TX_FIELD != null, sort ascending to get lowest/oldest value first, then grab first and consider as candidate currentRunStartTime
                 fieldsToSelect.add(ModelEntity.STAMP_TX_FIELD);
                 EntityListIterator eli = EntityQuery.use(delegator)
-                        .select(fieldsToSelect)
-                        .from(modelEntity.getEntityName())
-                        .where(EntityCondition.makeCondition(ModelEntity.STAMP_TX_FIELD, EntityOperator.NOT_EQUAL, null))
-                        .orderBy(ModelEntity.STAMP_TX_FIELD)
-                        .queryIterator();
+                                                    .select(fieldsToSelect)
+                                                    .from(modelEntity.getEntityName())
+                                                    .where(EntityCondition.makeCondition(ModelEntity.STAMP_TX_FIELD, EntityOperator.NOT_EQUAL, null))
+                                                    .orderBy(ModelEntity.STAMP_TX_FIELD)
+                                                    .queryIterator();
                 GenericValue nextValue = eli.next();
                 eli.close();
                 if (nextValue != null) {
@@ -1014,14 +1003,14 @@ public class EntitySyncContext {
 
                 this.totalStoreCalls++;
 
-                long toCreateInsertedCur = remoteStoreResult.get("toCreateInserted") == null ? 0 : ((Long) remoteStoreResult.get("toCreateInserted")).longValue();
-                long toCreateUpdatedCur = remoteStoreResult.get("toCreateUpdated") == null ? 0 : ((Long) remoteStoreResult.get("toCreateUpdated")).longValue();
-                long toCreateNotUpdatedCur = remoteStoreResult.get("toCreateNotUpdated") == null ? 0 : ((Long) remoteStoreResult.get("toCreateNotUpdated")).longValue();
-                long toStoreInsertedCur = remoteStoreResult.get("toStoreInserted") == null ? 0 : ((Long) remoteStoreResult.get("toStoreInserted")).longValue();
-                long toStoreUpdatedCur = remoteStoreResult.get("toStoreUpdated") == null ? 0 : ((Long) remoteStoreResult.get("toStoreUpdated")).longValue();
-                long toStoreNotUpdatedCur = remoteStoreResult.get("toStoreNotUpdated") == null ? 0 : ((Long) remoteStoreResult.get("toStoreNotUpdated")).longValue();
-                long toRemoveDeletedCur = remoteStoreResult.get("toRemoveDeleted") == null ? 0 : ((Long) remoteStoreResult.get("toRemoveDeleted")).longValue();
-                long toRemoveAlreadyDeletedCur = remoteStoreResult.get("toRemoveAlreadyDeleted") == null ? 0 : ((Long) remoteStoreResult.get("toRemoveAlreadyDeleted")).longValue();
+                long toCreateInsertedCur = remoteStoreResult.get("toCreateInserted") == null ? 0 : (Long) remoteStoreResult.get("toCreateInserted");
+                long toCreateUpdatedCur = remoteStoreResult.get("toCreateUpdated") == null ? 0 : (Long) remoteStoreResult.get("toCreateUpdated");
+                long toCreateNotUpdatedCur = remoteStoreResult.get("toCreateNotUpdated") == null ? 0 : (Long) remoteStoreResult.get("toCreateNotUpdated");
+                long toStoreInsertedCur = remoteStoreResult.get("toStoreInserted") == null ? 0 : (Long) remoteStoreResult.get("toStoreInserted");
+                long toStoreUpdatedCur = remoteStoreResult.get("toStoreUpdated") == null ? 0 : (Long) remoteStoreResult.get("toStoreUpdated");
+                long toStoreNotUpdatedCur = remoteStoreResult.get("toStoreNotUpdated") == null ? 0 : (Long) remoteStoreResult.get("toStoreNotUpdated");
+                long toRemoveDeletedCur = remoteStoreResult.get("toRemoveDeleted") == null ? 0 : (Long) remoteStoreResult.get("toRemoveDeleted");
+                long toRemoveAlreadyDeletedCur = remoteStoreResult.get("toRemoveAlreadyDeleted") == null ? 0 : (Long) remoteStoreResult.get("toRemoveAlreadyDeleted");
 
                 this.toCreateInserted += toCreateInsertedCur;
                 this.toCreateUpdated += toCreateUpdatedCur;
@@ -1193,7 +1182,7 @@ public class EntitySyncContext {
         @Override
         public void saveSyncErrorInfo(EntitySyncContext esc) {
             if (esc != null) {
-                List<Object> errorList = new LinkedList<Object>();
+                List<Object> errorList = new LinkedList<>();
                 esc.saveSyncErrorInfo("ESR_OTHER_ERROR", errorList);
                 this.addErrorMessages(errorList);
             }
@@ -1211,7 +1200,7 @@ public class EntitySyncContext {
         @Override
         public void saveSyncErrorInfo(EntitySyncContext esc) {
             if (esc != null) {
-                List<Object> errorList = new LinkedList<Object>();
+                List<Object> errorList = new LinkedList<>();
                 esc.saveSyncErrorInfo("ESR_DATA_ERROR", errorList);
                 this.addErrorMessages(errorList);
             }
@@ -1229,7 +1218,7 @@ public class EntitySyncContext {
         @Override
         public void saveSyncErrorInfo(EntitySyncContext esc) {
             if (esc != null) {
-                List<Object> errorList = new LinkedList<Object>();
+                List<Object> errorList = new LinkedList<>();
                 esc.saveSyncErrorInfo("ESR_SERVICE_ERROR", errorList);
                 this.addErrorMessages(errorList);
             }

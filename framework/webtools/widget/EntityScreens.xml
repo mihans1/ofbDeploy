@@ -37,10 +37,14 @@ under the License.
             <widgets>
                 <decorator-screen name="CommonEntityDecorator" location="${parameters.mainDecoratorLocation}">
                     <decorator-section name="body">
-                        <include-form name="EntitySQLCommand" location="component://webtools/widget/EntityForms.xml"/>
-                        <platform-specific>
-                            <html><html-template location="component://webtools/template/entity/EntitySQLProcessor.ftl"/></html>
-                        </platform-specific>
+                        <screenlet>
+                            <include-form name="EntitySQLCommand" location="component://webtools/widget/EntityForms.xml"/>
+                        </screenlet>
+                        <screenlet>
+                            <platform-specific>
+                                <html><html-template location="component://webtools/template/entity/EntitySQLProcessor.ftl"/></html>
+                            </platform-specific>
+                        </screenlet>
                     </decorator-section>
                 </decorator-screen>
             </widgets>
@@ -195,9 +199,9 @@ under the License.
             </condition>
             <actions>
                 <property-map resource="WebtoolsErrorUiLabels" map-name="uiLabelMap"/>
-                <script location="component://webtools/groovyScripts/entity/FindGeneric.groovy"/>
                 <property-map resource="CommonUiLabels" map-name="uiLabelMap"/>
                 <property-map resource="WebtoolsUiLabels" map-name="uiLabelMap"/>
+                <script location="component://webtools/groovyScripts/entity/FindGeneric.groovy"/>
                 <set field="title" value="${uiLabelMap.WebtoolsFindValues} ${uiLabelMap.WebtoolsForEntity}: ${entityName}"/>
                 <set field="commonDisplaying" from-field="uiLabelMap.CommonDisplaying"/>
                 <set field="tabButtonItem" value="entitymaint"/>
@@ -208,14 +212,9 @@ under the License.
                         <decorator-screen name="FindScreenDecorator" location="component://common/widget/CommonScreens.xml">
                             <decorator-section name="menu-bar">
                                 <container style="button-bar button-style-1">
-                                    <link target="entitymaint" text="${uiLabelMap.WebtoolsBackToEntityList}"/>
-                                    <link target="ViewRelations" text="${uiLabelMap.WebtoolsViewRelations}">
-                                        <parameter param-name="entityName"/>
-                                    </link>
-                                    <link target="ViewGeneric" text="${uiLabelMap.CommonCreateNew}" style="create">
-                                        <parameter param-name="entityName"/>
-                                        <parameter param-name="enableEdit" value="true"/>
-                                    </link>
+                                    <link target="entity/list" text="${uiLabelMap.WebtoolsBackToEntityList}"/>
+                                    <link target="entity/relations/${entityName}" text="${uiLabelMap.WebtoolsViewRelations}"/>
+                                    <link target="entity/create/${entityName}" text="${uiLabelMap.CommonCreate}" style="create"/>
                                 </container>
                             </decorator-section>
                             <decorator-section name="search-options">
@@ -260,6 +259,16 @@ under the License.
             <fail-widgets>
                 <label style="h3">${uiLabelMap.WebtoolsPermissionError}</label>
             </fail-widgets>
+        </section>
+    </screen>
+    <screen name="EditGeneric">
+        <section>
+            <actions>
+                <set field="parameters.enableEdit" value="true"/>
+            </actions>
+            <widgets>
+                <include-screen name="ViewGeneric"/>
+            </widgets>
         </section>
     </screen>
     <screen name="ViewRelations">
@@ -484,9 +493,11 @@ under the License.
             <widgets>
                 <decorator-screen name="CommonEntityDecorator" location="${parameters.mainDecoratorLocation}">
                     <decorator-section name="body">
-                        <platform-specific>
-                            <html><html-template location="component://webtools/template/entity/ConnectionPoolStatus.ftl"/></html>
-                        </platform-specific>
+                        <screenlet>
+                            <platform-specific>
+                                <html><html-template location="component://webtools/template/entity/ConnectionPoolStatus.ftl"/></html>
+                            </platform-specific>
+                        </screenlet>
                     </decorator-section>
                 </decorator-screen>
             </widgets>

@@ -39,6 +39,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
+import java.util.function.Supplier;
 
 import org.apache.ofbiz.base.util.collections.MapComparator;
 import org.apache.ofbiz.entity.Delegator;
@@ -108,22 +109,38 @@ public final class UtilMisc {
     }
 
     /**
-     * Create a map from passed nameX, valueX parameters
-     * @return The resulting Map
+     * Creates a pseudo-literal map corresponding to key-values.
+     *
+     * @param kvs  the key-value pairs
+     * @return the corresponding map.
+     * @throws IllegalArgumentException when the key-value list is not even.
+     */
+    public static <K, V> Map<K, V> toMap(Object... kvs) {
+        return toMap(HashMap::new, kvs);
+    }
+
+    /**
+     * Creates a pseudo-literal map corresponding to key-values.
+     *
+     * @param constructor  the constructor used to instantiate the map
+     * @param kvs  the key-value pairs
+     * @return the corresponding map.
+     * @throws IllegalArgumentException when the key-value list is not even.
      */
     @SuppressWarnings("unchecked")
-    public static <K, V> Map<String, V> toMap(Object... data) {
-        if (data.length == 1 && data[0] instanceof Map) {
-            return UtilGenerics.<String, V>checkMap(data[0]);
+    public static <K, V> Map<K, V> toMap(Supplier<Map<K, V>> constructor, Object... kvs) {
+        if (kvs.length == 1 && kvs[0] instanceof Map) {
+            return UtilGenerics.cast(kvs[0]);
         }
-        if (data.length % 2 == 1) {
-            IllegalArgumentException e = new IllegalArgumentException("You must pass an even sized array to the toMap method (size = " + data.length + ")");
+        if (kvs.length % 2 == 1) {
+            IllegalArgumentException e = new IllegalArgumentException(
+                    "You must pass an even sized array to the toMap method (size = " + kvs.length + ")");
             Debug.logInfo(e, module);
             throw e;
         }
-        Map<String, V> map = new HashMap<>();
-        for (int i = 0; i < data.length;) {
-            map.put((String) data[i++], (V) data[i++]);
+        Map<K, V> map = constructor.get();
+        for (int i = 0; i < kvs.length;) {
+            map.put((K) kvs[i++], (V) kvs[i++]);
         }
         return map;
     }
@@ -153,14 +170,6 @@ public final class UtilMisc {
         }
         Map<K, V> result = new HashMap<>(map.size());
         result.putAll(map);
-        return result;
-    }
-
-    public static <T> Set<T> makeSetWritable(Collection<? extends T> col) {
-        Set<T> result = new LinkedHashSet<>();
-        if (col != null) {
-            result.addAll(col);
-        }
         return result;
     }
 
@@ -212,7 +221,7 @@ public final class UtilMisc {
      * Assuming outerMap not null; if null will throw a NullPointerException
      */
     public static <K, IK, V> Map<IK, V> getMapFromMap(Map<K, Object> outerMap, K key) {
-        Map<IK, V> innerMap = UtilGenerics.<IK, V>checkMap(outerMap.get(key));
+        Map<IK, V> innerMap = UtilGenerics.cast(outerMap.get(key));
         if (innerMap == null) {
             innerMap = new HashMap<>();
             outerMap.put(key, innerMap);
@@ -224,7 +233,7 @@ public final class UtilMisc {
      * Assuming outerMap not null; if null will throw a NullPointerException
      */
     public static <K, V> List<V> getListFromMap(Map<K, Object> outerMap, K key) {
-        List<V> innerList = UtilGenerics.<V>checkList(outerMap.get(key));
+        List<V> innerList = UtilGenerics.cast(outerMap.get(key));
         if (innerList == null) {
             innerList = new LinkedList<>();
             outerMap.put(key, innerList);
@@ -243,9 +252,9 @@ public final class UtilMisc {
         } else if (currentNumberObj instanceof BigDecimal) {
             currentNumber = (BigDecimal) currentNumberObj;
         } else if (currentNumberObj instanceof Double) {
-            currentNumber = new BigDecimal(((Double) currentNumberObj).doubleValue());
+            currentNumber = new BigDecimal((Double) currentNumberObj);
         } else if (currentNumberObj instanceof Long) {
-            currentNumber = new BigDecimal(((Long) currentNumberObj).longValue());
+            currentNumber = new BigDecimal((Long) currentNumberObj);
         } else {
             throw new IllegalArgumentException("In addToBigDecimalInMap found a Map value of a type not supported: " + currentNumberObj.getClass().getName());
         }
@@ -359,18 +368,6 @@ public final class UtilMisc {
         return list;
     }
 
-    public static <T> List<T> toList(Collection<T> collection) {
-        if (collection == null) {
-            return null;
-        }
-        if (collection instanceof List<?>) {
-            return (List<T>) collection;
-        }
-        List<T> list = new LinkedList<>();
-        list.addAll(collection);
-        return list;
-    }
-
     public static <T> List<T> toListArray(T[] data) {
         if (data == null) {
             return null;
@@ -383,7 +380,7 @@ public final class UtilMisc {
     }
 
     public static <K, V> void addToListInMap(V element, Map<K, Object> theMap, K listKey) {
-        List<V> theList = UtilGenerics.checkList(theMap.get(listKey));
+        List<V> theList = UtilGenerics.cast(theMap.get(listKey));
         if (theList == null) {
             theList = new LinkedList<>();
             theMap.put(listKey, theList);
@@ -392,7 +389,7 @@ public final class UtilMisc {
     }
 
     public static <K, V> void addToSetInMap(V element, Map<K, Set<V>> theMap, K setKey) {
-        Set<V> theSet = UtilGenerics.checkSet(theMap.get(setKey));
+        Set<V> theSet = UtilGenerics.cast(theMap.get(setKey));
         if (theSet == null) {
             theSet = new LinkedHashSet<>();
             theMap.put(setKey, theSet);
@@ -401,7 +398,7 @@ public final class UtilMisc {
     }
 
     public static <K, V> void addToSortedSetInMap(V element, Map<K, Set<V>> theMap, K setKey) {
-        Set<V> theSet = UtilGenerics.checkSet(theMap.get(setKey));
+        Set<V> theSet = UtilGenerics.cast(theMap.get(setKey));
         if (theSet == null) {
             theSet = new TreeSet<>();
             theMap.put(setKey, theSet);
@@ -416,7 +413,7 @@ public final class UtilMisc {
      */
     public static double toDouble(Object obj) {
         Double result = toDoubleObject(obj);
-        return result == null ? 0.0 : result.doubleValue();
+        return result == null ? 0.0 : result;
     }
 
     /** Converts an <code>Object</code> to a <code>Double</code>. Returns
@@ -432,12 +429,15 @@ public final class UtilMisc {
             return (Double) obj;
         }
         if (obj instanceof Number) {
-            return Double.valueOf(((Number) obj).doubleValue());
+            return ((Number) obj).doubleValue();
         }
         Double result = null;
         try {
             result = Double.parseDouble(obj.toString());
-        } catch (Exception e) {}
+        } catch (Exception e) {
+            Debug.logError(e, module);
+        }
+
         return result;
     }
 
@@ -448,7 +448,7 @@ public final class UtilMisc {
      */
     public static int toInteger(Object obj) {
         Integer result = toIntegerObject(obj);
-        return result == null ? 0 : result.intValue();
+        return result == null ? 0 : result;
     }
 
     /** Converts an <code>Object</code> to an <code>Integer</code>. Returns
@@ -469,7 +469,10 @@ public final class UtilMisc {
         Integer result = null;
         try {
             result = Integer.parseInt(obj.toString());
-        } catch (Exception e) {}
+        } catch (Exception e) {
+            Debug.logError(e, module);
+        }
+
         return result;
     }
 
@@ -480,7 +483,7 @@ public final class UtilMisc {
      */
     public static long toLong(Object obj) {
         Long result = toLongObject(obj);
-        return result == null ? 0 : result.longValue();
+        return result == null ? 0 : result;
     }
 
     /** Converts an <code>Object</code> to a <code>Long</code>. Returns
@@ -496,12 +499,15 @@ public final class UtilMisc {
             return (Long) obj;
         }
         if (obj instanceof Number) {
-            return Long.valueOf(((Number) obj).longValue());
+            return ((Number) obj).longValue();
         }
         Long result = null;
         try {
             result = Long.parseLong(obj.toString());
-        } catch (Exception e) {}
+        } catch (Exception e) {
+            Debug.logError(e, module);
+        }
+
         return result;
     }
 
@@ -596,19 +602,6 @@ public final class UtilMisc {
     /** Returns a List of available locales sorted by display name */
     public static List<Locale> availableLocales() {
         return LocaleHolder.availableLocaleList;
-    }
-
-    /** List of domains or IP addresses to be checked to prevent Host Header Injection, 
-     * no spaces after commas,no wildcard, can be extended of course... 
-     * @return List of domains or IP addresses to be checked to prevent Host Header Injection,
-     */
-    public static List<String> getHostHeadersAllowed() {
-        String hostHeadersAllowedString = UtilProperties.getPropertyValue("security", "host-headers-allowed", "localhost");
-        List<String> hostHeadersAllowed = null;
-        if (UtilValidate.isNotEmpty(hostHeadersAllowedString)) {
-            hostHeadersAllowed = StringUtil.split(hostHeadersAllowedString, ",");
-        }
-        return Collections.unmodifiableList(hostHeadersAllowed);
     }
 
     /** @deprecated use Thread.sleep() */

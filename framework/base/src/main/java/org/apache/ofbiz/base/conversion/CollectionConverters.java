@@ -25,6 +25,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import org.apache.ofbiz.base.util.StringUtil;
 import org.apache.ofbiz.base.util.UtilGenerics;
@@ -32,10 +33,12 @@ import org.apache.ofbiz.base.util.UtilGenerics;
 /** Collection Converter classes. */
 public class CollectionConverters implements ConverterLoader {
     public static class ArrayCreator implements ConverterCreator, ConverterLoader {
+        @Override
         public void loadConverters() {
             Converters.registerCreator(this);
         }
 
+        @Override
         public <S, T> Converter<S, T> createConverter(Class<S> sourceClass, Class<T> targetClass) {
             if (!sourceClass.isArray()) {
                return null;
@@ -60,6 +63,7 @@ public class CollectionConverters implements ConverterLoader {
             return sourceClass == this.getSourceClass() && targetClass == this.getTargetClass();
         }
 
+        @Override
         public T convert(S obj) throws ConversionException {
             List<Object> list = new LinkedList<>();
             int len = Array.getLength(obj);
@@ -89,6 +93,7 @@ public class CollectionConverters implements ConverterLoader {
             return false;
         }
 
+        @Override
         public List<T> convert(T[] obj) throws ConversionException {
             return Arrays.asList(obj);
         }
@@ -99,6 +104,7 @@ public class CollectionConverters implements ConverterLoader {
             super(List.class, String.class);
         }
 
+        @Override
         public String convert(List<T> obj) throws ConversionException {
             return obj.toString();
         }
@@ -109,6 +115,7 @@ public class CollectionConverters implements ConverterLoader {
             super(Map.class, List.class);
         }
 
+        @Override
         public List<Map<K, V>> convert(Map<K, V> obj) throws ConversionException {
             List<Map<K, V>> tempList = new LinkedList<>();
             tempList.add(obj);
@@ -121,6 +128,7 @@ public class CollectionConverters implements ConverterLoader {
             super(Map.class, Set.class);
         }
 
+        @Override
         public Set<Map<K, V>> convert(Map<K, V> obj) throws ConversionException {
             Set<Map<K, V>> tempSet = new HashSet<>();
             tempSet.add(obj);
@@ -133,6 +141,7 @@ public class CollectionConverters implements ConverterLoader {
             super(Map.class, String.class);
         }
 
+        @Override
         public String convert(Map<K, V> obj) throws ConversionException {
             return obj.toString();
         }
@@ -157,11 +166,16 @@ public class CollectionConverters implements ConverterLoader {
             super(String.class, Map.class);
         }
 
+        @Override
         public Map<String, String> convert(String obj) throws ConversionException {
-            if (obj.startsWith("{") && obj.endsWith("}")) {
-                return StringUtil.toMap(obj);
+            if (!obj.startsWith("{") || !obj.endsWith("}")) {
+                throw new ConversionException("Could not convert " + obj + " to Map: ");
             }
-            throw new ConversionException("Could not convert " + obj + " to Map: ");
+            String kvs = obj.substring(1, obj.length() - 1);
+            return Arrays.stream(kvs.split("\\,\\s"))
+                    .map(entry -> entry.split("\\="))
+                    .filter(kv -> kv.length == 2)
+                    .collect(Collectors.toMap(kv -> kv[0], kv -> kv[1]));
         }
     }
 
@@ -179,6 +193,7 @@ public class CollectionConverters implements ConverterLoader {
         }
     }
 
+    @Override
     public void loadConverters() {
         Converters.loadContainedConverters(CollectionConverters.class);
     }

@@ -26,8 +26,10 @@ import java.io.InputStreamReader;
 import java.io.StringWriter;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Base64;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -38,9 +40,7 @@ import javax.xml.parsers.SAXParser;
 import javax.xml.parsers.SAXParserFactory;
 
 import org.apache.ofbiz.base.location.FlexibleLocation;
-import org.apache.ofbiz.base.util.Base64;
 import org.apache.ofbiz.base.util.Debug;
-import org.apache.ofbiz.base.util.UtilIO;
 import org.apache.ofbiz.base.util.UtilMisc;
 import org.apache.ofbiz.base.util.UtilValidate;
 import org.apache.ofbiz.base.util.UtilXml;
@@ -97,7 +97,7 @@ public class EntitySaxReader extends DefaultHandler {
     private boolean createDummyFks = false;
     private boolean checkDataOnly = false;
     private boolean continueOnFail = false;
-    private enum Action {CREATE, CREATE_UPDATE, CREATE_REPLACE, DELETE};
+    private enum Action {CREATE, CREATE_UPDATE, CREATE_REPLACE, DELETE}
     private List<String> actionTags = UtilMisc.toList("create", "create-update", "create-replace", "delete");
     private Action currentAction = Action.CREATE_UPDATE;
     private List<Object> messageList = null;
@@ -161,7 +161,7 @@ public class EntitySaxReader extends DefaultHandler {
 
     public List<Object> getMessageList() {
         if (this.checkDataOnly && this.messageList == null) {
-            messageList = new LinkedList<Object>();
+            messageList = new LinkedList<>();
         }
         return this.messageList;
     }
@@ -269,6 +269,7 @@ public class EntitySaxReader extends DefaultHandler {
 
     // ======== ContentHandler interface implementation ========
 
+    @Override
     public void characters(char[] values, int offset, int count) throws SAXException {
         if (isParseForTemplate) {
             // if null, don't worry about it
@@ -294,6 +295,7 @@ public class EntitySaxReader extends DefaultHandler {
         }
     }
 
+    @Override
     public void endElement(String namespaceURI, String localName, String fullNameString) throws SAXException {
         if (Debug.verboseOn()) Debug.logVerbose("endElement: localName=" + localName + ", fullName=" + fullNameString + ", numberRead=" + numberRead, module);
         if ("entity-engine-xml".equals(fullNameString)) {
@@ -312,7 +314,7 @@ public class EntitySaxReader extends DefaultHandler {
                 throw new SAXException("Could not find transform template with resource path: " + templatePath);
             } else {
                 try {
-                    BufferedReader templateReader = new BufferedReader(new InputStreamReader(templateUrl.openStream(),UtilIO.getUtf8()));
+                    BufferedReader templateReader = new BufferedReader(new InputStreamReader(templateUrl.openStream(),StandardCharsets.UTF_8));
 
                     StringWriter outWriter = new StringWriter();
                     Configuration config = FreeMarkerWorker.newConfiguration();
@@ -322,7 +324,7 @@ public class EntitySaxReader extends DefaultHandler {
                     Template template = new Template("FMImportFilter", templateReader, config);
                     NodeModel nodeModel = NodeModel.wrap(this.rootNodeForTemplate);
 
-                    Map<String, Object> context = new HashMap<String, Object>();
+                    Map<String, Object> context = new HashMap<>();
                     TemplateHashModel staticModels = FreeMarkerWorker.getDefaultOfbizWrapper().getStaticModels();
                     context.put("Static", staticModels);
 
@@ -367,13 +369,14 @@ public class EntitySaxReader extends DefaultHandler {
                         ModelField modelField = modelEntity.getField(currentFieldName.toString());
                         String type = modelField.getType();
                         if (type != null && "blob".equals(type)) {
-                            byte[] binData = Base64.base64Decode((new String(currentFieldValue)).getBytes());
+                            byte[] binData = Base64.getMimeDecoder().decode((new String(currentFieldValue)).getBytes());
                             currentValue.setBytes(currentFieldName.toString(), binData);
                         } else {
                             currentValue.setString(currentFieldName.toString(), new String(currentFieldValue));
                         }
                     } else {
-                        Debug.logWarning("Ignoring invalid field name [" + currentFieldName + "] found for the entity: " + currentValue.getEntityName() + " with value=" + currentFieldValue, module);
+                        Debug.logWarning("Ignoring invalid field name [" + currentFieldName + "] found for the entity: "
+                                + currentValue.getEntityName() + " with value=" + currentFieldValue.toString(), module);
                     }
                     currentFieldValue = null;
                 }
@@ -443,10 +446,12 @@ public class EntitySaxReader extends DefaultHandler {
         }
     }
 
+    @Override
     public void setDocumentLocator(org.xml.sax.Locator locator) {
         this.locator = locator;
     }
 
+    @Override
     public void startElement(String namepsaceURI, String localName, String fullNameString, Attributes attributes) throws SAXException {
         if (Debug.verboseOn()) Debug.logVerbose("startElement: localName=" + localName + ", fullName=" + fullNameString + ", attributes=" + attributes, module);
         if ("entity-engine-xml".equals(fullNameString)) {
@@ -583,15 +588,18 @@ public class EntitySaxReader extends DefaultHandler {
 
     // ======== ErrorHandler interface implementation ========
 
+    @Override
     public void error(org.xml.sax.SAXParseException exception) throws SAXException {
         Debug.logWarning(exception, "Error reading XML on line " + exception.getLineNumber() + ", column " + exception.getColumnNumber(), module);
     }
 
+    @Override
     public void fatalError(org.xml.sax.SAXParseException exception) throws SAXException {
         Debug.logError(exception, "Fatal Error reading XML on line " + exception.getLineNumber() + ", column " + exception.getColumnNumber(), module);
         throw new SAXException("Fatal Error reading XML on line " + exception.getLineNumber() + ", column " + exception.getColumnNumber(), exception);
     }
 
+    @Override
     public void warning(org.xml.sax.SAXParseException exception) throws SAXException {
         Debug.logWarning(exception, "Warning reading XML on line " + exception.getLineNumber() + ", column " + exception.getColumnNumber(), module);
     }

@@ -31,6 +31,7 @@ under the License.
     <form method="post" action="<@ofbizUrl>login</@ofbizUrl>" name="loginform">
       <input type="hidden" name="requirePasswordChange" value="Y"/>
       <input type="hidden" name="USERNAME" value="${username}"/>
+      <input type="hidden" name="TOKEN" value="${parameters.TOKEN!}"/>
       <input type="hidden" name="userTenantId" value="${tenantId}"/>
       <input type="hidden" name="forgotPwdFlag" value="${parameters.forgotPwdFlag!}" />
       <table cellspacing="0">
@@ -56,19 +57,6 @@ under the License.
           <td class="label">${uiLabelMap.CommonNewPasswordVerify}</td>
           <td><input type="password" name="newPasswordVerify" autocomplete="off" value="" size="20"/></td>
         </tr>
-        <#if securityQuestion?has_content>
-          <tr>
-            <td class="label">${uiLabelMap.SecurityQuestiom}</td>
-            <td>
-              <input type="hidden" name="securityQuestion" value="${securityQuestion.enumId!}" />
-                ${securityQuestion.description!}
-            </td>
-          </tr>
-          <tr>
-            <td class="label">${uiLabelMap.SecurityAnswer}</td>
-            <td><input type="text" class='inputBox' name="securityAnswer" id="SECURITY_ANSWER" value="" maxlength="100" /></td>
-          </tr>
-        </#if>
         <tr>
           <td colspan="2" align="center">
             <input type="submit" value="${uiLabelMap.CommonSubmit}"/>
@@ -80,6 +68,6 @@ under the License.
 </div>
 </center>
 
-<script language="JavaScript" type="text/javascript">
+<script type="application/javascript">
   document.loginform.PASSWORD.focus();
 </script>

@@ -58,18 +58,18 @@ public class ServerHitBin {
     private static final String[] typeIds = {"", "REQUEST", "EVENT", "VIEW", "ENTITY", "SERVICE"};
 
     // these Maps contain Lists of ServerHitBin objects by id, the most recent is first in the list
-    public static final ConcurrentMap<String, Deque<ServerHitBin>> requestHistory = new ConcurrentHashMap<String, Deque<ServerHitBin>>();
-    public static final ConcurrentMap<String, Deque<ServerHitBin>> eventHistory = new ConcurrentHashMap<String, Deque<ServerHitBin>>();
-    public static final ConcurrentMap<String, Deque<ServerHitBin>> viewHistory = new ConcurrentHashMap<String, Deque<ServerHitBin>>();
-    public static final ConcurrentMap<String, Deque<ServerHitBin>> entityHistory = new ConcurrentHashMap<String, Deque<ServerHitBin>>();
-    public static final ConcurrentMap<String, Deque<ServerHitBin>> serviceHistory = new ConcurrentHashMap<String, Deque<ServerHitBin>>();
+    public static final ConcurrentMap<String, Deque<ServerHitBin>> requestHistory = new ConcurrentHashMap<>();
+    public static final ConcurrentMap<String, Deque<ServerHitBin>> eventHistory = new ConcurrentHashMap<>();
+    public static final ConcurrentMap<String, Deque<ServerHitBin>> viewHistory = new ConcurrentHashMap<>();
+    public static final ConcurrentMap<String, Deque<ServerHitBin>> entityHistory = new ConcurrentHashMap<>();
+    public static final ConcurrentMap<String, Deque<ServerHitBin>> serviceHistory = new ConcurrentHashMap<>();
 
     // these Maps contain ServerHitBin objects by id
-    public static final ConcurrentMap<String, ServerHitBin> requestSinceStarted = new ConcurrentHashMap<String, ServerHitBin>();
-    public static final ConcurrentMap<String, ServerHitBin> eventSinceStarted = new ConcurrentHashMap<String, ServerHitBin>();
-    public static final ConcurrentMap<String, ServerHitBin> viewSinceStarted = new ConcurrentHashMap<String, ServerHitBin>();
-    public static final ConcurrentMap<String, ServerHitBin> entitySinceStarted = new ConcurrentHashMap<String, ServerHitBin>();
-    public static final ConcurrentMap<String, ServerHitBin> serviceSinceStarted = new ConcurrentHashMap<String, ServerHitBin>();
+    public static final ConcurrentMap<String, ServerHitBin> requestSinceStarted = new ConcurrentHashMap<>();
+    public static final ConcurrentMap<String, ServerHitBin> eventSinceStarted = new ConcurrentHashMap<>();
+    public static final ConcurrentMap<String, ServerHitBin> viewSinceStarted = new ConcurrentHashMap<>();
+    public static final ConcurrentMap<String, ServerHitBin> entitySinceStarted = new ConcurrentHashMap<>();
+    public static final ConcurrentMap<String, ServerHitBin> serviceSinceStarted = new ConcurrentHashMap<>();
 
     public static void countRequest(String id, HttpServletRequest request, long startTime, long runningTime, GenericValue userLogin) {
         countHit(id, REQUEST, request, startTime, runningTime, userLogin);
@@ -172,7 +172,7 @@ public class ServerHitBin {
         }
 
         if (binList == null) {
-            binList = new ConcurrentLinkedDeque<ServerHitBin>();
+            binList = new ConcurrentLinkedDeque<>();
             Deque<ServerHitBin> listFromMap = null;
             switch (type) {
             case REQUEST:
@@ -219,10 +219,10 @@ public class ServerHitBin {
                     serverHitBin.set("hitTypeId", ServerHitBin.typeIds[bin.type]);
                     serverHitBin.set("binStartDateTime", new java.sql.Timestamp(bin.startTime));
                     serverHitBin.set("binEndDateTime", new java.sql.Timestamp(bin.endTime));
-                    serverHitBin.set("numberHits", Long.valueOf(bin.getNumberHits()));
-                    serverHitBin.set("totalTimeMillis", Long.valueOf(bin.getTotalRunningTime()));
-                    serverHitBin.set("minTimeMillis", Long.valueOf(bin.getMinTime()));
-                    serverHitBin.set("maxTimeMillis", Long.valueOf(bin.getMaxTime()));
+                    serverHitBin.set("numberHits", bin.getNumberHits());
+                    serverHitBin.set("totalTimeMillis", bin.getTotalRunningTime());
+                    serverHitBin.set("minTimeMillis", bin.getMinTime());
+                    serverHitBin.set("maxTimeMillis", bin.getMaxTime());
                     // get localhost ip address and hostname to store
                     if (VisitHandler.address != null) {
                         serverHitBin.set("serverIpAddress", VisitHandler.address.getHostAddress());
@@ -512,7 +512,7 @@ public class ServerHitBin {
                 }
             }
             serverHit.set("contentId", this.id);
-            serverHit.set("runningTimeMillis", Long.valueOf(runningTime));
+            serverHit.set("runningTimeMillis", runningTime);
 
             String fullRequestUrl = UtilHttp.getFullRequestUrl(request);
 
@@ -527,22 +527,6 @@ public class ServerHitBin {
                 serverHit.set("serverHostName", VisitHandler.address.getHostName());
             }
 
-            // The problem with
-            //
-            //     serverHit.create();
-            //
-            // is that if there are two requests with the same startTime (this should only happen with MySQL see https://issues.apache.org/jira/browse/OFBIZ-2208)
-            // then this will go wrong and abort the actual
-            // transaction we are interested in.
-            // Another way instead of using create is to store or update,
-            // that is overwrite in case there already was an entry, thus
-            // avoiding the transaction being aborted which is not
-            // less desirable than having multiple requests with the
-            // same startTime overwriting each other.
-            // This may not satisfy those who want to record each and
-            // every server hit even with equal startTimes but that could be
-            // solved adding a counter to the ServerHit's PK (a counter
-            // counting multiple hits at the same startTime).
             serverHit.create();
         }
     }

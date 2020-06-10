@@ -85,7 +85,7 @@ public class CategoryServices {
         Delegator delegator = dctx.getDelegator();
         String categoryId = (String) context.get("categoryId");
         String productId = (String) context.get("productId");
-        boolean activeOnly = (context.get("activeOnly") != null ? ((Boolean) context.get("activeOnly")).booleanValue() : true);
+        boolean activeOnly = (context.get("activeOnly") != null ? (Boolean) context.get("activeOnly") : true);
         Integer index = (Integer) context.get("index");
         Timestamp introductionDateLimit = (Timestamp) context.get("introductionDateLimit");
         Timestamp releaseDateLimit = (Timestamp) context.get("releaseDateLimit");
@@ -95,8 +95,8 @@ public class CategoryServices {
             return ServiceUtil.returnFailure(UtilProperties.getMessage(resourceError, "categoryservices.problems_getting_next_products", locale));
         }
 
-        List<String> orderByFields = UtilGenerics.checkList(context.get("orderByFields"));
-        if (orderByFields == null) orderByFields = new LinkedList<String>();
+        List<String> orderByFields = UtilGenerics.cast(context.get("orderByFields"));
+        if (orderByFields == null) orderByFields = new LinkedList<>();
         String entityName = getCategoryFindEntityName(delegator, orderByFields, introductionDateLimit, releaseDateLimit);
 
         GenericValue productCategory;
@@ -111,7 +111,7 @@ public class CategoryServices {
         if (activeOnly) {
             productCategoryMembers = EntityUtil.filterByDate(productCategoryMembers, true);
         }
-        List<EntityCondition> filterConditions = new LinkedList<EntityCondition>();
+        List<EntityCondition> filterConditions = new LinkedList<>();
         if (introductionDateLimit != null) {
             EntityCondition condition = EntityCondition.makeCondition(EntityCondition.makeCondition("introductionDate", EntityOperator.EQUALS, null), EntityOperator.OR, EntityCondition.makeCondition("introductionDate", EntityOperator.LESS_THAN_EQUAL_TO, introductionDateLimit));
             filterConditions.add(condition);
@@ -127,7 +127,7 @@ public class CategoryServices {
         if (productId != null && index == null) {
             for (GenericValue v: productCategoryMembers) {
                 if (v.getString("productId").equals(productId)) {
-                    index = Integer.valueOf(productCategoryMembers.indexOf(v));
+                    index = productCategoryMembers.indexOf(v);
                 }
             }
         }
@@ -143,16 +143,16 @@ public class CategoryServices {
         String previous = null;
         String next = null;
 
-        if (index.intValue() - 1 >= 0 && index.intValue() - 1 < productCategoryMembers.size()) {
-            previous = productCategoryMembers.get(index.intValue() - 1).getString("productId");
+        if (index - 1 >= 0 && index - 1 < productCategoryMembers.size()) {
+            previous = productCategoryMembers.get(index - 1).getString("productId");
             result.put("previousProductId", previous);
         } else {
             previous = productCategoryMembers.get(productCategoryMembers.size() - 1).getString("productId");
             result.put("previousProductId", previous);
         }
 
-        if (index.intValue() + 1 < productCategoryMembers.size()) {
-            next = productCategoryMembers.get(index.intValue() + 1).getString("productId");
+        if (index + 1 < productCategoryMembers.size()) {
+            next = productCategoryMembers.get(index + 1).getString("productId");
             result.put("nextProductId", next);
         } else {
             next = productCategoryMembers.get(0).getString("productId");
@@ -211,23 +211,23 @@ public class CategoryServices {
         Delegator delegator = dctx.getDelegator();
         LocalDispatcher dispatcher = dctx.getDispatcher();
         String productCategoryId = (String) context.get("productCategoryId");
-        boolean limitView = ((Boolean) context.get("limitView")).booleanValue();
-        int defaultViewSize = ((Integer) context.get("defaultViewSize")).intValue();
+        boolean limitView = (Boolean) context.get("limitView");
+        int defaultViewSize = (Integer) context.get("defaultViewSize");
         Timestamp introductionDateLimit = (Timestamp) context.get("introductionDateLimit");
         Timestamp releaseDateLimit = (Timestamp) context.get("releaseDateLimit");
 
-        List<String> orderByFields = UtilGenerics.checkList(context.get("orderByFields"));
-        if (orderByFields == null) orderByFields = new LinkedList<String>();
+        List<String> orderByFields = UtilGenerics.cast(context.get("orderByFields"));
+        if (orderByFields == null) orderByFields = new LinkedList<>();
         String entityName = getCategoryFindEntityName(delegator, orderByFields, introductionDateLimit, releaseDateLimit);
 
         String prodCatalogId = (String) context.get("prodCatalogId");
 
-        boolean useCacheForMembers = (context.get("useCacheForMembers") == null || ((Boolean) context.get("useCacheForMembers")).booleanValue());
-        boolean activeOnly = (context.get("activeOnly") == null || ((Boolean) context.get("activeOnly")).booleanValue());
+        boolean useCacheForMembers = (context.get("useCacheForMembers") == null || (Boolean) context.get("useCacheForMembers"));
+        boolean activeOnly = (context.get("activeOnly") == null || (Boolean) context.get("activeOnly"));
 
         // checkViewAllow defaults to false, must be set to true and pass the prodCatalogId to enable
         boolean checkViewAllow = (prodCatalogId != null && context.get("checkViewAllow") != null &&
-                ((Boolean) context.get("checkViewAllow")).booleanValue());
+                (Boolean) context.get("checkViewAllow"));
 
         String viewProductCategoryId = null;
         if (checkViewAllow) {
@@ -255,7 +255,7 @@ public class CategoryServices {
             }
         }
 
-        GenericValue productCategory = null;
+        GenericValue productCategory;
         try {
             productCategory = EntityQuery.use(delegator).from("ProductCategory").where("productCategoryId", productCategoryId).cache().queryOne();
         } catch (GenericEntityException e) {
@@ -297,7 +297,7 @@ public class CategoryServices {
                     if (activeOnly) {
                         productCategoryMembers = EntityUtil.filterByDate(productCategoryMembers, true);
                     }
-                    List<EntityCondition> filterConditions = new LinkedList<EntityCondition>();
+                    List<EntityCondition> filterConditions = new LinkedList<>();
                     if (introductionDateLimit != null) {
                         EntityCondition condition = EntityCondition.makeCondition(EntityCondition.makeCondition("introductionDate", EntityOperator.EQUALS, null), EntityOperator.OR, EntityCondition.makeCondition("introductionDate", EntityOperator.LESS_THAN_EQUAL_TO, introductionDateLimit));
                         filterConditions.add(condition);
@@ -345,7 +345,7 @@ public class CategoryServices {
                         highIndex = listSize;
                     }
                 } else {
-                    List<EntityCondition> mainCondList = new LinkedList<EntityCondition>();
+                    List<EntityCondition> mainCondList = new LinkedList<>();
                     mainCondList.add(EntityCondition.makeCondition("productCategoryId", EntityOperator.EQUALS, productCategory.getString("productCategoryId")));
                     if (activeOnly) {
                         mainCondList.add(EntityCondition.makeCondition("fromDate", EntityOperator.LESS_THAN_EQUAL_TO, nowTimestamp));
@@ -372,7 +372,7 @@ public class CategoryServices {
                         if (limitView) {
                             if (viewProductCategoryId != null) {
                                 // do manual checking to filter view allow
-                                productCategoryMembers = new LinkedList<GenericValue>();
+                                productCategoryMembers = new LinkedList<>();
                                 GenericValue nextValue;
                                 int chunkSize = 0;
                                 listSize = 0;
@@ -415,7 +415,7 @@ public class CategoryServices {
 
                     // null safety
                     if (productCategoryMembers == null) {
-                        productCategoryMembers = new LinkedList<GenericValue>();
+                        productCategoryMembers = new LinkedList<>();
                     }
 
                     if (highIndex > listSize) {
@@ -427,12 +427,12 @@ public class CategoryServices {
             }
         }
 
-        Map<String, Object> result = new HashMap<String, Object>();
-        result.put("viewIndex", Integer.valueOf(viewIndex));
-        result.put("viewSize", Integer.valueOf(viewSize));
-        result.put("lowIndex", Integer.valueOf(lowIndex));
-        result.put("highIndex", Integer.valueOf(highIndex));
-        result.put("listSize", Integer.valueOf(listSize));
+        Map<String, Object> result = new HashMap<>();
+        result.put("viewIndex", viewIndex);
+        result.put("viewSize", viewSize);
+        result.put("lowIndex", lowIndex);
+        result.put("highIndex", highIndex);
+        result.put("listSize", listSize);
         if (productCategory != null) result.put("productCategory", productCategory);
         if (productCategoryMembers != null) result.put("productCategoryMembers", productCategoryMembers);
         return result;
@@ -460,7 +460,7 @@ public class CategoryServices {
             primaryKeyName = "productCategoryId";
         }
 
-        List categoryList = new LinkedList();
+        List<Map<Object, Object>> categoryList = new LinkedList<>();
         List<GenericValue> childOfCats;
         List<String> sortList = org.apache.ofbiz.base.util.UtilMisc.toList("sequenceNum", "title");
 
@@ -486,7 +486,7 @@ public class CategoryServices {
                         catId = childOfCat.get("productCategoryId");
                         catNameField = "CATEGORY_NAME";
 
-                        Map josonMap = new HashMap();
+                        Map<Object, Object> josonMap = new HashMap<>();
                         List<GenericValue> childList = null;
 
                         // Get the child list of chosen category
@@ -499,8 +499,8 @@ public class CategoryServices {
                         if (UtilValidate.isNotEmpty(childList)) {
                             josonMap.put("state", "closed");
                         }
-                        Map dataMap = new HashMap();
-                        Map dataAttrMap = new HashMap();
+                        Map<String, Object> dataMap = new HashMap<>();
+                        Map<String, String> dataAttrMap = new HashMap<>();
                         CategoryContentWrapper categoryContentWrapper = new CategoryContentWrapper(cate, request);
                         String title = null;
                         if (UtilValidate.isNotEmpty(categoryContentWrapper.get(catNameField, "html"))) {
@@ -519,7 +519,7 @@ public class CategoryServices {
                         dataAttrMap.put("href", hrefStr);
                         dataMap.put("attr", dataAttrMap);
                         josonMap.put("data", dataMap);
-                        Map attrMap = new HashMap();
+                        Map<String, Object> attrMap = new HashMap<>();
                         attrMap.put("id", catId);
                         attrMap.put("isCatalog", false);
                         attrMap.put("rel", "CATEGORY");

@@ -22,7 +22,7 @@ under the License.
 
 <#-- virtual product javascript -->
 ${virtualJavaScript!}
-<script language="JavaScript" type="text/javascript">
+<script type="application/javascript">
 <!--
     var detailImageUrl = null;
     function setAddProductId(name) {
@@ -586,7 +586,7 @@ ${virtualJavaScript!}
       </div>
       <#-- Prefill first select box (virtual products only) -->
       <#if variantTree?? && 0 < variantTree.size()>
-        <script language="JavaScript" type="text/javascript">eval("list" + "${featureOrderFirst}" + "()");</script>
+        <script type="application/javascript">eval("list" + "${featureOrderFirst}" + "()");</script>
       </#if>
 
       <#-- Swatches (virtual products only) -->
@@ -646,9 +646,9 @@ ${virtualJavaScript!}
 
   <#-- Upgrades/Up-Sell/Cross-Sell -->
   <#macro associated assocProducts beforeName showName afterName formNamePrefix targetRequestName>
-  <#assign targetRequest = "product">
+  <#local targetRequest = "product">
   <#if targetRequestName?has_content>
-    <#assign targetRequest = targetRequestName>
+    <#local targetRequest = targetRequestName>
   </#if>
   <#if assocProducts?has_content>
     <h2>${beforeName!}<#if "Y" == showName>${productContentWrapper.get("PRODUCT_NAME", "html")!}</#if>${afterName!}</h2>

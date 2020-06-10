@@ -19,6 +19,7 @@
 package org.apache.ofbiz.datafile;
 
 import java.io.Serializable;
+import java.nio.charset.StandardCharsets;
 import java.text.NumberFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -31,7 +32,6 @@ import java.util.NoSuchElementException;
 import java.util.StringTokenizer;
 
 import org.apache.ofbiz.base.crypto.HashCrypt;
-import org.apache.ofbiz.base.util.UtilIO;
 import org.apache.ofbiz.base.util.UtilValidate;
 import org.apache.ofbiz.common.login.LoginServices;
 
@@ -163,7 +163,7 @@ public class Record implements Serializable {
         }
         if (value != null || setIfNull) {
             if (value instanceof Boolean) {
-                value = ((Boolean) value).booleanValue() ? "Y" : "N";
+                value = (Boolean) value ? "Y" : "N";
             }
             fields.put(name, value);
         }
@@ -172,7 +172,7 @@ public class Record implements Serializable {
     /**
      * little endian reader for 2 byte short.
      */
-    public final short readLEShort(byte[] byteArray) {
+    private static short readLEShort(byte[] byteArray) {
         return (short) ((byteArray[1] & 0xff) << 8 | (byteArray[0] & 0xff));
 
     }
@@ -180,14 +180,14 @@ public class Record implements Serializable {
     /**
      * little endian reader for 4 byte int.
      */
-    public final int readLEInt(byte[] byteArray) {
+    private static int readLEInt(byte[] byteArray) {
         return (byteArray[3]) << 24 | (byteArray[2] & 0xff) << 16 | (byteArray[1] & 0xff) << 8 | (byteArray[0] & 0xff);
     }
 
     /**
      * little endian reader for 8 byte long.
      */
-    public final long readLELong(byte[] byteArray) {
+    private static long readLELong(byte[] byteArray) {
         return (long) (byteArray[7]) << 56 | /* long cast needed or shift done modulo 32 */
                (long) (byteArray[6] & 0xff) << 48 | (long) (byteArray[5] & 0xff) << 40 | (long) (byteArray[4] & 0xff) << 32 | (long) (byteArray[3] & 0xff) << 24
                | (long) (byteArray[2] & 0xff) << 16 | (long) (byteArray[1] & 0xff) << 8 | (byteArray[0] & 0xff);
@@ -256,12 +256,12 @@ public class Record implements Serializable {
             double divisor = Math.pow(10.0, decimalPlaces);
 
             number = number / divisor;
-            set(name, Double.valueOf(number));
+            set(name, number);
         } // standard types
         else if (fieldType.equals("java.lang.String") || fieldType.equals("String")) {
             if (field.format.equals("EncryptedString")) {
                 String hashType = LoginServices.getHashType();
-                set(name, HashCrypt.digestHash(hashType, value.getBytes(UtilIO.getUtf8())));
+                set(name, HashCrypt.digestHash(hashType, value.getBytes(StandardCharsets.UTF_8)));
             } else {
                 set(name, value);
             }
@@ -283,11 +283,11 @@ public class Record implements Serializable {
         } else if (fieldType.equals("java.lang.Double") || fieldType.equals("Double")) {
             set(name, Double.valueOf(value));
         } else if (fieldType.equals("LEShort")) {
-            set(name, Short.valueOf(readLEShort(value.getBytes(UtilIO.getUtf8()))));
+            set(name, readLEShort(value.getBytes(StandardCharsets.UTF_8)));
         } else if (fieldType.equals("LEInteger")) {
-            set(name, Integer.valueOf(readLEInt(value.getBytes(UtilIO.getUtf8()))));
+            set(name, readLEInt(value.getBytes(StandardCharsets.UTF_8)));
         } else if (fieldType.equals("LELong")) {
-            set(name, Long.valueOf(readLELong(value.getBytes(UtilIO.getUtf8()))));
+            set(name, readLELong(value.getBytes(StandardCharsets.UTF_8)));
         } else {
             throw new IllegalArgumentException("Field type " + fieldType + " not currently supported. Sorry.");
         }
@@ -336,7 +336,7 @@ public class Record implements Serializable {
             // of decimal places in the formatting string then place it in a Double
             double decimalPlaces = Double.parseDouble(field.format);
             double multiplier = Math.pow(10.0, decimalPlaces);
-            double dnum = multiplier * ((Double) value).doubleValue();
+            double dnum = multiplier * (Double) value;
             long number = Math.round(dnum);
 
             str = padFrontZeros(Long.toString(number), field.length);
@@ -573,8 +573,6 @@ public class Record implements Serializable {
                     catch (NoSuchElementException nsee) {
                         throw new DataFileException("Field " + modelField.name + " could not be read from a line (" + lineNum + ") with only " + line.length() + " chars.", nsee);
                     }
-                } else { //if input line is less than the header model then pad with null
-                    strVal = null;
                 }
             }
             try {

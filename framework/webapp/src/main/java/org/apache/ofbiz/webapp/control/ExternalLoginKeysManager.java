@@ -18,14 +18,6 @@
  */
 package org.apache.ofbiz.webapp.control;
 
-import java.util.Map;
-import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
-
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import javax.servlet.http.HttpSession;
-
 import org.apache.ofbiz.base.util.Debug;
 import org.apache.ofbiz.entity.Delegator;
 import org.apache.ofbiz.entity.DelegatorFactory;
@@ -33,8 +25,15 @@ import org.apache.ofbiz.entity.GenericValue;
 import org.apache.ofbiz.service.LocalDispatcher;
 import org.apache.ofbiz.webapp.WebAppUtil;
 
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import javax.servlet.http.HttpSession;
+import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+
 /**
- * This class manages the authentication tokens that provide single sign-on authentication to the OFBiz applications.
+ * This class manages the single sign-on authentication through external login keys between OFBiz applications.
  */
 public class ExternalLoginKeysManager {
     private static final String module = ExternalLoginKeysManager.class.getName();
@@ -96,13 +95,13 @@ public class ExternalLoginKeysManager {
 
     /**
      * OFBiz controller event that performs the user authentication using the authentication token.
-     * The methods is designed to be used in a chain of controller preprocessor event: it always return &amp;success&amp;
+     * The method is designed to be used in a chain of controller preprocessor event: it always return "success"
      * even when the authentication token is missing or the authentication fails in order to move the processing to the
      * next event in the chain.
      *
      * @param request - the http request object
      * @param response - the http response object
-     * @return - &amp;success&amp; in all the cases
+     * @return "success" in all the cases
      */
     public static String checkExternalLoginKey(HttpServletRequest request, HttpServletResponse response) {
         String externalKey = request.getParameter(EXTERNAL_LOGIN_KEY_ATTR);
@@ -128,6 +127,8 @@ public class ExternalLoginKeysManager {
                 if (currentUserLogin.getString("userLoginId").equals(userLogin.getString("userLoginId"))) {
                     // same user, just make sure the autoUserLogin is set to the same and that the client cookie has the correct userLoginId
                     LoginWorker.autoLoginSet(request, response);
+                    // Same for the SecuredLoginId cookie
+                    LoginWorker.createSecuredLoginIdCookie(request, response);
                     return "success";
                 }
 
@@ -136,7 +137,15 @@ public class ExternalLoginKeysManager {
                 // ignore the return value; even if the operation failed we want to set the new UserLogin
             }
 
+            // check userLogin base permission and if it is enabled
+            request.getSession().setAttribute("userLogin", userLogin);
+            userLogin = LoginWorker.checkLogout(request, response);
+
             LoginWorker.doBasicLogin(userLogin, request);
+
+            // Create a secured cookie with the correct userLoginId
+            LoginWorker.createSecuredLoginIdCookie(request, response);
+
         } else {
             Debug.logWarning("Could not find userLogin for external login key: " + externalKey, module);
         }
@@ -147,6 +156,11 @@ public class ExternalLoginKeysManager {
         return "success";
     }
 
+    /**
+     * Checks if the request is an Ajax request.
+     * @param request the request to check
+     * @return indicator
+     */
     private static boolean isAjax(HttpServletRequest request) {
        return "XMLHttpRequest".equals(request.getHeader("X-Requested-With"));
     }

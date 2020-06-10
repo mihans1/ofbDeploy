@@ -181,7 +181,7 @@ public abstract class ModelTreeAction extends AbstractModelAction {
                     this.getModelSubNode().setListIterator(listIt, context);
                 } else {
                     if (obj instanceof List<?>) {
-                        List<? extends Map<String, ? extends Object>> list = UtilGenerics.checkList(obj);
+                        List<? extends Map<String, ? extends Object>> list = UtilGenerics.cast(obj);
                         this.getModelSubNode().setListIterator(list.listIterator(), context);
                     }
                 }
@@ -315,7 +315,7 @@ public abstract class ModelTreeAction extends AbstractModelAction {
                     this.getModelSubNode().setListIterator(listIt, context);
                 } else {
                     if (obj instanceof List<?>) {
-                        List<? extends Map<String, ? extends Object>> list = UtilGenerics.checkList(obj);
+                        List<? extends Map<String, ? extends Object>> list = UtilGenerics.cast(obj);
                         this.getModelSubNode().setListIterator(list.listIterator(), context);
                     }
                 }
@@ -418,7 +418,7 @@ public abstract class ModelTreeAction extends AbstractModelAction {
                 String valueName = valueNameExdr.expandString(context);
                 if (this.getModelSubNode() != null) {
                     if (UtilValidate.isNotEmpty(resultMapListName)) {
-                        List<? extends Map<String, ? extends Object>> lst = UtilGenerics.checkList(result.get(resultMapListName));
+                        List<? extends Map<String, ? extends Object>> lst = UtilGenerics.cast(result.get(resultMapListName));
                         if (lst != null) {
                             if (lst instanceof ListIterator<?>) {
                                 ListIterator<? extends Map<String, ? extends Object>> listIt = UtilGenerics.cast(lst);
@@ -433,7 +433,7 @@ public abstract class ModelTreeAction extends AbstractModelAction {
                         if (UtilValidate.isNotEmpty(valueName)) {
                             context.put(valueName, result.get(resultMapValueName));
                         } else {
-                            Map<String, Object> resultMap = UtilGenerics.checkMap(result.get(resultMapValueName));
+                            Map<String, Object> resultMap = UtilGenerics.cast(result.get(resultMapValueName));
                             context.putAll(resultMap);
                         }
                     }

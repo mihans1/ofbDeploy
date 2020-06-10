@@ -22,6 +22,8 @@ import java.io.IOException;
 import java.io.StringWriter;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.nio.charset.StandardCharsets;
+import java.util.Base64;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -30,14 +32,12 @@ import java.util.Map;
 
 import javax.xml.parsers.ParserConfigurationException;
 
-import org.apache.ofbiz.base.util.Base64;
 import org.apache.ofbiz.base.util.Debug;
 import org.apache.ofbiz.base.util.GeneralException;
 import org.apache.ofbiz.base.util.HttpClient;
 import org.apache.ofbiz.base.util.HttpClientException;
 import org.apache.ofbiz.base.util.StringUtil;
 import org.apache.ofbiz.base.util.UtilDateTime;
-import org.apache.ofbiz.base.util.UtilIO;
 import org.apache.ofbiz.base.util.UtilMisc;
 import org.apache.ofbiz.base.util.UtilProperties;
 import org.apache.ofbiz.base.util.UtilValidate;
@@ -243,7 +243,7 @@ public class DhlServices {
                     "FacilityShipmentDhlShipmentTemplateLocationNotFound", locale));
         }
         StringWriter outWriter = new StringWriter();
-        Map<String, Object> inContext = new HashMap<String, Object>();
+        Map<String, Object> inContext = new HashMap<>();
         inContext.put("action", "RateEstimate");
         inContext.put("userid", userid);
         inContext.put("password", password);
@@ -319,8 +319,8 @@ public class DhlServices {
      * Parses an XML document from DHL to get the rate estimate
      */
     public static Map<String, Object> handleDhlRateResponse(Document rateResponseDocument, Locale locale) {
-        List<Object> errorList = new LinkedList<Object>();
-        Map<String, Object> dhlRateCodeMap = new HashMap<String, Object>();
+        List<Object> errorList = new LinkedList<>();
+        Map<String, Object> dhlRateCodeMap = new HashMap<>();
         // process RateResponse
         Element rateResponseElement = rateResponseDocument.getDocumentElement();
         DhlServices.handleErrors(rateResponseElement, errorList, locale);
@@ -355,10 +355,10 @@ public class DhlServices {
         List<? extends Element> chargeNodeList = UtilXml.childElementList(responseChargesElement,
                 "Charge");
 
-        List<Map<String, String>> chargeList = new LinkedList<Map<String,String>>();
+        List<Map<String, String>> chargeList = new LinkedList<>();
         if (UtilValidate.isNotEmpty(chargeNodeList)) {
             for (Element responseChargeElement: chargeNodeList) {
-                Map<String, String> charge = new HashMap<String, String>();
+                Map<String, String> charge = new HashMap<>();
 
                 Element responseChargeTypeElement = UtilXml.firstChildElement(
                         responseChargeElement, "Type");
@@ -471,7 +471,7 @@ public class DhlServices {
      * Parse response from DHL registration request to get shipping key
      */
     public static Map<String, Object> handleDhlRegisterResponse(Document registerResponseDocument, Locale locale) {
-        List<Object> errorList = new LinkedList<Object>();
+        List<Object> errorList = new LinkedList<>();
         // process RegisterResponse
         Element registerResponseElement = registerResponseDocument.getDocumentElement();
         DhlServices.handleErrors(registerResponseElement, errorList, locale);
@@ -590,6 +590,9 @@ public class DhlServices {
 
             String recipientEmail = null;
             Map<String, Object> results = dispatcher.runSync("getPartyEmail", UtilMisc.toMap("partyId", shipment.get("partyIdTo"), "userLogin", userLogin));
+            if (ServiceUtil.isError(results)) {
+                return ServiceUtil.returnError(ServiceUtil.getErrorMessage(results));
+            }
             if (results.get("emailAddress") != null) {
                 recipientEmail = (String) results.get("emailAddress");
             }
@@ -666,6 +669,9 @@ public class DhlServices {
                     weightUomId = "WT_lb"; // TODO: this should be specified in a properties file
                 }
                 results = dispatcher.runSync("convertUom", UtilMisc.<String, Object>toMap("uomId", weightUomId, "uomIdTo", DHL_WEIGHT_UOM_ID, "originalValue", packageWeight));
+                if (ServiceUtil.isError(results)) {
+                    return ServiceUtil.returnError(ServiceUtil.getErrorMessage(results));
+                }
                 if ((results == null) || (results.get(ModelService.RESPONSE_MESSAGE).equals(ModelService.RESPOND_ERROR)) || (results.get("convertedValue") == null)) {
                     Debug.logWarning("Unable to convert weights for shipmentId " + shipmentId , module);
                     packageWeight = BigDecimal.ONE;
@@ -726,7 +732,7 @@ public class DhlServices {
                         "FacilityShipmentDhlRateEstimateTemplateNotConfigured", locale));
             }
             StringWriter outWriter = new StringWriter();
-            Map<String, Object> inContext = new HashMap<String, Object>();
+            Map<String, Object> inContext = new HashMap<>();
             inContext.put("action", "GenerateLabel");
             inContext.put("userid", userid);
             inContext.put("password", password);
@@ -844,7 +850,7 @@ public class DhlServices {
                 continue;
             sb.append(encodedImageString.charAt(i));
         }
-        byte[] labelBytes = Base64.base64Decode(sb.toString().getBytes(UtilIO.getUtf8()));
+        byte[] labelBytes = Base64.getMimeDecoder().decode(sb.toString().getBytes(StandardCharsets.UTF_8));
 
         if (labelBytes != null) {
             // store in db blob

@@ -26,6 +26,7 @@ import java.util.Map;
 import org.apache.ofbiz.base.util.Debug;
 import org.apache.ofbiz.base.util.GeneralException;
 import org.apache.ofbiz.base.util.ObjectType;
+import org.apache.ofbiz.minilang.MiniLangValidate;
 import org.w3c.dom.Element;
 
 /**
@@ -41,7 +42,7 @@ public class ValidateMethod extends SimpleMapOperation {
     public ValidateMethod(Element element, SimpleMapProcess simpleMapProcess) {
         super(element, simpleMapProcess);
         this.methodName = element.getAttribute("method");
-        this.className = element.getAttribute("class");
+        this.className = MiniLangValidate.checkAttribute(element.getAttribute("class"), "org.apache.ofbiz.base.util.UtilValidate");
     }
 
     @Override
@@ -49,7 +50,7 @@ public class ValidateMethod extends SimpleMapOperation {
         Object obj = inMap.get(fieldName);
         String fieldValue = null;
         try {
-            fieldValue = (String) ObjectType.simpleTypeConvert(obj, "String", null, locale);
+            fieldValue = (String) ObjectType.simpleTypeOrObjectConvert(obj, "String", null, locale);
         } catch (GeneralException e) {
             messages.add("Could not convert field value for comparison: " + e.getMessage());
             return;
@@ -87,7 +88,7 @@ public class ValidateMethod extends SimpleMapOperation {
             Debug.logError("[ValidateMethod.exec] " + msg, module);
             return;
         }
-        if (!resultBool.booleanValue()) {
+        if (!resultBool) {
             addMessage(messages, loader, locale);
         }
     }

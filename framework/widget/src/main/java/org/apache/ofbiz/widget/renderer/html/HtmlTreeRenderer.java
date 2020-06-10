@@ -22,7 +22,6 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 
-import javax.servlet.ServletContext;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
@@ -55,9 +54,11 @@ public class HtmlTreeRenderer extends HtmlWidgetRenderer implements TreeStringRe
 
     public HtmlTreeRenderer() {}
 
+    @Override
     public void renderNodeBegin(Appendable writer, Map<String, Object> context, ModelTree.ModelNode node, int depth) throws IOException {
         String currentNodeTrailPiped = null;
-        List<String> currentNodeTrail = UtilGenerics.toList(context.get("currentNodeTrail"));
+        Object obj = context.get("currentNodeTrail");
+        List<String> currentNodeTrail = (obj instanceof List) ? UtilGenerics.cast(obj) : null;
         if (node.isRootNode()) {
             appendWhitespace(writer);
             this.widgetCommentsEnabled = ModelWidget.widgetBoundaryCommentsEnabled(context);
@@ -80,7 +81,8 @@ public class HtmlTreeRenderer extends HtmlWidgetRenderer implements TreeStringRe
         // check to see if this node needs to be expanded.
         if (hasChildren && node.isExpandCollapse()) {
             String targetEntityId = null;
-            List<String> targetNodeTrail = UtilGenerics.toList(context.get("targetNodeTrail"));
+            Object obj1 = context.get("targetNodeTrail");
+            List<String> targetNodeTrail = (obj1 instanceof List) ? UtilGenerics.cast(obj1) : null;
             if (depth < targetNodeTrail.size()) {
                 targetEntityId = targetNodeTrail.get(depth);
             }
@@ -131,9 +133,10 @@ public class HtmlTreeRenderer extends HtmlWidgetRenderer implements TreeStringRe
         }
     }
 
+    @Override
     public void renderNodeEnd(Appendable writer, Map<String, Object> context, ModelTree.ModelNode node) throws IOException {
         Boolean processChildren = (Boolean) context.get("processChildren");
-        if (processChildren.booleanValue()) {
+        if (processChildren) {
             appendWhitespace(writer);
             writer.append("</ul>");
         }
@@ -147,14 +150,16 @@ public class HtmlTreeRenderer extends HtmlWidgetRenderer implements TreeStringRe
         }
     }
 
+    @Override
     public void renderLastElement(Appendable writer, Map<String, Object> context, ModelTree.ModelNode node) throws IOException {
         Boolean processChildren = (Boolean) context.get("processChildren");
-        if (processChildren.booleanValue()) {
+        if (processChildren) {
             appendWhitespace(writer);
             writer.append("<ul class=\"basic-tree\">");
         }
     }
 
+    @Override
     public void renderLabel(Appendable writer, Map<String, Object> context, ModelTree.ModelNode.Label label) throws IOException {
         // open tag
         writer.append("<span");
@@ -182,6 +187,7 @@ public class HtmlTreeRenderer extends HtmlWidgetRenderer implements TreeStringRe
     }
 
 
+    @Override
     public void renderLink(Appendable writer, Map<String, Object> context, ModelTree.ModelNode.Link link) throws IOException {
         // open tag
         writer.append("<a");
@@ -265,6 +271,7 @@ public class HtmlTreeRenderer extends HtmlWidgetRenderer implements TreeStringRe
         writer.append("</a>");
     }
 
+    @Override
     public void renderImage(Appendable writer, Map<String, Object> context, ModelTree.ModelNode.Image image) throws IOException {
         // open tag
         writer.append("<img ");
@@ -309,8 +316,7 @@ public class HtmlTreeRenderer extends HtmlWidgetRenderer implements TreeStringRe
             HttpServletRequest request = (HttpServletRequest) context.get("request");
             if (urlMode != null && "intra-app".equalsIgnoreCase(urlMode)) {
                 if (request != null && response != null) {
-                    ServletContext ctx = (ServletContext) request.getAttribute("servletContext");
-                    RequestHandler rh = (RequestHandler) ctx.getAttribute("_REQUEST_HANDLER_");
+                    RequestHandler rh = RequestHandler.from(request);
                     String urlString = rh.makeLink(request, response, src, fullPath, secure, encode);
                     writer.append(urlString);
                 } else {
@@ -332,6 +338,7 @@ public class HtmlTreeRenderer extends HtmlWidgetRenderer implements TreeStringRe
 
     }
 
+    @Override
     public ScreenStringRenderer getScreenStringRenderer(Map<String, Object> context) {
         VisualTheme visualTheme = (VisualTheme) context.get("visualTheme");
         ModelTheme modelTheme = visualTheme.getModelTheme();

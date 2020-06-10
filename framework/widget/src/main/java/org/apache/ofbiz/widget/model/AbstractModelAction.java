@@ -475,7 +475,7 @@ public abstract class AbstractModelAction implements Serializable, ModelAction {
                 }
             }
             if (global) {
-                Map<String, Object> globalCtx = UtilGenerics.checkMap(context.get("globalContext"));
+                Map<String, Object> globalCtx = UtilGenerics.cast(context.get("globalContext"));
                 if (globalCtx != null) {
                     ResourceBundleMapWrapper globalExistingPropMap = this.mapNameAcsr.get(globalCtx);
                     if (globalExistingPropMap == null) {
@@ -685,7 +685,8 @@ public abstract class AbstractModelAction implements Serializable, ModelAction {
                     DispatchContext dc = WidgetWorker.getDispatcher(context).getDispatchContext();
                     // try a map called "parameters", try it first so values from here are overriden by values in the main context
                     Map<String, Object> combinedMap = new HashMap<>();
-                    Map<String, Object> parametersObj = UtilGenerics.toMap(context.get("parameters"));
+                    Object obj = context.get("parameters");
+                    Map<String, Object> parametersObj = (obj instanceof Map) ? UtilGenerics.cast(obj) : null;
                     if (parametersObj != null) {
                         combinedMap.putAll(parametersObj);
                     }
@@ -693,7 +694,8 @@ public abstract class AbstractModelAction implements Serializable, ModelAction {
                     serviceContext = dc.makeValidContext(serviceNameExpanded, ModelService.IN_PARAM, combinedMap);
                 } else if (UtilValidate.isNotEmpty(autoFieldMapString) && !"false".equals(autoFieldMapString)) {
                     FlexibleMapAccessor<Object> fieldFma = FlexibleMapAccessor.getInstance(autoFieldMapString);
-                    Map<String, Object> autoFieldMap = UtilGenerics.toMap(fieldFma.get(context));
+                    Object obj = fieldFma.get(context);
+                    Map<String, Object> autoFieldMap = (obj instanceof Map) ? UtilGenerics.cast(obj) : null;
                     if (autoFieldMap != null) {
                         serviceContext = WidgetWorker.getDispatcher(context).getDispatchContext()
                                 .makeValidContext(serviceNameExpanded, ModelService.IN_PARAM, autoFieldMap);
@@ -770,7 +772,8 @@ public abstract class AbstractModelAction implements Serializable, ModelAction {
         public Object getInMemoryPersistedFromField(Object storeAgent, Map<String, Object> context) {
             Object newValue = null;
             String originalName = this.fromField.getOriginalName();
-            List<String> currentWidgetTrail = UtilGenerics.toList(context.get("_WIDGETTRAIL_"));
+            Object obj = context.get("_WIDGETTRAIL_");
+            List<String> currentWidgetTrail = (obj instanceof List) ? UtilGenerics.cast(obj) : null;
             List<String> trailList = new ArrayList<>();
             if (currentWidgetTrail != null) {
                 trailList.addAll(currentWidgetTrail);
@@ -843,7 +846,7 @@ public abstract class AbstractModelAction implements Serializable, ModelAction {
                     newValue = new LinkedList();
                 } else {
                     try {
-                        newValue = ObjectType.simpleTypeConvert(newValue, this.type, null, (TimeZone) context.get("timeZone"),
+                        newValue = ObjectType.simpleTypeOrObjectConvert(newValue, this.type, null, (TimeZone) context.get("timeZone"),
                                 (Locale) context.get("locale"), true);
                     } catch (GeneralException e) {
                         String errMsg = "Could not convert field value for the field: [" + this.field.getOriginalName()
@@ -867,7 +870,8 @@ public abstract class AbstractModelAction implements Serializable, ModelAction {
             }
             if (this.toScope != null && "user".equals(this.toScope)) {
                 String originalName = this.field.getOriginalName();
-                List<String> currentWidgetTrail = UtilGenerics.toList(context.get("_WIDGETTRAIL_"));
+                Object obj = context.get("_WIDGETTRAIL_");
+                List<String> currentWidgetTrail = (obj instanceof List) ? UtilGenerics.cast(obj) : null;
                 String newKey = "";
                 if (currentWidgetTrail != null) {
                     newKey = StringUtil.join(currentWidgetTrail, "|");
@@ -883,7 +887,8 @@ public abstract class AbstractModelAction implements Serializable, ModelAction {
                 }
             } else if (this.toScope != null && "application".equals(this.toScope)) {
                 String originalName = this.field.getOriginalName();
-                List<String> currentWidgetTrail = UtilGenerics.toList(context.get("_WIDGETTRAIL_"));
+                Object obj = context.get("_WIDGETTRAIL_");
+                List<String> currentWidgetTrail = (obj instanceof List) ? UtilGenerics.cast(obj) : null;
                 String newKey = "";
                 if (currentWidgetTrail != null) {
                     newKey = StringUtil.join(currentWidgetTrail, "|");
@@ -907,7 +912,7 @@ public abstract class AbstractModelAction implements Serializable, ModelAction {
                 }
             }
             if (global) {
-                Map<String, Object> globalCtx = UtilGenerics.checkMap(context.get("globalContext"));
+                Map<String, Object> globalCtx = UtilGenerics.cast(context.get("globalContext"));
                 if (globalCtx != null) {
                     this.field.put(globalCtx, newValue);
                 } else {

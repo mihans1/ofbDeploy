@@ -16,7 +16,7 @@ KIND, either express or implied.  See the License for the
 specific language governing permissions and limitations
 under the License.
 -->
-<script language="JavaScript" type="text/javascript">
+<script type="application/javascript">
       jQuery(document).ready(function(){
         jQuery('#shipToSameParty, #shipToOtherParty').change(function(){
             if(jQuery('#shipToSameParty').is(':checked')){
@@ -95,7 +95,7 @@ under the License.
                           </td>
                           <td nowrap="nowrap">&nbsp;&nbsp;&nbsp;&nbsp;</td>
                           <td>
-                            <div><a href="/facility/control/EditContactMech?facilityId=${facility.facilityId}&amp;contactMechId=${shippingAddress.contactMechId}" target="_blank" class="buttontext">${uiLabelMap.CommonUpdate}</a></div>
+                            <div><a href="<@ofbizUrl controlPath="/facility/control">EditContactMech?facilityId=${facility.facilityId}&amp;contactMechId=${shippingAddress.contactMechId}</@ofbizUrl>" target="_blank" class="buttontext">${uiLabelMap.CommonUpdate}</a></div>
                           </td>
                         </tr>
                         <#if shippingContactMech_has_next>
@@ -109,7 +109,7 @@ under the License.
                       <td colspan="4">
                         <div>
                           ${uiLabelMap.CommonNoContactInformationOnFile}:
-                          <a href="/facility/control/EditContactMech?facilityId=${facility.facilityId}&amp;preContactMechTypeId=POSTAL_ADDRESS" target="_blank" class="buttontext">${uiLabelMap.CommonNew}</a>
+                          <a href="<@ofbizUrl controlPath="/facility/control">EditContactMech?facilityId=${facility.facilityId}&amp;preContactMechTypeId=POSTAL_ADDRESS</@ofbizUrl>" target="_blank" class="buttontext">${uiLabelMap.CommonNew}</a>
                         </div>
                       </td>
                     </tr>
@@ -143,7 +143,7 @@ under the License.
               </td>
               <td nowrap="nowrap">&nbsp;&nbsp;&nbsp;&nbsp;</td>
               <td>
-                <div><a href="/partymgr/control/editcontactmech?partyId=${orderParty.partyId}&amp;contactMechId=${shippingContactMech.contactMechId}" target="_blank" class="buttontext">${uiLabelMap.CommonUpdate}</a></div>
+                <div><a href="<@ofbizUrl controlPath="/partymgr/control">editcontactmech?partyId=${orderParty.partyId}&amp;contactMechId=${shippingContactMech.contactMechId}</@ofbizUrl>" target="_blank" class="buttontext">${uiLabelMap.CommonUpdate}</a></div>
               </td>
             </tr>
             <#if shippingContactMech_has_next>
@@ -166,7 +166,7 @@ under the License.
       <table width='100%' border='0' cellspacing='0' cellpadding='0' class="boxoutside">
         <tr>
           <td>
-            <a href="<@ofbizUrl>setShipping?createNewShipGroup=Y</@ofbizUrl>" class="buttontext">${uiLabelMap.CommonCreateNew} ${uiLabelMap.OrderShipGroup}</a>
+            <a href="<@ofbizUrl>setShipping?createNewShipGroup=Y</@ofbizUrl>" class="buttontext">${uiLabelMap.CommonCreate} ${uiLabelMap.OrderShipGroup}</a>
             <a href="<@ofbizUrl>EditShipAddress</@ofbizUrl>" class="buttontext">${uiLabelMap.OrderCreateShippingAddress}</a>
             <#list 1..cart.getShipGroupSize() as currIndex>
               <#assign shipGroupIndex = currIndex - 1>
@@ -188,6 +188,13 @@ under the License.
                         <option value=""></option>
                         <#list suppliers as supplier>
                           <option value="${supplier.partyId}"<#if supplierPartyId??><#if supplier.partyId == supplierPartyId> selected="selected"</#if></#if>>${Static["org.apache.ofbiz.party.party.PartyHelper"].getPartyName(supplier, true)}</option>
+                        </#list>
+                      </select>
+                      ${uiLabelMap.AccountingAgreement}:
+                      <select name="${shipGroupIndex?default("0")}_supplierAgreementId">
+                        <option value=""></option>
+                        <#list supplierAgreements as agreement>
+                          <option value="${agreement.agreementId}"<#if supplierAgreementId??><#if agreement.agreementId == supplierAgreementId> selected="selected"</#if></#if>>${agreement.description}</option>
                         </#list>
                       </select>
                       ${uiLabelMap.ProductReserveInventoryFromFacility}:
@@ -236,7 +243,7 @@ under the License.
                         </label>
                       </td>
                       <td>
-                        <div><a href="/partymgr/control/editcontactmech?partyId=${orderParty.partyId}&amp;contactMechId=${shippingContactMech.contactMechId}" target="_blank" class="buttontext">${uiLabelMap.CommonUpdate}</a></div>
+                        <div><a href="<@ofbizUrl controlPath="/partymgr/control">editcontactmech?partyId=${orderParty.partyId}&amp;contactMechId=${shippingContactMech.contactMechId}</@ofbizUrl>" target="_blank" class="buttontext">${uiLabelMap.CommonUpdate}</a></div>
                       </td>
                     </tr>
                     <#if shippingContactMech_has_next>

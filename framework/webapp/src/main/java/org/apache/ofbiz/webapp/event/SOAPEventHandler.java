@@ -55,7 +55,6 @@ import org.apache.ofbiz.service.LocalDispatcher;
 import org.apache.ofbiz.service.ModelService;
 import org.apache.ofbiz.service.ServiceUtil;
 import org.apache.ofbiz.service.engine.SoapSerializer;
-import org.apache.ofbiz.webapp.control.ConfigXMLReader;
 import org.apache.ofbiz.webapp.control.ConfigXMLReader.Event;
 import org.apache.ofbiz.webapp.control.ConfigXMLReader.RequestMap;
 import org.apache.ofbiz.webapp.control.RequestHandler;
@@ -68,15 +67,11 @@ public class SOAPEventHandler implements EventHandler {
 
     public static final String module = SOAPEventHandler.class.getName();
 
-    /**
-     * @see org.apache.ofbiz.webapp.event.EventHandler#init(javax.servlet.ServletContext)
-     */
+    @Override
     public void init(ServletContext context) throws EventHandlerException {
     }
 
-    /**
-     * @see org.apache.ofbiz.webapp.event.EventHandler#invoke(ConfigXMLReader.Event, ConfigXMLReader.RequestMap, javax.servlet.http.HttpServletRequest, javax.servlet.http.HttpServletResponse)
-     */
+    @Override
     public String invoke(Event event, RequestMap requestMap, HttpServletRequest request, HttpServletResponse response) throws EventHandlerException {
         LocalDispatcher dispatcher = (LocalDispatcher) request.getAttribute("dispatcher");
         Delegator delegator = (Delegator) request.getAttribute("delegator");
@@ -89,7 +84,7 @@ public class SOAPEventHandler implements EventHandler {
         if (wsdlReq != null) {
             String serviceName = RequestHandler.getOverrideViewUri(request.getPathInfo());
             DispatchContext dctx = dispatcher.getDispatchContext();
-            String locationUri = this.getLocationURI(request);
+            String locationUri = getLocationURI(request);
 
             if (serviceName != null) {
                 Document wsdl = null;
@@ -115,9 +110,7 @@ public class SOAPEventHandler implements EventHandler {
                     sendError(response, "Unable to obtain WSDL", serviceName);
                     throw new EventHandlerException("Unable to obtain WSDL");
                 }
-            }
-
-            if (serviceName == null) {
+            } else {
                 try (Writer writer = response.getWriter()) {
                     StringBuilder sb = new StringBuilder();
                     sb.append("<html><head><title>OFBiz SOAP/1.1 Services</title></head>");
@@ -150,8 +143,8 @@ public class SOAPEventHandler implements EventHandler {
 
         // get the service name and parameters
         try {
-            InputStream inputStream = (InputStream) request.getInputStream();
-            SOAPModelBuilder builder = (SOAPModelBuilder) OMXMLBuilderFactory.createSOAPModelBuilder(inputStream, "UTF-8");
+            InputStream inputStream = request.getInputStream();
+            SOAPModelBuilder builder = OMXMLBuilderFactory.createSOAPModelBuilder(inputStream, "UTF-8");
             reqEnv = (SOAPEnvelope) builder.getDocumentElement();
 
             // log the request message
@@ -218,7 +211,7 @@ public class SOAPEventHandler implements EventHandler {
         return null;
     }
 
-    private void validateSOAPBody(SOAPBody reqBody) throws EventHandlerException {
+    private static void validateSOAPBody(SOAPBody reqBody) throws EventHandlerException {
         // ensure the SOAPBody contains only one service call request
         Integer numServiceCallRequests = 0;
         Iterator<Object> serviceIter = UtilGenerics.cast(reqBody.getChildElements());
@@ -231,7 +224,8 @@ public class SOAPEventHandler implements EventHandler {
         }
     }
 
-    private void createAndSendSOAPResponse(Map<String, Object> serviceResults, String serviceName, HttpServletResponse response) throws EventHandlerException {
+    private static void createAndSendSOAPResponse(Map<String, Object> serviceResults, String serviceName,
+            HttpServletResponse response) throws EventHandlerException {
         try {
         // setup the response
             if (Debug.verboseOn()) Debug.logVerbose("[EventHandler] : Setting up response message", module);
@@ -273,15 +267,18 @@ public class SOAPEventHandler implements EventHandler {
         }
     }
 
-    private void sendError(HttpServletResponse res, String errorMessage, String serviceName) throws EventHandlerException {
+    private static void sendError(HttpServletResponse res, String errorMessage, String serviceName)
+            throws EventHandlerException {
         // setup the response
         sendError(res, ServiceUtil.returnError(errorMessage), serviceName);
     }
 
-    private void sendError(HttpServletResponse res, List<String> errorMessages, String serviceName) throws EventHandlerException {
+    private static void sendError(HttpServletResponse res, List<String> errorMessages, String serviceName)
+            throws EventHandlerException {
         sendError(res, ServiceUtil.returnError(errorMessages.toString()), serviceName);
     }
-    private void sendError(HttpServletResponse res, Object object, String serviceName) throws EventHandlerException {
+    private static void sendError(HttpServletResponse res, Object object, String serviceName)
+            throws EventHandlerException {
         try {
             // setup the response
             res.setContentType("text/xml");
@@ -321,7 +318,7 @@ public class SOAPEventHandler implements EventHandler {
         }
     }
 
-    private String getLocationURI(HttpServletRequest request) {
+    private static String getLocationURI(HttpServletRequest request) {
         StringBuilder uri = new StringBuilder();
         uri.append(request.getScheme());
         uri.append("://");

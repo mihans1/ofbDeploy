@@ -39,7 +39,7 @@ public class PermissionRecorder {
 
     protected boolean isOn = false;
     protected GenericValue userLogin;
-    protected List<Map<String, Object>> permCheckResults = new LinkedList<Map<String,Object>>();
+    protected List<Map<String, Object>> permCheckResults = new LinkedList<>();
     protected boolean entityPermCheckResult = false;
     protected String currentContentId = "";
     protected Map<String, Object> currentContentMap;
@@ -124,10 +124,10 @@ public class PermissionRecorder {
 
     public void setCurrentContentId(String id) {
         if (!currentContentId.equals(id)) {
-            currentContentMap = new HashMap<String, Object>();
+            currentContentMap = new HashMap<>();
             permCheckResults.add(currentContentMap);
             currentContentMap.put("contentId", id);
-            currentContentMap.put("checkResults", new LinkedList());
+            currentContentMap.put("checkResults", new LinkedList<>());
         }
         currentContentId = id;
     }
@@ -155,7 +155,7 @@ public class PermissionRecorder {
     }
 
     public void startMatchGroup(List<String> targetOperations, List<String> purposes, List<String> roles, List<String> targStatusList, String targPrivilegeEnumId, String contentId) {
-        currentContentMap = new HashMap<String, Object>();
+        currentContentMap = new HashMap<>();
         permCheckResults.add(currentContentMap);
         String s = null;
         if (targetOperations != null) {
@@ -174,7 +174,7 @@ public class PermissionRecorder {
             s = targStatusList.toString();
             currentContentMap.put("statusId", s);
         }
-        List<Map<String, Object>> checkResultList = new LinkedList<Map<String,Object>>();
+        List<Map<String, Object>> checkResultList = new LinkedList<>();
         currentContentMap.put("privilegeEnumId", privilegeEnumId);
         currentContentMap.put("contentId", contentId);
         currentContentMap.put("checkResultList", checkResultList);
@@ -184,13 +184,13 @@ public class PermissionRecorder {
 
     public void record(GenericValue purposeOp, boolean targetOpCond, boolean purposeCond, boolean statusCond, boolean privilegeCond, boolean roleCond) {
         Map<String, Object> map = UtilMisc.makeMapWritable(purposeOp);
-        map.put("contentOperationIdCond", Boolean.valueOf(targetOpCond));
-        map.put("contentPurposeTypeIdCond", Boolean.valueOf(purposeCond));
-        map.put("statusIdCond", Boolean.valueOf(statusCond));
-        map.put("privilegeEnumIdCond", Boolean.valueOf(privilegeCond));
-        map.put("roleTypeIdCond", Boolean.valueOf(roleCond));
+        map.put("contentOperationIdCond", targetOpCond);
+        map.put("contentPurposeTypeIdCond", purposeCond);
+        map.put("statusIdCond", statusCond);
+        map.put("privilegeEnumIdCond", privilegeCond);
+        map.put("roleTypeIdCond", roleCond);
         map.put("contentId", currentContentId);
-        List<Map<String, Object>> checkResultList = UtilGenerics.checkList(currentContentMap.get("checkResultList"));
+        List<Map<String, Object>> checkResultList = UtilGenerics.cast(currentContentMap.get("checkResultList"));
         checkResultList.add(map);
     }
 
@@ -229,7 +229,7 @@ public class PermissionRecorder {
 
     public String renderCurrentContentMapHtml(Map<String, Object> cMap) {
         StringBuilder sb = new StringBuilder();
-        List<Map<String, Object>> resultList = UtilGenerics.checkList(cMap.get("checkResultList"));
+        List<Map<String, Object>> resultList = UtilGenerics.cast(cMap.get("checkResultList"));
         for (Map<String, Object> rMap : resultList) {
             sb.append(renderResultRowHtml(rMap, cMap));
         }
@@ -276,8 +276,8 @@ public class PermissionRecorder {
         for (int i=0; i < opFields.length; i++) {
             String opField = opFields[i];
             Boolean bool = (Boolean)rMap.get(opField + "Cond");
-            String cls = (bool.booleanValue()) ? "pass" : "fail";
-            if (!bool.booleanValue())
+            String cls = (bool) ? "pass" : "fail";
+            if (!bool)
                 isPass = false;
             sb.append("<td class=\"" + cls + "\">");
             s = (String)rMap.get(opField);

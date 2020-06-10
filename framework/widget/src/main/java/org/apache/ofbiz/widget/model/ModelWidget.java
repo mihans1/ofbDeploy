@@ -63,8 +63,8 @@ public abstract class ModelWidget implements Serializable {
     protected ModelWidget(Element widgetElement) {
         this.name = widgetElement.getAttribute("name");
         this.systemId = (String) widgetElement.getUserData("systemId");
-        this.startColumn = ((Integer) widgetElement.getUserData("startColumn")).intValue();
-        this.startLine = ((Integer) widgetElement.getUserData("startLine")).intValue();
+        this.startColumn = (Integer) widgetElement.getUserData("startColumn");
+        this.startLine = (Integer) widgetElement.getUserData("startLine");
     }
 
     public abstract void accept(ModelWidgetVisitor visitor) throws Exception;
@@ -140,7 +140,7 @@ public abstract class ModelWidget implements Serializable {
             if (str != null) {
                 result = "true".equals(str);
             } else {
-                Map<String, ? extends Object> parameters = UtilGenerics.checkMap(context.get("parameters"));
+                Map<String, ? extends Object> parameters = UtilGenerics.cast(context.get("parameters"));
                 if (parameters != null) {
                     str = (String) parameters.get(enableBoundaryCommentsParam);
                     if (str != null) {

@@ -217,7 +217,7 @@ if (orderHeader) {
         BigDecimal quantityNotAvailable = 0
         List<GenericValue> oisgirs = orderItem.getRelated("OrderItemShipGrpInvRes", null, null, false)
         for (GenericValue oisgir : oisgirs) {
-            if (UtilValidate.isNotEmpty(oisgir.get("quantityNotAvailable"))) {
+            if (oisgir.get("quantityNotAvailable")) {
                 quantityNotAvailable = quantityNotAvailable.add(oisgir.getBigDecimal("quantityNotAvailable"))
             }
         }
@@ -497,16 +497,6 @@ if (workEffortId && assignPartyId && assignRoleTypeId && fromDate) {
             context.workEffortStatus = workEffortStatus
             if ("WF_RUNNING".equals(workEffortStatus) || "WF_SUSPENDED".equals(workEffortStatus))
                 context.inProcess = true
-        }
-
-        if (workEffort) {
-            if ("true".equals(delegate) || "WF_RUNNING".equals(workEffortStatus)) {
-                activity = from("WorkflowActivity").where("packageId", workEffort.workflowPackageId, "packageVersion", workEffort.workflowPackageVersion, "processId", workEffort.workflowProcessId, "processVersion", workEffort.workflowProcessVersion, "activityId", workEffort.workflowActivityId).queryOne()
-                if (activity) {
-                    transitions = activity.getRelated("FromWorkflowTransition", null, ["-transitionId"], false)
-                    context.wfTransitions = transitions
-                }
-            }
         }
     }
 }

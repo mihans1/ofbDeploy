@@ -21,7 +21,7 @@ under the License.
     <h3>${uiLabelMap.CommonAdvancedSearch}</h3>
   </div>
   <div class="screenlet-body">
-    <form name="advToKeyWordSearchForm" method="post" action="<@ofbizUrl>ContentSearchResults</@ofbizUrl>" style="margin: 0;">
+    <form class="basic-form" name="advToKeyWordSearchForm" method="post" action="<@ofbizUrl>ContentSearchResults</@ofbizUrl>" style="margin: 0;">
       <input type="hidden" name="VIEW_SIZE" value="25"/>
       <table class="basic-table" cellspacing="0">
         <tr>
@@ -129,12 +129,11 @@ under the License.
         <tr>
           <td colspan="2" align="center">
             <div>
-              <a href="javascript:document.advToKeyWordSearchForm.submit()" class="buttontext">${uiLabelMap.CommonFind}</a>
+              <input type="submit" value="${uiLabelMap.CommonFind}"/>
             </div>
           </td>
         </tr>
       </table>
-        <input type="image" src="<@ofbizContentUrl>/images/spacer.gif</@ofbizContentUrl>" onclick="javascript:document.advToKeyWordSearchForm.submit();"/>
     </form>
   </div>
 </div>

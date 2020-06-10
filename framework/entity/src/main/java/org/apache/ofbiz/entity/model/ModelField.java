@@ -40,23 +40,13 @@ public final class ModelField extends ModelChild {
     public static final String module = ModelField.class.getName();
 
     public enum EncryptMethod {
-        FALSE {
-            public boolean isEncrypted() {
-                return false;
-            }
-        },
-        TRUE {
-            public boolean isEncrypted() {
-                return true;
-            }
-        },
-        SALT {
-            public boolean isEncrypted() {
-                return true;
-            }
-        };
+        FALSE,
+        TRUE,
+        SALT;
 
-        public abstract boolean isEncrypted();
+        public boolean isEncrypted() {
+            return this != FALSE;
+        }
     }
 
     /**
@@ -152,7 +142,7 @@ public final class ModelField extends ModelChild {
         List<String>validators = Collections.emptyList();
         List<? extends Element> elementList = UtilXml.childElementList(fieldElement, "validate");
         if (!elementList.isEmpty()) {
-            validators = new ArrayList<String>(elementList.size());
+            validators = new ArrayList<>(elementList.size());
             for (Element validateElement : elementList) {
                 validators.add(validateElement.getAttribute("name").intern());
             }

@@ -17,7 +17,7 @@ specific language governing permissions and limitations
 under the License.
 -->
 
-<script language="JavaScript" type="text/javascript">
+<script type="application/javascript">
     function clearLine(facilityId, orderId, orderItemSeqId, productId, shipGroupSeqId, inventoryItemId, packageSeqId) {
         document.clearPackLineForm.facilityId.value = facilityId;
         document.clearPackLineForm.orderId.value = orderId;
@@ -58,8 +58,8 @@ under the License.
                     <ul>
                     <#list invoiceIds as invoiceId>
                       <li>
-                        ${uiLabelMap.CommonNbr}<a href="/accounting/control/invoiceOverview?invoiceId=${invoiceId}${StringUtil.wrapString(externalKeyParam)}" target="_blank" class="buttontext">${invoiceId}</a>
-                        (<a href="/accounting/control/invoice.pdf?invoiceId=${invoiceId}${StringUtil.wrapString(externalKeyParam)}" target="_blank" class="buttontext">PDF</a>)
+                        ${uiLabelMap.CommonNbr}<a href="<@ofbizUrl controlPath="/accounting/control">invoiceOverview?invoiceId=${invoiceId}${StringUtil.wrapString(externalKeyParam)}</@ofbizUrl>" target="_blank" class="buttontext">${invoiceId}</a>
+                        (<a href="<@ofbizUrl controlPath="/accounting/control">invoice.pdf?invoiceId=${invoiceId}${StringUtil.wrapString(externalKeyParam)}</@ofbizUrl>" target="_blank" class="buttontext">${uiLabelMap.CommonPdf}</a>)
                       </li>
                     </#list>
                     </ul>
@@ -86,7 +86,6 @@ under the License.
                 <tr>
                   <td colspan="2">&nbsp;</td>
                   <td colspan="2">
-                    <input type="image" src="<@ofbizContentUrl>/images/spacer.gif</@ofbizContentUrl>" onclick="javascript:document.selectOrderForm.submit();" />
                     <a href="javascript:document.selectOrderForm.submit();" class="buttontext">${uiLabelMap.ProductPackOrder}</a>
                     <a href="javascript:document.selectOrderForm.action='<@ofbizUrl>WeightPackageOnly</@ofbizUrl>';document.selectOrderForm.submit();" class="buttontext">${uiLabelMap.ProductWeighPackageOnly}</a>
                   </td>
@@ -111,7 +110,6 @@ under the License.
                 <tr>
                   <td colspan="2">&nbsp;</td>
                   <td colspan="1">
-                    <input type="image" src="<@ofbizContentUrl>/images/spacer.gif</@ofbizContentUrl>" onclick="javascript:document.selectPicklistBinForm.submit();" />
                     <a href="javascript:document.selectPicklistBinForm.submit();" class="buttontext">${uiLabelMap.ProductPackOrder}</a>
                     <a href="javascript:document.selectPicklistBinForm.action='<@ofbizUrl>WeightPackageOnly</@ofbizUrl>';document.selectPicklistBinForm.submit();" class="buttontext">${uiLabelMap.ProductWeighPackageOnly}</a>
                   </td>
@@ -144,7 +142,7 @@ under the License.
     <div class="screenlet">
         <div class="screenlet-title-bar">
             <ul>
-                <li class="h3">${uiLabelMap.ProductOrderId} ${uiLabelMap.CommonNbr}<a href="/ordermgr/control/orderview?orderId=${orderId}">${orderId}</a> / ${uiLabelMap.ProductOrderShipGroupId} #${shipGroupSeqId}</li>
+                <li class="h3">${uiLabelMap.ProductOrderId} ${uiLabelMap.CommonNbr}<a href="<@ofbizUrl controlPath="/ordermgr/control">orderview?orderId=${orderId}</@ofbizUrl>">${orderId}</a> / ${uiLabelMap.ProductOrderShipGroupId} #${shipGroupSeqId}</li>
             </ul>
             <br class="clear"/>
         </div>
@@ -289,9 +287,9 @@ under the License.
                               </#if>
                           </td>
                           <td>
-                              <a href="/catalog/control/EditProduct?productId=${orderProduct.productId!}${StringUtil.wrapString(externalKeyParam)}" class="buttontext" target="_blank">${(orderProduct.internalName)!}</a>
+                              <a href="<@ofbizUrl controlPath="/catalog/control">EditProduct?productId=${orderProduct.productId!}${StringUtil.wrapString(externalKeyParam)}</@ofbizUrl>" class="buttontext" target="_blank">${(orderProduct.internalName)!}</a>
                               <#if orderProduct.productId != product.productId>
-                                  &nbsp;[<a href="/catalog/control/EditProduct?productId=${product.productId!}${StringUtil.wrapString(externalKeyParam)}" class="buttontext" target="_blank">${(product.internalName)!}</a>]
+                                  &nbsp;[<a href="<@ofbizUrl controlPath="/catalog/control">EditProduct?productId=${product.productId!}${StringUtil.wrapString(externalKeyParam)}</@ofbizUrl>" class="buttontext" target="_blank">${(product.internalName)!}</a>]
                               </#if>
                           </td>
                           <td align="right">${orderItemQuantity}</td>
@@ -410,7 +408,7 @@ under the License.
                           <#if "true" == forceComplete?default("false")>
                             <#assign buttonName = "${uiLabelMap.ProductCompleteForce}">
                           </#if>
-                          <input type="button" value="${buttonName}" onclick="javascript:document.completePackForm.submit();"/>
+                          <input type="submit" value="${buttonName}"/>
                         </div>
                       </td>
                     </tr>
@@ -458,7 +456,7 @@ under the License.
                       <td>${line.getOrderItemSeqId()}</td>
                       <td>${line.getProductId()?default("N/A")}</td>
                       <td>
-                          <a href="/catalog/control/EditProduct?productId=${line.getProductId()!}${StringUtil.wrapString(externalKeyParam)}" class="buttontext" target="_blank">${product.internalName!?default("[N/A]")}</a>
+                          <a href="<@ofbizUrl controlPath="/catalog/control">EditProduct?productId=${line.getProductId()!}${StringUtil.wrapString(externalKeyParam)}</@ofbizUrl>" class="buttontext" target="_blank">${product.internalName!?default("[N/A]")}</a>
                       </td>
                       <td>${line.getInventoryItemId()}</td>
                       <td align="right">${line.getQuantity()}</td>
@@ -502,7 +500,7 @@ under the License.
                       <td>${line.getOrderItemSeqId()}</td>
                       <td>${line.getProductId()?default("N/A")}</td>
                       <td>
-                          <a href="/catalog/control/EditProduct?productId=${line.getProductId()!}${StringUtil.wrapString(externalKeyParam)}" class="buttontext" target="_blank">${product.internalName!?default("[N/A]")}</a>
+                          <a href="<@ofbizUrl controlPath="/catalog/control">EditProduct?productId=${line.getProductId()!}${StringUtil.wrapString(externalKeyParam)}</@ofbizUrl>" class="buttontext" target="_blank">${product.internalName!?default("[N/A]")}</a>
                       </td>
                       <td>${line.getInventoryItemId()}</td>
                       <td align="right">${line.getQuantity()}</td>
@@ -518,11 +516,11 @@ under the License.
   </#if>
 
   <#if orderId?has_content>
-    <script language="javascript" type="text/javascript">
+    <script type="application/javascript">
       document.singlePackForm.productId.focus();
     </script>
   <#else>
-    <script language="javascript" type="text/javascript">
+    <script type="application/javascript">
       document.selectOrderForm.orderId.focus();
     </script>
   </#if>

@@ -50,7 +50,7 @@ under the License.
                             <widgets>
                                 <screenlet id="FindPartyPanel" title="${uiLabelMap.PartyFindParty}" navigation-menu-name="CreateNewParty"
                                            navigation-form-name="LookupParty" save-collapsed="false" collapsible="true" initially-collapsed="${initialyCollapsed}">
-                                    <include-menu location="component://party/widget/partymgr/PartyMenus.xml" name="CreateNewParty"/>
+                                    <include-menu name="CreateNewParty" location="component://party/widget/partymgr/PartyMenus.xml"/>
                                     <include-form name="LookupParty" location="component://party/widget/partymgr/PartyForms.xml"/>
                                 </screenlet>
                                 <screenlet title="${uiLabelMap.CommonSearchResults}" navigation-form-name="ListParty">
@@ -680,7 +680,9 @@ under the License.
                         <screenlet id="AddPartyRatesPanel" title="${uiLabelMap.PageTitleEditPartyRates}" collapsible="true">
                             <include-form name="AddPartyRate" location="component://party/widget/partymgr/PartyForms.xml"/>
                         </screenlet>
-                        <include-grid name="ListPartyRates" location="component://party/widget/partymgr/PartyForms.xml"/>
+                        <screenlet>
+                            <include-grid name="ListPartyRates" location="component://party/widget/partymgr/PartyForms.xml"/>
+                        </screenlet>
                     </decorator-section>
                 </decorator-screen>
             </widgets>
@@ -705,7 +707,9 @@ under the License.
                         <screenlet id="AddSegmentRolePanel" title="${uiLabelMap.PageTitleAddPartySegmentRoles}" collapsible="true">
                             <include-form name="AddSegmentRole" location="component://party/widget/partymgr/PartyForms.xml"/>
                         </screenlet>
-                        <include-grid name="ListSegmentRoles" location="component://party/widget/partymgr/PartyForms.xml"/>
+                        <screenlet>
+                            <include-grid name="ListSegmentRoles" location="component://party/widget/partymgr/PartyForms.xml"/>
+                        </screenlet>
                     </decorator-section>
                 </decorator-screen>
             </widgets>
@@ -911,7 +915,7 @@ under the License.
                 <decorator-screen name="CommonPartyDecorator"  location="${parameters.mainDecoratorLocation}">
                     <decorator-section name="body">
                         <container style="button-bar">
-                            <link target="EditPartyContent" text="${uiLabelMap.CommonCreateNew}" style="smallSubmit">
+                            <link target="EditPartyContent" text="${uiLabelMap.CommonCreate}" style="smallSubmit">
                                 <parameter param-name="partyId"/>
                             </link>
                         </container>
@@ -938,7 +942,7 @@ under the License.
                 <decorator-screen name="CommonPartyDecorator"  location="${parameters.mainDecoratorLocation}">
                     <decorator-section name="body">
                         <container style="button-bar">
-                            <link target="EditPartyContent" text="${uiLabelMap.CommonCreateNew}" style="smallSubmit">
+                            <link target="EditPartyContent" text="${uiLabelMap.CommonCreate}" style="smallSubmit">
                                 <parameter param-name="partyId"/>
                             </link>
                         </container>
@@ -982,7 +986,9 @@ under the License.
                         <screenlet id="EditPartyResumePanel" title="${uiLabelMap.CommonAdd} ${uiLabelMap.PartyParty} ${uiLabelMap.HumanResPartyResume}" collapsible="true">
                             <include-form name="EditPartyResume" location="component://humanres/widget/forms/PartyResumeForms.xml"/>
                         </screenlet>
-                        <include-form name="ListPartyResumes" location="component://humanres/widget/forms/PartyResumeForms.xml"/>
+                        <screenlet>
+                            <include-form name="ListPartyResumes" location="component://humanres/widget/forms/PartyResumeForms.xml"/>
+                        </screenlet>
                     </decorator-section>
                 </decorator-screen>
             </widgets>
@@ -1224,7 +1230,7 @@ under the License.
                             </widgets>
                             <fail-widgets>
                                 <container style="button-bar">
-                                    <link target="addGeoLocation" text="${uiLabelMap.CommonCreateNew}" style="buttontext create">
+                                    <link target="addGeoLocation" text="${uiLabelMap.CommonCreate}" style="buttontext create">
                                         <parameter param-name="partyId" from-field="parameters.partyId"/>
                                     </link>
                                 </container>

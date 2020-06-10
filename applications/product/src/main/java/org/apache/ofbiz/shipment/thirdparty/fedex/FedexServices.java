@@ -23,7 +23,9 @@ import java.io.IOException;
 import java.io.StringWriter;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.nio.charset.StandardCharsets;
 import java.sql.Timestamp;
+import java.util.Base64;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -32,13 +34,11 @@ import java.util.Map;
 
 import javax.xml.parsers.ParserConfigurationException;
 
-import org.apache.ofbiz.base.util.Base64;
 import org.apache.ofbiz.base.util.Debug;
 import org.apache.ofbiz.base.util.GeneralException;
 import org.apache.ofbiz.base.util.HttpClient;
 import org.apache.ofbiz.base.util.HttpClientException;
 import org.apache.ofbiz.base.util.UtilDateTime;
-import org.apache.ofbiz.base.util.UtilIO;
 import org.apache.ofbiz.base.util.UtilMisc;
 import org.apache.ofbiz.base.util.UtilProperties;
 import org.apache.ofbiz.base.util.UtilValidate;
@@ -152,11 +152,11 @@ public class FedexServices {
         String shipmentGatewayConfigId = (String) context.get("shipmentGatewayConfigId");
         String resource = (String) context.get("configProps");
         Locale locale = (Locale) context.get("locale");
-        List<Object> errorList = new LinkedList<Object> ();
+        List<Object> errorList = new LinkedList<> ();
 
         Boolean replaceMeterNumber = (Boolean) context.get("replaceMeterNumber");
 
-        if (! replaceMeterNumber.booleanValue()) {
+        if (!replaceMeterNumber) {
             String meterNumber = getShipmentGatewayConfigValue(delegator, shipmentGatewayConfigId, "accessMeterNumber", resource, "shipment.fedex.access.meterNumber");
             if (UtilValidate.isNotEmpty(meterNumber)) {
                 return ServiceUtil.returnError(UtilProperties.getMessage(resourceError, 
@@ -168,7 +168,7 @@ public class FedexServices {
         String companyPartyId = (String) context.get("companyPartyId");
         String contactPartyName = (String) context.get("contactPartyName");
 
-        Map<String, Object> result = new HashMap<String, Object>();
+        Map<String, Object> result = new HashMap<>();
 
         String accountNumber = getShipmentGatewayConfigValue(delegator, shipmentGatewayConfigId, "accessAccountNbr", resource, "shipment.fedex.access.accountNbr");
         if (UtilValidate.isEmpty(accountNumber)) {
@@ -214,7 +214,7 @@ public class FedexServices {
                     .queryList();
 
             // Get the first valid postal address (address1, city, postalCode and countryGeoId are required by Fedex)
-            List<EntityCondition> postalAddressConditions = new LinkedList<EntityCondition>();
+            List<EntityCondition> postalAddressConditions = new LinkedList<>();
             postalAddressConditions.add(EntityCondition.makeCondition("contactMechTypeId", EntityOperator.EQUALS, "POSTAL_ADDRESS"));
             postalAddressConditions.add(EntityCondition.makeCondition("address1", EntityOperator.NOT_EQUAL, null));
             postalAddressConditions.add(EntityCondition.makeCondition("address1", EntityOperator.NOT_EQUAL, ""));
@@ -254,7 +254,7 @@ public class FedexServices {
             }
 
             // Get the first valid primary phone number (required by Fedex)
-            List<EntityCondition> phoneNumberConditions = new LinkedList<EntityCondition>();
+            List<EntityCondition> phoneNumberConditions = new LinkedList<>();
             phoneNumberConditions.add(EntityCondition.makeCondition("contactMechTypeId", EntityOperator.EQUALS, "TELECOM_NUMBER"));
             phoneNumberConditions.add(EntityCondition.makeCondition("contactMechPurposeTypeId", EntityOperator.EQUALS, "PRIMARY_PHONE"));
             phoneNumberConditions.add(EntityCondition.makeCondition("areaCode", EntityOperator.NOT_EQUAL, null));
@@ -278,7 +278,7 @@ public class FedexServices {
             phoneNumber = phoneNumber.replaceAll("[^+\\d]", "");
 
             // Get the first valid fax number
-            List<EntityCondition> faxNumberConditions = new LinkedList<EntityCondition>();
+            List<EntityCondition> faxNumberConditions = new LinkedList<>();
             faxNumberConditions.add(EntityCondition.makeCondition("contactMechTypeId", EntityOperator.EQUALS, "TELECOM_NUMBER"));
             faxNumberConditions.add(EntityCondition.makeCondition("contactMechPurposeTypeId", EntityOperator.EQUALS, "FAX_NUMBER"));
             faxNumberConditions.add(EntityCondition.makeCondition("areaCode", EntityOperator.NOT_EQUAL, null));
@@ -297,7 +297,7 @@ public class FedexServices {
             }
 
             // Get the first valid email address
-            List<EntityCondition> emailConditions = new LinkedList<EntityCondition>();
+            List<EntityCondition> emailConditions = new LinkedList<>();
             emailConditions.add(EntityCondition.makeCondition("contactMechTypeId", EntityOperator.EQUALS, "EMAIL_ADDRESS"));
             emailConditions.add(EntityCondition.makeCondition("infoString", EntityOperator.NOT_EQUAL, null));
             emailConditions.add(EntityCondition.makeCondition("infoString", EntityOperator.NOT_EQUAL, ""));
@@ -316,7 +316,7 @@ public class FedexServices {
             }
 
             // Populate the Freemarker context
-            Map<String, Object> subscriptionRequestContext = new HashMap<String, Object>();
+            Map<String, Object> subscriptionRequestContext = new HashMap<>();
             subscriptionRequestContext.put("AccountNumber", accountNumber);
             subscriptionRequestContext.put("PersonName", contactPartyName);
             subscriptionRequestContext.put("CompanyName", companyName);
@@ -474,7 +474,7 @@ public class FedexServices {
         }
 
         try {
-            Map<String, Object> shipRequestContext = new HashMap<String, Object>();
+            Map<String, Object> shipRequestContext = new HashMap<>();
 
             // Get the shipment and the shipmentRouteSegment
             GenericValue shipment = EntityQuery.use(delegator).from("Shipment").where("shipmentId", shipmentId).queryOne();
@@ -981,7 +981,7 @@ public class FedexServices {
      */
     public static Map<String, Object> handleFedexShipReply(String fDXShipReplyString, GenericValue shipmentRouteSegment, 
             List<GenericValue> shipmentPackageRouteSegs, Locale locale) throws GenericEntityException {
-        List<Object> errorList = new LinkedList<Object>();
+        List<Object> errorList = new LinkedList<>();
         GenericValue shipmentPackageRouteSeg = shipmentPackageRouteSegs.get(0);
 
         Document fdxShipReplyDocument = null;
@@ -1021,7 +1021,7 @@ public class FedexServices {
                             "fDXShipReplyString", fDXShipReplyString), locale));
         }
 
-        byte[] labelBytes = Base64.base64Decode(encodedImageString.getBytes(UtilIO.getUtf8()));
+        byte[] labelBytes = Base64.getMimeDecoder().decode(encodedImageString.getBytes(StandardCharsets.UTF_8));
 
         if (labelBytes != null) {
 

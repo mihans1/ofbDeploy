@@ -25,8 +25,6 @@ import java.util.List;
 
 import org.apache.commons.lang.RandomStringUtils;
 import org.apache.ofbiz.base.util.Debug;
-import org.apache.ofbiz.base.util.GeneralException;
-import org.apache.ofbiz.base.util.GroovyUtil;
 import org.apache.ofbiz.base.util.ObjectType;
 import org.apache.ofbiz.base.util.UtilGenerics;
 import org.apache.ofbiz.base.util.UtilMisc;
@@ -50,31 +48,20 @@ import junit.framework.TestSuite;
  * Use this class in a JUnit test runner to bootstrap the Test Suite runner.
  */
 public class ModelTestSuite {
-
     public static final String module = ModelTestSuite.class.getName();
+    public static final String DELEGATOR_NAME = "test";
+    public static final String DISPATCHER_NAME = "test-dispatcher";
 
     protected String suiteName;
-    protected String originalDelegatorName;
-    protected String originalDispatcherName;
-
     protected Delegator delegator;
     protected LocalDispatcher dispatcher;
-
-    protected List<Test> testList = new ArrayList<Test>();
+    protected List<Test> testList = new ArrayList<>();
 
     public ModelTestSuite(Element mainElement, String testCase) {
-        this.suiteName = mainElement.getAttribute("suite-name");
-
-        this.originalDelegatorName = mainElement.getAttribute("delegator-name");
-        if (UtilValidate.isEmpty(this.originalDelegatorName)) this.originalDelegatorName = "test";
-
-        this.originalDispatcherName = mainElement.getAttribute("dispatcher-name");
-        if (UtilValidate.isEmpty(this.originalDispatcherName)) this.originalDispatcherName = "test-dispatcher";
-
         String uniqueSuffix = "-" + RandomStringUtils.randomAlphanumeric(10);
-
-        this.delegator = DelegatorFactory.getDelegator(this.originalDelegatorName).makeTestDelegator(this.originalDelegatorName + uniqueSuffix);
-        this.dispatcher = ServiceContainer.getLocalDispatcher(originalDispatcherName + uniqueSuffix, delegator);
+        this.suiteName = mainElement.getAttribute("suite-name");
+        this.delegator = DelegatorFactory.getDelegator(DELEGATOR_NAME).makeTestDelegator(DELEGATOR_NAME + uniqueSuffix);
+        this.dispatcher = ServiceContainer.getLocalDispatcher(DISPATCHER_NAME + uniqueSuffix, delegator);
 
         for (Element testCaseElement : UtilXml.childElementList(mainElement, UtilMisc.toSet("test-case", "test-group"))) {
             String caseName = testCaseElement.getAttribute("case-name");
@@ -116,14 +103,6 @@ public class ModelTestSuite {
             } catch (Exception e) {
                 String errMsg = "Unable to load test suite class : " + className;
                 Debug.logError(e, errMsg, module);
-            }
-        } else if ("groovy-test-suite".equals(nodeName)) {
-            try {
-                Class testClass = GroovyUtil.getScriptClassFromLocation(testElement.getAttribute("location"));
-                TestCase groovyTestCase = (GroovyScriptTestCase) testClass.newInstance();
-                this.testList.add(new TestSuite(testClass, testElement.getAttribute("name")));
-            } catch (GeneralException|InstantiationException|IllegalAccessException e) {
-                Debug.logError(e, module);
             }
         } else if ("service-test".equals(nodeName)) {
             this.testList.add(new ServiceTest(caseName, testElement));
@@ -199,9 +178,6 @@ public class ModelTestSuite {
             if (test instanceof OFBizTestCase) {
                 ((OFBizTestCase)test).setDispatcher(dispatcher);
             }
-        } else if (test instanceof GroovyScriptTestCase) {
-            ((GroovyScriptTestCase)test).setDelegator(delegator);
-            ((GroovyScriptTestCase)test).setDispatcher(dispatcher);
         }
     }
 }

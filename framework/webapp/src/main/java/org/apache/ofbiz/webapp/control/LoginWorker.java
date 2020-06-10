@@ -26,10 +26,13 @@ import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.ServiceLoader;
+import java.util.function.Predicate;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -80,6 +83,7 @@ import org.apache.ofbiz.service.GenericServiceException;
 import org.apache.ofbiz.service.LocalDispatcher;
 import org.apache.ofbiz.service.ModelService;
 import org.apache.ofbiz.service.ServiceUtil;
+import org.apache.ofbiz.webapp.WebAppCache;
 import org.apache.ofbiz.webapp.WebAppUtil;
 import org.apache.ofbiz.webapp.stats.VisitHandler;
 import org.apache.ofbiz.widget.model.ThemeFactory;
@@ -96,6 +100,7 @@ public class LoginWorker {
     public static final String securityProperties = "security.properties";
 
     private static final String keyValue = UtilProperties.getPropertyValue(securityProperties, "login.secret_key_string");
+    private static final WebAppCache webapps = WebAppCache.getShared();
 
     public static StringWrapper makeLoginUrl(PageContext pageContext) {
         return makeLoginUrl(pageContext, "checkLogin");
@@ -198,10 +203,10 @@ public class LoginWorker {
         // user is logged in; check to see if they have globally logged out if not
         // check if they have permission for this login attempt; if not log them out
         if (userLogin != null) {
-            List<Object> errorMessageList = UtilGenerics.checkList(request.getAttribute("_ERROR_MESSAGE_LIST"));
+            List<Object> errorMessageList = UtilGenerics.cast(request.getAttribute("_ERROR_MESSAGE_LIST"));
             if (!hasBasePermission(userLogin, request) || isFlaggedLoggedOut(userLogin, userLogin.getDelegator())) {
                 if (errorMessageList == null) {
-                    errorMessageList = new LinkedList<Object>();
+                    errorMessageList = new LinkedList<>();
                     request.setAttribute("_ERROR_MESSAGE_LIST", errorMessageList);
                 }
                 errorMessageList.add("User does not have permission or is flagged as logged out");
@@ -213,6 +218,52 @@ public class LoginWorker {
             }
         }
         return userLogin;
+    }
+
+    /**
+     * Return the active {@link GenericValue} of a current impersonation UserLoginHistory of current userLogin session,
+     * only if not the impersonator himself.
+     *
+     * @param request The HTTP request object for the current JSP or Servlet request.
+     * @param response The HTTP response object for the current JSP or Servlet request.
+     * @return GenericValue
+     */
+    public static GenericValue checkImpersonationInProcess(HttpServletRequest request, HttpServletResponse response) {
+        HttpSession session = request.getSession();
+        GenericValue userLogin = (GenericValue) session.getAttribute("userLogin");
+        GenericValue originUserLogin = (GenericValue) session.getAttribute("originUserLogin");
+
+        //if originUserLogin is present, it is the impersonator session
+        if (originUserLogin != null) {
+            return null;
+        }
+
+        //Check the existence of an enabled impersonation visit
+        GenericValue userLoginHistory = null;
+        if (userLogin != null) {
+            try {
+                userLoginHistory = EntityQuery.use(userLogin.getDelegator())
+                        .from("UserLoginHistory")
+                        .where(EntityCondition.makeCondition("userLoginId", userLogin.get("userLoginId")),
+                                EntityCondition.makeCondition("originUserLoginId", EntityOperator.NOT_EQUAL, null))
+                        .filterByDate()
+                        .queryFirst();
+            } catch (GenericEntityException e) {
+                Debug.logError(e, "impossible to resolve userLogin history", module);
+            }
+        }
+        if (userLoginHistory != null) {
+            List<Object> errorMessageList = UtilGenerics.cast(request.getAttribute("_ERROR_MESSAGE_LIST"));
+            if (errorMessageList == null) {
+                errorMessageList = new LinkedList<>();
+                request.setAttribute("_ERROR_MESSAGE_LIST_", errorMessageList);
+            }
+            HashMap<String, Object> messageMap = new HashMap<>();
+            messageMap.putAll(userLoginHistory.getAllFields());
+            String errMsg = UtilProperties.getMessage(resourceWebapp, "loginevents.impersonation_in_process", messageMap, UtilHttp.getLocale(request));
+            errorMessageList.add(errMsg);
+        }
+        return userLoginHistory;
     }
 
     /** This WebEvent allows for java 'services' to hook into the login path.
@@ -280,17 +331,22 @@ public class LoginWorker {
 
         String username = null;
         String password = null;
+        String token = null;
 
         if (userLogin == null) {
             // check parameters
             username = request.getParameter("USERNAME");
             password = request.getParameter("PASSWORD");
+            token = request.getParameter("TOKEN");
             // check session attributes
             if (username == null) username = (String) session.getAttribute("USERNAME");
             if (password == null) password = (String) session.getAttribute("PASSWORD");
+            if (token == null) token = (String) session.getAttribute("TOKEN");
 
             // in this condition log them in if not already; if not logged in or can't log in, save parameters and return error
-            if ((username == null) || (password == null) || ("error".equals(login(request, response)))) {
+            if (username == null
+                    || (password == null && token == null)
+                    || "error".equals(login(request, response))) {
 
                 // make sure this attribute is not in the request; this avoids infinite recursion when a login by less stringent criteria (like not checkout the hasLoggedOut field) passes; this is not a normal circumstance but can happen with custom code or in funny error situations when the userLogin service gets the userLogin object but runs into another problem and fails to return an error
                 request.removeAttribute("_LOGIN_PASSED_");
@@ -304,7 +360,8 @@ public class LoginWorker {
                 if (UtilValidate.isNotEmpty(urlParams)) {
                     session.setAttribute("_PREVIOUS_PARAM_MAP_URL_", urlParams);
                 }
-                Map<String, Object> formParams = UtilHttp.getParameterMap(request, urlParams.keySet(), false);
+                Predicate<String> isUrlParam = urlParams.keySet()::contains;
+                Map<String, Object> formParams = UtilHttp.getParameterMap(request, isUrlParam.negate());
                 if (UtilValidate.isNotEmpty(formParams)) {
                     session.setAttribute("_PREVIOUS_PARAM_MAP_FORM_", formParams);
                 }
@@ -313,6 +370,16 @@ public class LoginWorker {
 
                 return "error";
             }
+        }
+
+        //Allow loggingOut when impersonated
+        boolean isLoggingOut = "logout".equals(RequestHandler.getRequestUri(request.getPathInfo()));
+        //Check if the user has an impersonation in process
+        boolean authoriseLoginDuringImpersonate = EntityUtilProperties.propertyValueEquals("security", "security.login.authorised.during.impersonate", "true");
+        if (!isLoggingOut && !authoriseLoginDuringImpersonate && checkImpersonationInProcess(request, response) != null) {
+            //remove error message that will be displayed in impersonated status screen
+            request.removeAttribute("_ERROR_MESSAGE_LIST_");
+            return "impersonated";
         }
 
         return "success";
@@ -327,7 +394,7 @@ public class LoginWorker {
      *         JSP should generate its own content. This allows an event to override the default content.
      */
     public static String login(HttpServletRequest request, HttpServletResponse response) {
-        HttpSession session = request.getSession();  
+        HttpSession session = request.getSession();
         
         // Prevent session fixation by making Tomcat generate a new jsessionId (ultimately put in cookie). 
         if (!session.isNew()) {  // Only do when really signing in. 
@@ -337,6 +404,7 @@ public class LoginWorker {
         Delegator delegator = (Delegator) request.getAttribute("delegator");
         String username = request.getParameter("USERNAME");
         String password = request.getParameter("PASSWORD");
+        String token = request.getParameter("TOKEN");
         String forgotPwdFlag = request.getParameter("forgotPwdFlag");
 
         // password decryption
@@ -358,6 +426,7 @@ public class LoginWorker {
 
         if (username == null) username = (String) session.getAttribute("USERNAME");
         if (password == null) password = (String) session.getAttribute("PASSWORD");
+        if (token == null) token = (String) session.getAttribute("TOKEN");
 
         // allow a username and/or password in a request attribute to override the request parameter or the session attribute; this way a preprocessor can play with these a bit...
         if (UtilValidate.isNotEmpty(request.getAttribute("USERNAME"))) {
@@ -366,12 +435,15 @@ public class LoginWorker {
         if (UtilValidate.isNotEmpty(request.getAttribute("PASSWORD"))) {
             password = (String) request.getAttribute("PASSWORD");
         }
+        if (UtilValidate.isNotEmpty(request.getAttribute("TOKEN"))) {
+            token = (String) request.getAttribute("TOKEN");
+        }
 
-        List<String> unpwErrMsgList = new LinkedList<String>();
+        List<String> unpwErrMsgList = new LinkedList<>();
         if (UtilValidate.isEmpty(username)) {
             unpwErrMsgList.add(UtilProperties.getMessage(resourceWebapp, "loginevents.username_was_empty_reenter", UtilHttp.getLocale(request)));
         }
-        if (UtilValidate.isEmpty(password)) {
+        if (UtilValidate.isEmpty(password) && UtilValidate.isEmpty(token)) {
             unpwErrMsgList.add(UtilProperties.getMessage(resourceWebapp, "loginevents.password_was_empty_reenter", UtilHttp.getLocale(request)));
         }
         boolean requirePasswordChange = "Y".equals(request.getParameter("requirePasswordChange"));
@@ -443,7 +515,13 @@ public class LoginWorker {
         try {
             // get the visit id to pass to the userLogin for history
             String visitId = VisitHandler.getVisitId(session);
-            result = dispatcher.runSync("userLogin", UtilMisc.toMap("login.username", username, "login.password", password, "visitId", visitId, "locale", UtilHttp.getLocale(request), "request", request));
+            result = dispatcher.runSync("userLogin", UtilMisc.toMap(
+                    "login.username", username,
+                    "login.password", password,
+                    "login.token", token,
+                    "visitId", visitId,
+                    "locale", UtilHttp.getLocale(request),
+                    "request", request));
         } catch (GenericServiceException e) {
             Debug.logError(e, "Error calling userLogin service", module);
             Map<String, String> messageMap = UtilMisc.toMap("errorMessage", e.getMessage());
@@ -456,11 +534,14 @@ public class LoginWorker {
             GenericValue userLogin = (GenericValue) result.get("userLogin");
 
             if (requirePasswordChange) {
-                Map<String, Object> inMap = UtilMisc.<String, Object>toMap("login.username", username, "login.password", password, "locale", UtilHttp.getLocale(request));
-                inMap.put("userLoginId", username);
-                inMap.put("currentPassword", password);
-                inMap.put("newPassword", request.getParameter("newPassword"));
-                inMap.put("newPasswordVerify", request.getParameter("newPasswordVerify"));
+                Map<String, Object> inMap = UtilMisc.<String, Object>toMap(
+                        "login.username", username,
+                        "login.password", password,
+                        "login.token", token,
+                        "userLoginId", username,
+                        "currentPassword", password,
+                        "newPassword", request.getParameter("newPassword"),
+                        "newPasswordVerify", request.getParameter("newPasswordVerify"));
                 Map<String, Object> resultPasswordChange = null;
                 try {
                     resultPasswordChange = dispatcher.runSync("updatePassword", inMap);
@@ -520,7 +601,6 @@ public class LoginWorker {
             } catch (GenericServiceException e) {
                 Debug.logError(e, "Error setting user preference", module);
             }
-
             // finally do the main login routine to set everything else up in the session, etc
             return doMainLogin(request, response, userLogin, userLoginSession);
         } else {
@@ -529,6 +609,160 @@ public class LoginWorker {
             request.setAttribute("_ERROR_MESSAGE_", errMsg);
             return requirePasswordChange ? "requirePasswordChange" : "error";
         }
+    }
+
+    /**
+     * An HTTP WebEvent handler to impersonate a given userLogin without using password. This should run before the security check.
+     *
+     * @param request The HTTP request object for the current JSP or Servlet request.
+     * @param response The HTTP response object for the current JSP or Servlet request.
+     * @return Return a boolean which specifies whether or not the calling Servlet or
+     *         JSP should generate its own content. This allows an event to override the default content.
+     */
+    public static String impersonateLogin(HttpServletRequest request, HttpServletResponse response) {
+        HttpSession session = request.getSession();
+        Delegator delegator = (Delegator) request.getAttribute("delegator");
+        String userLoginIdToImpersonate = request.getParameter("userLoginIdToImpersonate");
+        GenericValue userLogin = (GenericValue) session.getAttribute("userLogin");
+        LocalDispatcher dispatcher;
+
+        if (UtilProperties.getPropertyAsBoolean("security","security.disable.impersonation", true)) {
+            String errMsg = UtilProperties.getMessage(resourceWebapp, "loginevents.impersonation_disabled", UtilHttp.getLocale(request));
+            request.setAttribute("_ERROR_MESSAGE_", errMsg);
+            return "error";
+        }
+
+        //Check if user has impersonate permission
+        Security security = (Security) request.getAttribute("security");
+        if (!security.hasEntityPermission("IMPERSONATE", "_ADMIN", userLogin)) {
+            String errMsg = UtilProperties.getMessage(resourceWebapp, "loginevents.unable_to_login_this_application", UtilHttp.getLocale(request));
+            request.setAttribute("_ERROR_MESSAGE_", errMsg);
+            return "error";
+        }
+
+        List<String> errMsgList = new LinkedList<>();
+        if (UtilValidate.isNotEmpty(session.getAttribute("originUserLogin"))) {
+            errMsgList.add(UtilProperties.getMessage(resourceWebapp, "loginevents.origin_username_is_present", UtilHttp.getLocale(request)));
+        }
+        if (UtilValidate.isEmpty(userLoginIdToImpersonate)) {
+            errMsgList.add(UtilProperties.getMessage(resourceWebapp, "loginevents.username_was_empty_reenter", UtilHttp.getLocale(request)));
+        }
+
+        try {
+            GenericValue userLoginToImpersonate = delegator.findOne("UserLogin", false, "userLoginId", userLoginIdToImpersonate);
+            if (!hasBasePermission(userLoginToImpersonate, request)) {
+                errMsgList.add(UtilProperties.getMessage(resourceWebapp, "loginevents.unable_to_login_this_application", UtilHttp.getLocale(request)));
+            }
+        } catch (GenericEntityException e) {
+            String errMsg ="Error impersonating the userLoginId" + userLoginIdToImpersonate;
+            Debug.logError(e, errMsg, module);
+            errMsgList.add(errMsg);
+            request.setAttribute("_ERROR_MESSAGE_LIST_", errMsgList);
+            return  "error";
+        }
+        if (!errMsgList.isEmpty()) {
+            request.setAttribute("_ERROR_MESSAGE_LIST_", errMsgList);
+            return  "error";
+        }
+
+        ServletContext servletContext = session.getServletContext();
+
+        Debug.logInfo("Setting default delegator", module);
+        String delegatorName = delegator.getDelegatorBaseName();
+        delegator = DelegatorFactory.getDelegator(delegatorName);
+        dispatcher = WebAppUtil.makeWebappDispatcher(servletContext, delegator);
+
+        Map<String, Object> result;
+        try {
+            // get the visit id to pass to the userLogin for history
+            String visitId = VisitHandler.getVisitId(session);
+            result = dispatcher.runSync("userImpersonate",
+                    UtilMisc.toMap("userLoginIdToImpersonate", userLoginIdToImpersonate,
+                            "userLogin", userLogin,"visitId", visitId, "locale", UtilHttp.getLocale(request)));
+        } catch (GenericServiceException e) {
+            Debug.logError(e, "Error calling userImpersonate service", module);
+            Map<String, String> messageMap = UtilMisc.toMap("errorMessage", e.getMessage());
+            String errMsg = UtilProperties.getMessage(resourceWebapp, "loginevents.following_error_occurred_during_login", messageMap, UtilHttp.getLocale(request));
+            request.setAttribute("_ERROR_MESSAGE_", errMsg);
+            return "error";
+        }
+
+        if (ModelService.RESPOND_SUCCESS.equals(result.get(ModelService.RESPONSE_MESSAGE))) {
+            userLogin = (GenericValue) result.get("userLogin");
+            GenericValue originUserLogin = (GenericValue) result.get("originUserLogin");
+
+            Map<String, Object> userLoginSession = checkMap(result.get("userLoginSession"), String.class, Object.class);
+
+            // check on JavaScriptEnabled
+            String javaScriptEnabled = "N";
+            if ("Y".equals(request.getParameter("JavaScriptEnabled"))) {
+                javaScriptEnabled = "Y";
+            }
+            try {
+                dispatcher.runSync("setUserPreference", UtilMisc.toMap("userPrefTypeId", "javaScriptEnabled",
+                        "userPrefGroupTypeId", "GLOBAL_PREFERENCES", "userPrefValue", javaScriptEnabled, "userLogin", userLogin));
+            } catch (GenericServiceException e) {
+                Debug.logError(e, "Error setting user preference", module);
+            }
+
+            //add originUserLogin in session
+            session.setAttribute("originUserLogin", originUserLogin);
+            // finally do the main login routine to set everything else up in the session, etc
+            return doMainLogin(request, response, userLogin, userLoginSession);
+        } else {
+            Map<String, String> messageMap = UtilMisc.toMap("errorMessage", result.get(ModelService.ERROR_MESSAGE));
+            String errMsg = UtilProperties.getMessage(resourceWebapp, "loginevents.following_error_occurred_during_login", messageMap, UtilHttp.getLocale(request));
+            request.setAttribute("_ERROR_MESSAGE_", errMsg);
+            return "error";
+        }
+    }
+
+    /**
+     * An HTTP WebEvent handler to reverse an impersonate login.
+     *
+     * @param request The HTTP request object for the current JSP or Servlet request.
+     * @param response The HTTP response object for the current JSP or Servlet request.
+     * @return Return a boolean which specifies whether or not the calling Servlet or
+     *         JSP should generate its own content. This allows an event to override the default content.
+     */
+    public static String depersonateLogin(HttpServletRequest request, HttpServletResponse response) {
+        HttpSession session = request.getSession();
+        GenericValue originUserLogin = (GenericValue) session.getAttribute("originUserLogin");
+        session.removeAttribute("originUserLogin");
+
+        List<String> errMsgList = new LinkedList<>();
+        if (null == originUserLogin) {
+            errMsgList.add(UtilProperties.getMessage(resourceWebapp, "loginevents.username_was_empty_reenter", UtilHttp.getLocale(request)));
+        }
+        if (!errMsgList.isEmpty()) {
+            request.setAttribute("_ERROR_MESSAGE_LIST_", errMsgList);
+            return "error";
+        }
+
+        //update the userLogin history, only one impersonation of this user can be active at the same time
+        GenericValue userLogin = (GenericValue) session.getAttribute("userLogin");
+        EntityCondition conditions = EntityCondition.makeCondition(
+                EntityCondition.makeCondition("userLoginId", userLogin.get("userLoginId")),
+                EntityCondition.makeCondition("originUserLoginId", originUserLogin.get("userLoginId")),
+                EntityUtil.getFilterByDateExpr());
+        try {
+            //check impersonation process existence to avoid depersonation abuse
+            if (EntityQuery.use(originUserLogin.getDelegator()).from("UserLoginHistory").where(conditions).queryCount() == 0) {
+                String errMsg = UtilProperties.getMessage(resourceWebapp, "loginevents.impersonate_NotInProcess", UtilHttp.getLocale(request));
+                request.setAttribute("_ERROR_MESSAGE_", errMsg);
+                return "error";
+            }
+            originUserLogin.getDelegator().storeByCondition("UserLoginHistory",
+                    UtilMisc.toMap("thruDate", UtilDateTime.nowTimestamp()), conditions);
+        } catch (GenericEntityException e) {
+            return "error";
+        }
+
+        // Log out currentLogin to clean session
+        doBasicLogout(userLogin, request, response);
+
+        // Log back the impersonating user
+        return doMainLogin(request, response, originUserLogin, null);
     }
 
     protected static void setWebContextObjects(HttpServletRequest request, HttpServletResponse response, Delegator delegator, LocalDispatcher dispatcher) {
@@ -559,6 +793,10 @@ public class LoginWorker {
 
     public static String doMainLogin(HttpServletRequest request, HttpServletResponse response, GenericValue userLogin, Map<String, Object> userLoginSession) {
         HttpSession session = request.getSession();
+        boolean authoriseLoginDuringImpersonate = EntityUtilProperties.propertyValueEquals("security", "security.login.authorised.during.impersonate", "true");
+        if (!authoriseLoginDuringImpersonate && checkImpersonationInProcess(request, response) != null) {
+            return "error";
+        }
         if (userLogin != null && hasBasePermission(userLogin, request)) {
             doBasicLogin(userLogin, request);
         } else {
@@ -577,6 +815,8 @@ public class LoginWorker {
         RequestHandler rh = RequestHandler.getRequestHandler(request.getSession().getServletContext());
         rh.runAfterLoginEvents(request, response);
 
+        // Create a secured cookie with the correct userLoginId
+        createSecuredLoginIdCookie(request, response);
 
         // make sure the autoUserLogin is set to the same and that the client cookie has the correct userLoginId
         autoLoginSet(request, response);
@@ -597,7 +837,7 @@ public class LoginWorker {
         } catch (GenericServiceException e) {
             Debug.logError(e, "Error getting user preference", module);
         }
-        session.setAttribute("javaScriptEnabled", Boolean.valueOf("Y".equals(javaScriptEnabled)));
+        session.setAttribute("javaScriptEnabled", "Y".equals(javaScriptEnabled));
 
         //init theme from user preference, clean the current visualTheme value in session and restart the resolution
         UtilHttp.setVisualTheme(session, null);
@@ -710,23 +950,42 @@ public class LoginWorker {
         Delegator delegator = (Delegator) request.getAttribute("delegator");
         HttpSession session = request.getSession();
         GenericValue userLogin = (GenericValue) session.getAttribute("userLogin");
-        ServletContext context = request.getServletContext();
+        String serverId = (String) request.getServletContext().getAttribute("_serverId");
         String applicationName = UtilHttp.getApplicationName(request);
-        WebappInfo webappInfo = ComponentConfig.getWebappInfo((String) context.getAttribute("_serverId"), applicationName);
+        Optional<WebappInfo> webappInfo = webapps.getWebappInfo(serverId, applicationName);
                 
         if (userLogin != null && 
-                ((webappInfo != null && webappInfo.isAutologinCookieUsed())
-                || webappInfo == null)) { // When using an empty mountpoint, ie using root as mountpoint. Beware: works only for 1 webapp!
+                // When using an empty mountpoint, ie using root as mountpoint. Beware: works only for 1 webapp!
+                webappInfo.map(WebappInfo::isAutologinCookieUsed).orElse(!webappInfo.isPresent())) {
             Cookie autoLoginCookie = new Cookie(getAutoLoginCookieName(request), userLogin.getString("userLoginId"));
             autoLoginCookie.setMaxAge(60 * 60 * 24 * 365);
             autoLoginCookie.setDomain(EntityUtilProperties.getPropertyValue("url", "cookie.domain", delegator));
-            autoLoginCookie.setPath( applicationName.equals("root") ? "/" : request.getContextPath());
+            autoLoginCookie.setPath(applicationName.equals("root") ? "/" : request.getContextPath());
             autoLoginCookie.setSecure(true);
             autoLoginCookie.setHttpOnly(true);
             response.addCookie(autoLoginCookie);
+
             return autoLoginCheck(delegator, session, userLogin.getString("userLoginId"));
         } else {
             return "success";
+        }
+    }
+
+    // Create a securedLoginId cookie for the browser session
+    public static void createSecuredLoginIdCookie(HttpServletRequest request, HttpServletResponse response) {
+        Delegator delegator = (Delegator) request.getAttribute("delegator");
+        HttpSession session = request.getSession();
+        GenericValue userLogin = (GenericValue) session.getAttribute("userLogin");
+        String applicationName = UtilHttp.getApplicationName(request);
+        
+        if (userLogin != null) {
+            Cookie securedLoginIdCookie = new Cookie(getSecuredLoginIdCookieName(request), userLogin.getString("userLoginId"));
+            securedLoginIdCookie.setMaxAge(-1);
+            securedLoginIdCookie.setDomain(EntityUtilProperties.getPropertyValue("url", "cookie.domain", delegator));
+            securedLoginIdCookie.setPath( applicationName.equals("root") ? "/" : request.getContextPath());
+            securedLoginIdCookie.setSecure(true);
+            securedLoginIdCookie.setHttpOnly(true);
+            response.addCookie(securedLoginIdCookie);
         }
     }
 
@@ -734,6 +993,10 @@ public class LoginWorker {
         return UtilHttp.getApplicationName(request) + ".autoUserLoginId";
     }
 
+    protected static String getSecuredLoginIdCookieName(HttpServletRequest request) {
+        return UtilHttp.getApplicationName(request) + ".securedLoginId";
+    }
+    
     public static String getAutoUserLoginId(HttpServletRequest request) {
         String autoUserLoginId = null;
         Cookie[] cookies = request.getCookies();
@@ -751,10 +1014,33 @@ public class LoginWorker {
         return autoUserLoginId;
     }
     
+    public static String getSecuredUserLoginId(HttpServletRequest request) {
+        String securedUserLoginId = null;
+        Cookie[] cookies = request.getCookies();
+        if (Debug.verboseOn()) {
+            Debug.logVerbose("Cookies: " + Arrays.toString(cookies), module);
+        }
+        if (cookies != null) {
+            for (Cookie cookie: cookies) {
+                String cookieName = getSecuredLoginIdCookieName(request);
+                if (cookie.getName().equals(cookieName)) {
+                    securedUserLoginId = cookie.getValue();
+                    break;
+                }
+            }
+        }
+        return securedUserLoginId;
+    }
+
 
     public static String autoLoginCheck(HttpServletRequest request, HttpServletResponse response) {
         Delegator delegator = (Delegator) request.getAttribute("delegator");
         HttpSession session = request.getSession();
+        
+        GenericValue autoUserLogin = (GenericValue) session.getAttribute("autoUserLogin");
+        if (autoUserLogin != null){
+            return "success";
+        }
 
         return autoLoginCheck(delegator, session, getAutoUserLoginId(request));
     }
@@ -919,6 +1205,7 @@ public class LoginWorker {
 
         return "success";
     }
+    
     // preprocessor method to login a user w/ client certificate see security.properties to configure the pattern of CN
     public static String check509CertLogin(HttpServletRequest request, HttpServletResponse response) {
         Delegator delegator = (Delegator) request.getAttribute("delegator");
@@ -995,7 +1282,7 @@ public class LoginWorker {
     }
 
     protected static boolean checkValidIssuer(Delegator delegator, Map<String, String> x500Map, BigInteger serialNumber) throws GeneralException {
-        List<EntityCondition> conds = new LinkedList<EntityCondition>();
+        List<EntityCondition> conds = new LinkedList<>();
         conds.add(EntityCondition.makeCondition(EntityOperator.OR, EntityCondition.makeConditionMap("commonName", x500Map.get("CN")),
                 EntityCondition.makeConditionMap("commonName", null),
                 EntityCondition.makeConditionMap("commonName", "")));
@@ -1109,8 +1396,8 @@ public class LoginWorker {
      * user is authorized to access
      */
     public static Collection<ComponentConfig.WebappInfo> getAppBarWebInfos(Security security, GenericValue userLogin, String serverName, String menuName) {
-        Collection<ComponentConfig.WebappInfo> allInfos = ComponentConfig.getAppBarWebInfos(serverName, menuName);
-        Collection<ComponentConfig.WebappInfo> allowedInfos = new ArrayList<ComponentConfig.WebappInfo>(allInfos.size());
+        Collection<ComponentConfig.WebappInfo> allInfos = webapps.getAppBarWebInfos(serverName, menuName);
+        Collection<ComponentConfig.WebappInfo> allowedInfos = new ArrayList<>(allInfos.size());
         for (ComponentConfig.WebappInfo info : allInfos) {
             if (hasApplicationPermission(info, security, userLogin)) {
                 allowedInfos.add(info);
@@ -1177,5 +1464,14 @@ public class LoginWorker {
             }
         }
         return "success";
+    }
+
+    /**
+     * Return true if userLogin has not been disabled
+     * @param userLogin
+     * @return boolean
+     */
+    public static boolean isUserLoginActive(GenericValue userLogin) {
+        return !"N".equals(userLogin.getString("enabled")) && UtilValidate.isEmpty(userLogin.getString("disabledBy"));
     }
 }

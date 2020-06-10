@@ -72,6 +72,7 @@ public class TestRunContainer implements Container {
         this.jsWrapper = prepareJunitSuiteWrapper(testProps);
     }
 
+    @Override
     public boolean start() throws ContainerException {
         boolean failedRun = false;
         for (ModelTestSuite modelSuite: jsWrapper.getModelTestSuites()) {
@@ -102,14 +103,16 @@ public class TestRunContainer implements Container {
         return true;
     }
 
-    public void stop() throws ContainerException {
+    @Override
+    public void stop() {
     }
 
+    @Override
     public String getName() {
         return name;
     }
 
-    private void setLoggerLevel(String logLevel) {
+    private static void setLoggerLevel(String logLevel) {
         if (logLevel != null) {
             int selectedLogLevel = Debug.getLevelFromString(logLevel);
 
@@ -120,7 +123,7 @@ public class TestRunContainer implements Container {
         }
     }
 
-    private JunitSuiteWrapper prepareJunitSuiteWrapper(Map<String,String> testProps) throws ContainerException {
+    private static JunitSuiteWrapper prepareJunitSuiteWrapper(Map<String,String> testProps) throws ContainerException {
         String component = testProps.get("component");
         String suiteName = testProps.get("suitename");
         String testCase = testProps.get("case");
@@ -141,7 +144,7 @@ public class TestRunContainer implements Container {
         }
     }
 
-    private void logTestSuiteResults(TestSuite suite, TestResult results) {
+    private static void logTestSuiteResults(TestSuite suite, TestResult results) {
         Debug.logInfo("[JUNIT] Results for test suite: " + suite.getName(), module);
         Debug.logInfo("[JUNIT] Pass: " + results.wasSuccessful() + " | # Tests: " + results.runCount() + " | # Failed: " +
                 results.failureCount() + " # Errors: " + results.errorCount(), module);
@@ -156,7 +159,7 @@ public class TestRunContainer implements Container {
         }
     }
 
-    private void logErrorsOrFailures(Enumeration<TestFailure> errorsOrFailures) {
+    private static void logErrorsOrFailures(Enumeration<TestFailure> errorsOrFailures) {
         if (!errorsOrFailures.hasMoreElements()) {
             Debug.logInfo("None", module);
         } else {
@@ -170,7 +173,7 @@ public class TestRunContainer implements Container {
 
     class JunitXmlListener extends XMLJUnitResultFormatter {
 
-        Map<String, Long> startTimes = new HashMap<String, Long>();
+        Map<String, Long> startTimes = new HashMap<>();
 
         public JunitXmlListener(OutputStream out) {
             this.setOutput(out);
@@ -192,18 +195,22 @@ public class TestRunContainer implements Container {
 
     class JunitListener implements TestListener {
 
+        @Override
         public void addError(Test test, Throwable throwable) {
             Debug.logWarning(throwable, "[JUNIT (error)] - " + getTestName(test) + " : " + throwable.toString(), module);
         }
 
+        @Override
         public void addFailure(Test test, AssertionFailedError assertionFailedError) {
             Debug.logWarning("[JUNIT (failure)] - " + getTestName(test) + " : " + assertionFailedError.getMessage(), module);
         }
 
+        @Override
         public void endTest(Test test) {
             Debug.logInfo("[JUNIT] : " + getTestName(test) + " finished.", module);
         }
 
+        @Override
         public void startTest(Test test) {
            Debug.logInfo("[JUNIT] : " + getTestName(test) + " starting...", module);
         }

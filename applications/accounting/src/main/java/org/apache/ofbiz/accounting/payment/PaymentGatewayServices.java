@@ -19,6 +19,7 @@
 package org.apache.ofbiz.accounting.payment;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.sql.Timestamp;
 import java.util.Collection;
 import java.util.Date;
@@ -33,6 +34,7 @@ import java.util.Set;
 
 import org.apache.ofbiz.accounting.invoice.InvoiceWorker;
 import org.apache.ofbiz.base.util.Debug;
+import org.apache.ofbiz.base.util.ObjectType;
 import org.apache.ofbiz.base.util.GeneralException;
 import org.apache.ofbiz.base.util.StringUtil;
 import org.apache.ofbiz.base.util.UtilDateTime;
@@ -75,28 +77,18 @@ public class PaymentGatewayServices {
 
     public static final String module = PaymentGatewayServices.class.getName();
     public static final String AUTH_SERVICE_TYPE = "PRDS_PAY_AUTH";
-    public static final String REAUTH_SERVICE_TYPE = "PRDS_PAY_REAUTH";
-    public static final String RELEASE_SERVICE_TYPE = "PRDS_PAY_RELEASE";
-    public static final String CAPTURE_SERVICE_TYPE = "PRDS_PAY_CAPTURE";
-    public static final String REFUND_SERVICE_TYPE = "PRDS_PAY_REFUND";
-    public static final String CREDIT_SERVICE_TYPE = "PRDS_PAY_CREDIT";
+    private static final String REAUTH_SERVICE_TYPE = "PRDS_PAY_REAUTH";
+    private static final String RELEASE_SERVICE_TYPE = "PRDS_PAY_RELEASE";
+    private static final String CAPTURE_SERVICE_TYPE = "PRDS_PAY_CAPTURE";
+    private static final String REFUND_SERVICE_TYPE = "PRDS_PAY_REFUND";
+    private static final String CREDIT_SERVICE_TYPE = "PRDS_PAY_CREDIT";
     private static final int TX_TIME = 300;
-    private static BigDecimal ZERO = BigDecimal.ZERO;
-    private static int decimals;
-    private static int rounding;
+    public static final int decimals = UtilNumber.getBigDecimalScale("order.decimals");
+    public static final RoundingMode rounding = UtilNumber.getRoundingMode("order.rounding");
+    public static final BigDecimal ZERO = BigDecimal.ZERO.setScale(decimals, rounding);
     public static final String resource = "AccountingUiLabels";
     public static final String resourceError = "AccountingErrorUiLabels";
     public static final String resourceOrder = "OrderUiLabels";
-
-    static {
-        decimals = UtilNumber.getBigDecimalScale("order.decimals");
-        rounding = UtilNumber.getBigDecimalRoundingMode("order.rounding");
-
-        // set zero to the proper scale
-        if (decimals != -1) {
-            ZERO = ZERO.setScale(decimals);
-        }
-    }
 
     /**
      * Authorizes a single order preference with an option to specify an amount. The result map has the Booleans
@@ -147,11 +139,11 @@ public class PaymentGatewayServices {
         // get the process attempts so far
         Long procAttempt = orderPaymentPreference.getLong("processAttempt");
         if (procAttempt == null) {
-            procAttempt = Long.valueOf(0);
+            procAttempt = 0L;
         }
 
         // update the process attempt count
-        orderPaymentPreference.set("processAttempt", Long.valueOf(procAttempt.longValue() + 1));
+        orderPaymentPreference.set("processAttempt", procAttempt + 1);
         try {
             orderPaymentPreference.store();
             orderPaymentPreference.refresh();
@@ -193,7 +185,7 @@ public class PaymentGatewayServices {
             // handle the response
             if (authPaymentResult != null) {
                 // not null result means either an approval or decline; null would mean error
-                BigDecimal thisAmount = (BigDecimal) authPaymentResult.get("processAmount");
+                BigDecimal thisAmount = (BigDecimal) ObjectType.simpleTypeOrObjectConvert(authPaymentResult.get("processAmount"), "BigDecimal", null, locale);
 
                 // process the auth results
                 try {
@@ -326,7 +318,7 @@ public class PaymentGatewayServices {
         Map<String, Object> result = new HashMap<>();
         boolean reAuth = false;
         if (context.get("reAuth") != null) {
-            reAuth = ((Boolean)context.get("reAuth")).booleanValue();
+            reAuth = (Boolean) context.get("reAuth");
         }
         // get the order header and payment preferences
         GenericValue orderHeader = null;
@@ -408,14 +400,14 @@ public class PaymentGatewayServices {
                 messages.add("Could not authorize OrderPaymentPreference [" + paymentPref.getString("orderPaymentPreferenceId") + "] for order [" + orderId + "]: " + results.get(ModelService.ERROR_MESSAGE));
                 continue;
             }
-            if (((Boolean) results.get("finished")).booleanValue()) {
+            if ((Boolean) results.get("finished")) {
                 finished += 1;
             }
-            if (((Boolean) results.get("errors")).booleanValue()) {
+            if ((Boolean) results.get("errors")) {
                 hadError += 1;
             }
             if (results.get("messages") != null) {
-                List<String> message = UtilGenerics.checkList(results.get("messages"));
+                List<String> message = UtilGenerics.cast(results.get("messages"));
                 messages.addAll(message);
             }
             if (results.get("processAmount") != null) {
@@ -848,7 +840,7 @@ public class PaymentGatewayServices {
         // save the response and respective messages
         savePgrAndMsgs(dctx, pgCredit, messageEntities);
 
-        if (creditResponse != null && creditResponse.booleanValue()) {
+        if (creditResponse != null && creditResponse) {
             paymentPref.set("statusId", "PAYMENT_CANCELLED");
             try {
                 paymentPref.store();
@@ -1052,7 +1044,7 @@ public class PaymentGatewayServices {
             }
         }
 
-        if (releaseResponse != null && releaseResponse.booleanValue()) {
+        if (releaseResponse != null && releaseResponse) {
             paymentPref.set("statusId", "PAYMENT_CANCELLED");
             try {
                 paymentPref.store();
@@ -1281,7 +1273,14 @@ public class PaymentGatewayServices {
                     }
                     if (captureResult != null) {
 
-                        BigDecimal amountCaptured = (BigDecimal) captureResult.get("captureAmount");
+                        BigDecimal amountCaptured = BigDecimal.ZERO;
+                        try {
+                            amountCaptured = (BigDecimal) ObjectType.simpleTypeOrObjectConvert(captureResult.get("captureAmount"), "BigDecimal", null, locale);
+                        } catch (GeneralException e) {
+                            Debug.logError(e, "Trouble processing the result; captureResult: " + captureResult, module);
+                            return ServiceUtil.returnError(UtilProperties.getMessage(resourceOrder,
+                                    "AccountingPaymentCannotBeCaptured", locale) + " " + captureResult);
+                        }
                         if (Debug.infoOn()) {
                             Debug.logInfo("Amount captured for order [" + orderId + "] from unapplied payments associated to billing account [" + billingAccountId + "] is: " + amountCaptured, module);
                         }
@@ -1387,7 +1386,10 @@ public class PaymentGatewayServices {
                 Map<String, Object> captureResult = capturePayment(dctx, userLogin, orh, paymentPref, amountThisCapture, locale);
                 if (captureResult != null && ServiceUtil.isSuccess(captureResult)) {
                     // credit card processors return captureAmount, but gift certificate processors return processAmount
-                    BigDecimal amountCaptured = (BigDecimal) captureResult.get("captureAmount");
+                    BigDecimal amountCaptured = null;
+                    try {
+                        amountCaptured = (BigDecimal) ObjectType.simpleTypeOrObjectConvert(captureResult.get("captureAmount"), "BigDecimal", null, locale);
+
                     if (amountCaptured == null) {
                         amountCaptured = (BigDecimal) captureResult.get("processAmount");
                     }
@@ -1403,7 +1405,6 @@ public class PaymentGatewayServices {
                     }
 
                     // process the capture's results
-                    try {
                         processResult(dctx, captureResult, userLogin, paymentPref, locale);
                     } catch (GeneralException e) {
                         Debug.logError(e, "Trouble processing the result; captureResult: " + captureResult, module);
@@ -1883,13 +1884,13 @@ public class PaymentGatewayServices {
 
         if (authResult != null) {
             processAuthResult(dctx, result, userLogin, paymentPreference);
-            resultPassed = authResult.booleanValue();
+            resultPassed = authResult;
             authServiceType = ("PAYMENT_NOT_AUTH".equals(initialStatus)) ? AUTH_SERVICE_TYPE : REAUTH_SERVICE_TYPE;
         }
         if (captureResult != null) {
             processCaptureResult(dctx, result, userLogin, paymentPreference, authServiceType, locale);
             if (!resultPassed) {
-                resultPassed = captureResult.booleanValue();
+                resultPassed = captureResult;
             }
         }
         return resultPassed;
@@ -2017,7 +2018,7 @@ public class PaymentGatewayServices {
             }
 
             // set the status of the OrderPaymentPreference
-            boolean authResultOk = authResult.booleanValue();
+            boolean authResultOk = authResult;
             
             if (authResultOk) {
                 orderPaymentPreference.set("statusId", "PAYMENT_AUTHORIZED");
@@ -2043,18 +2044,18 @@ public class PaymentGatewayServices {
                 if (creditCard != null) {
                     Long consecutiveFailedAuths = creditCard.getLong("consecutiveFailedAuths");
                     if (consecutiveFailedAuths == null) {
-                        creditCard.set("consecutiveFailedAuths", Long.valueOf(1));
+                        creditCard.set("consecutiveFailedAuths", 1L);
                     } else {
-                        creditCard.set("consecutiveFailedAuths", Long.valueOf(consecutiveFailedAuths.longValue() + 1));
+                        creditCard.set("consecutiveFailedAuths", consecutiveFailedAuths + 1);
                     }
                     creditCard.set("lastFailedAuthDate", nowTimestamp);
 
                     if (Boolean.TRUE.equals(context.get("resultNsf"))) {
                         Long consecutiveFailedNsf = creditCard.getLong("consecutiveFailedNsf");
                         if (consecutiveFailedNsf == null) {
-                            creditCard.set("consecutiveFailedNsf", Long.valueOf(1));
+                            creditCard.set("consecutiveFailedNsf", 1L);
                         } else {
-                            creditCard.set("consecutiveFailedNsf", Long.valueOf(consecutiveFailedNsf.longValue() + 1));
+                            creditCard.set("consecutiveFailedNsf", consecutiveFailedNsf + 1);
                         }
                         creditCard.set("lastFailedNsfDate", nowTimestamp);
                     }
@@ -2065,9 +2066,9 @@ public class PaymentGatewayServices {
             // auth was successful, to clear out any failed auth or nsf info
             if (authResultOk) {
                 if ((creditCard != null) && (creditCard.get("lastFailedAuthDate") != null)) {
-                    creditCard.set("consecutiveFailedAuths", Long.valueOf(0));
+                    creditCard.set("consecutiveFailedAuths", 0L);
                     creditCard.set("lastFailedAuthDate", null);
-                    creditCard.set("consecutiveFailedNsf", Long.valueOf(0));
+                    creditCard.set("consecutiveFailedNsf", 0L);
                     creditCard.set("lastFailedNsfDate", null);
                     creditCard.store();
                 }
@@ -2098,7 +2099,7 @@ public class PaymentGatewayServices {
                                     "paymentMethodId", orderPaymentPreference.get("paymentMethodId"),
                                     "resultNsf", "Y")
                             .queryCount();
-                        if (failedTries < autoOrderCcTryLaterMax.longValue()) {
+                        if (failedTries < autoOrderCcTryLaterMax) {
                             needsNsfRetry = true;
                         }
                     } else {
@@ -2159,7 +2160,7 @@ public class PaymentGatewayServices {
         if (capRes != null && ServiceUtil.isError(capRes)) {
             throw new GeneralException(ServiceUtil.getErrorMessage(capRes));
         }
-        if (!captureResult.booleanValue()) {
+        if (!captureResult) {
             // capture returned false (error)
             try {
                 processReAuthFromCaptureFailure(dctx, result, amount, userLogin, paymentPreference, locale);
@@ -2212,7 +2213,7 @@ public class PaymentGatewayServices {
         if (authResp != null && Boolean.TRUE.equals(authResp)) {
             GenericValue authTrans = processAuthRetryResult(dctx, authPayRes, userLogin, paymentPreference);
             // check if auto-capture was enabled; process if so
-            if (capResp != null && capResp.booleanValue()) {
+            if (capResp != null && capResp) {
                 processCaptureResult(dctx, result, userLogin, paymentPreference, locale);
             } else {
                 // no auto-capture; do manual capture now
@@ -2223,7 +2224,7 @@ public class PaymentGatewayServices {
 
                 // process the capture result
                 Boolean capPayResp = (Boolean) capPayRes.get("captureResult");
-                if (capPayResp != null && capPayResp.booleanValue()) {
+                if (capPayResp != null && capPayResp) {
                     // process the capture result
                     processCaptureResult(dctx, capPayRes, userLogin, paymentPreference, locale);
                 } else {
@@ -2246,7 +2247,7 @@ public class PaymentGatewayServices {
         BigDecimal amount = (BigDecimal) context.get("captureAmount");
         String serviceType = (String) context.get("serviceTypeEnum");
         String currencyUomId = (String) context.get("currencyUomId");
-        boolean captureSuccessful = ((Boolean) context.get("captureResult")).booleanValue();
+        boolean captureSuccessful = (Boolean) context.get("captureResult");
 
         String paymentMethodTypeId = paymentPreference.getString("paymentMethodTypeId");
 
@@ -2502,14 +2503,7 @@ public class PaymentGatewayServices {
                 serviceContext.put("currency", orh.getCurrency());
 
                 // get the creditCard/address/email
-                String payToPartyId = null;
-                try {
-                    payToPartyId = getBillingInformation(orh, paymentPref, new HashMap<String, Object>());
-                } catch (GenericEntityException e) {
-                    Debug.logError(e, "Problems getting billing information", module);
-                    return ServiceUtil.returnError(UtilProperties.getMessage(resource, 
-                            "AccountingBillingAccountNotFound", UtilMisc.toMap("billingAccountId", ""), locale));
-                }
+                String payToPartyId = orh.getBillToParty().getString("partyId");
 
                 BigDecimal processAmount = refundAmount.setScale(decimals, rounding);
                 serviceContext.put("refundAmount", processAmount);
@@ -2547,7 +2541,7 @@ public class PaymentGatewayServices {
 
                     // The refund amount could be different from what we tell the payment gateway due to issues
                     // such as having to void the entire original auth amount and re-authorize the new order total.
-                    BigDecimal actualRefundAmount = (BigDecimal) refundResponse.get("refundAmount");
+                    BigDecimal actualRefundAmount = (BigDecimal) ObjectType.simpleTypeOrObjectConvert(refundResponse.get("refundAmount"), "BigDecimal", null, locale);
                     if (actualRefundAmount != null && actualRefundAmount.compareTo(processAmount) != 0) {
                         refundResCtx.put("refundAmount", refundResponse.get("refundAmount"));
                     }
@@ -2555,12 +2549,11 @@ public class PaymentGatewayServices {
                     if (ServiceUtil.isError(refundResRes)) {
                         return ServiceUtil.returnError(ServiceUtil.getErrorMessage(refundResRes));
                     }
-                } catch (GenericServiceException e) {
+                } catch (GeneralException e) {
                     Debug.logError(e, module);
                     return ServiceUtil.returnError(UtilProperties.getMessage(resource, 
                             "AccountingPaymentRefundError", locale) + " " + e.getMessage());
                 }
-
                 return refundResRes;
             } else {
                 return ServiceUtil.returnError(UtilProperties.getMessage(resource, 
@@ -2625,7 +2618,7 @@ public class PaymentGatewayServices {
         }
 
         Boolean refundResult = (Boolean) context.get("refundResult");
-        if (refundResult != null && refundResult.booleanValue()) {
+        if (refundResult != null && refundResult) {
 
             // mark the preference as refunded
             paymentPref.set("statusId", "PAYMENT_REFUNDED");
@@ -2752,7 +2745,7 @@ public class PaymentGatewayServices {
         EntityQuery eq = EntityQuery.use(delegator)
                 .from("OrderPaymentPreference")
                 .where(EntityCondition.makeCondition("statusId", EntityOperator.EQUALS, "PAYMENT_NOT_AUTH"),
-                        EntityCondition.makeCondition("processAttempt",EntityOperator.GREATER_THAN, Long.valueOf(0)))
+                        EntityCondition.makeCondition("processAttempt",EntityOperator.GREATER_THAN, 0L))
                 .orderBy("orderId");
 
         try (EntityListIterator eli = eq.queryIterator()) {
@@ -3320,7 +3313,7 @@ public class PaymentGatewayServices {
                         "AccountingPaymentCreditError",
                         UtilMisc.toMap("errorString", e.getMessage()), locale));
             }
-            if (responseRes != null && ServiceUtil.isError(responseRes)) {
+            if (ServiceUtil.isError(responseRes)) {
                 return ServiceUtil.returnError(ServiceUtil.getErrorMessage(responseRes));
             }
         } else if (ServiceUtil.isError(response)) {
@@ -3782,7 +3775,7 @@ public class PaymentGatewayServices {
         return result;
     }
 
-    public static String getPaymentCustomMethod(Delegator delegator, String customMethodId) {
+    private static String getPaymentCustomMethod(Delegator delegator, String customMethodId) {
         String serviceName = null;
         GenericValue customMethod = null;
         try {
@@ -3796,7 +3789,7 @@ public class PaymentGatewayServices {
         return serviceName;
     }
 
-    public static boolean isReplacementOrder(GenericValue orderHeader) {
+    private static boolean isReplacementOrder(GenericValue orderHeader) {
         boolean replacementOrderFlag = false;
 
         List<GenericValue> returnItemResponses = new LinkedList<>();

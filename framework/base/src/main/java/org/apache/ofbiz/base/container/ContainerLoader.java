@@ -20,98 +20,106 @@ package org.apache.ofbiz.base.container;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
+import java.util.Deque;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.stream.Collectors;
 
 import org.apache.ofbiz.base.component.ComponentConfig;
 import org.apache.ofbiz.base.start.Config;
 import org.apache.ofbiz.base.start.StartupCommand;
 import org.apache.ofbiz.base.start.StartupException;
-import org.apache.ofbiz.base.start.StartupLoader;
 import org.apache.ofbiz.base.util.Debug;
 import org.apache.ofbiz.base.util.UtilValidate;
-
-import edu.emory.mathcs.backport.java.util.Collections;
 
 /**
  * An object that loads containers (background processes).
  *
- * <p>Normally, instances of this class are created by OFBiz startup code, and
+ * Normally, instances of this class are created by OFBiz startup code, and
  * client code should not create instances of this class. Client code is
- * responsible for making sure containers are shut down properly. </p>
- *
+ * responsible for making sure containers are shut down properly.
+ * <p>
+ * When OFBiz starts, the main thread will create the {@code ContainerLoader} instance and
+ * then call the loader's {@code load} method.
+ * After this instance has been created and initialized, the main thread will call the
+ * {@code start} method. When OFBiz shuts down, a separate shutdown thread will call
+ * the {@code unload} method.
  */
-public class ContainerLoader implements StartupLoader {
+public class ContainerLoader {
 
     public static final String module = ContainerLoader.class.getName();
 
-    private final List<Container> loadedContainers = new LinkedList<>();
+    private final Deque<Container> loadedContainers = new LinkedList<>();
 
     /**
-     * @see org.apache.ofbiz.base.start.StartupLoader#load(Config, List)
+     * Starts the containers.
+     *
+     * @param config Startup config
+     * @param ofbizCommands Command-line arguments
+     * @throws StartupException If an error was encountered. Throwing this exception
+     * will halt loader loading, so it should be thrown only when OFBiz can't
+     * operate without it.
      */
-    @Override
     public synchronized void load(Config config, List<StartupCommand> ofbizCommands) throws StartupException {
+        // Load mandatory container providing access to containers from components.
+        try {
+            ComponentContainer cc = new ComponentContainer();
+            cc.init(ofbizCommands, "component-container", null);
+            loadedContainers.add(cc);
+        } catch (ContainerException e) {
+            throw new StartupException("Cannot init() component-container", e);
+        }
 
-        // loaders defined in startup (e.g. main, test, load-data, etc ...)
-        List<String> loaders = config.loaders;
-
-        // load containers defined in ofbiz-containers.xml
+        // Load containers defined in components.
         Debug.logInfo("[Startup] Loading containers...", module);
-        List<ContainerConfig.Configuration> ofbizContainerConfigs = filterContainersHavingMatchingLoaders(
-                loaders, retrieveOfbizContainers(config.containerConfig));
-        loadedContainers.addAll(loadContainersFromConfigurations(ofbizContainerConfigs, config, ofbizCommands));
-
-        // load containers defined in components
-        Debug.logInfo("[Startup] Loading component containers...", module);
-        List<ContainerConfig.Configuration> componentContainerConfigs = filterContainersHavingMatchingLoaders(
-                loaders, ComponentConfig.getAllConfigurations());
-        loadedContainers.addAll(loadContainersFromConfigurations(componentContainerConfigs, config, ofbizCommands));
+        loadedContainers.addAll(loadContainersFromConfigurations(config.loaders, ofbizCommands));
 
         // Start all containers loaded from above steps
         startLoadedContainers();
     }
 
-    private Collection<ContainerConfig.Configuration> retrieveOfbizContainers(String configFile) throws StartupException {
-        try {
-            return ContainerConfig.getConfigurations(configFile);
-        } catch (ContainerException e) {
-            throw new StartupException(e);
-        }
+    /**
+     * Checks if two collections have an intersection or are both empty.
+     *
+     * @param a the first collection which can be {@code null}
+     * @param b the second collection which can be {@code null}
+     * @return {@code true} if {@code a} and {@code b} have an intersection or are both empty.
+     */
+    private static boolean intersects(Collection<?> a, Collection<?> b) {
+        return UtilValidate.isEmpty(a) && UtilValidate.isEmpty(b)
+                || !Collections.disjoint(a, b);
     }
 
-    private List<ContainerConfig.Configuration> filterContainersHavingMatchingLoaders(List<String> loaders,
-            Collection<ContainerConfig.Configuration> containerConfigs) {
-        return containerConfigs.stream()
-                .filter(containerCfg ->
-                    UtilValidate.isEmpty(containerCfg.loaders) &&
-                    UtilValidate.isEmpty(loaders) ||
-                    containerCfg.loaders.stream().anyMatch(loader -> loaders.contains(loader)))
-                .collect(Collectors.toList());
-    }
-
-    private List<Container> loadContainersFromConfigurations(List<ContainerConfig.Configuration> containerConfigs,
-            Config config, List<StartupCommand> ofbizCommands) throws StartupException {
-
+    /**
+     * Loads the available containers which are matching the configured loaders.
+     *
+     * @param loaders  the collection of loaders to match
+     * @param ofbizCommands  the parsed commands line arguments used by the containers
+     * @return a list of loaded containers.
+     * @throws StartupException when a container fails to load.
+     */
+    private static List<Container> loadContainersFromConfigurations(Collection<String> loaders,
+            List<StartupCommand> ofbizCommands) throws StartupException {
         List<Container> loadContainers = new ArrayList<>();
-        for (ContainerConfig.Configuration containerCfg : containerConfigs) {
-            Debug.logInfo("Loading container: " + containerCfg.name, module);
-            Container tmpContainer = loadContainer(config.containerConfig, containerCfg, ofbizCommands);
-            loadContainers.add(tmpContainer);
-            Debug.logInfo("Loaded container: " + containerCfg.name, module);
+        for (ContainerConfig.Configuration containerCfg : ComponentConfig.getAllConfigurations()) {
+            if (intersects(containerCfg.loaders(), loaders)) {
+                Debug.logInfo("Loading container: " + containerCfg.name(), module);
+                Container tmpContainer = loadContainer(containerCfg, ofbizCommands);
+                loadContainers.add(tmpContainer);
+                Debug.logInfo("Loaded container: " + containerCfg.name(), module);
+            }
         }
         return loadContainers;
     }
 
-    private Container loadContainer(String configFile,
-            ContainerConfig.Configuration containerCfg,
-            List<StartupCommand> ofbizCommands) throws StartupException {
+
+    private static Container loadContainer(ContainerConfig.Configuration containerCfg, List<StartupCommand> ofbizCommands)
+            throws StartupException {
         // load the container class
         ClassLoader loader = Thread.currentThread().getContextClassLoader();
         Class<?> containerClass;
         try {
-            containerClass = loader.loadClass(containerCfg.className);
+            containerClass = loader.loadClass(containerCfg.className());
         } catch (ClassNotFoundException e) {
             throw new StartupException("Cannot locate container class", e);
         }
@@ -122,9 +130,9 @@ public class ContainerLoader implements StartupLoader {
         // create a new instance of the container object
         Container containerObj;
         try {
-            containerObj = (Container) containerClass.newInstance();
-        } catch (InstantiationException | IllegalAccessException e) {
-            throw new StartupException("Cannot create " + containerCfg.name, e);
+            containerObj = (Container) containerClass.getDeclaredConstructor().newInstance();
+        } catch (ReflectiveOperationException e) {
+            throw new StartupException("Cannot create " + containerCfg.name(), e);
         }
         if (containerObj == null) {
             throw new StartupException("Unable to create instance of component container");
@@ -132,9 +140,9 @@ public class ContainerLoader implements StartupLoader {
 
         // initialize the container object
         try {
-            containerObj.init(ofbizCommands, containerCfg.name, configFile);
+            containerObj.init(ofbizCommands, containerCfg.name(), null);
         } catch (ContainerException e) {
-            throw new StartupException("Cannot init() " + containerCfg.name, e);
+            throw new StartupException("Cannot init() " + containerCfg.name(), e);
         }
 
         return containerObj;
@@ -154,16 +162,11 @@ public class ContainerLoader implements StartupLoader {
     }
 
     /**
-     * @see org.apache.ofbiz.base.start.StartupLoader#unload()
+     * Stops the containers.
      */
-    @Override
-    public synchronized void unload() throws StartupException {
+    public synchronized void unload() {
         Debug.logInfo("Shutting down containers", module);
-
-        List<Container> reversedContainerList = new ArrayList<>(loadedContainers);
-        Collections.reverse(reversedContainerList);
-
-        for(Container loadedContainer : reversedContainerList) {
+        loadedContainers.descendingIterator().forEachRemaining(loadedContainer -> {
             Debug.logInfo("Stopping container " + loadedContainer.getName(), module);
             try {
                 loadedContainer.stop();
@@ -171,6 +174,6 @@ public class ContainerLoader implements StartupLoader {
                 Debug.logError(e, module);
             }
             Debug.logInfo("Stopped container " + loadedContainer.getName(), module);
-        }
+        });
     }
 }

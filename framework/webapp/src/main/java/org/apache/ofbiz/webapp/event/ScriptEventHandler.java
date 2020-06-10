@@ -32,6 +32,7 @@ import javax.servlet.http.HttpSession;
 
 import org.apache.ofbiz.base.util.Debug;
 import org.apache.ofbiz.base.util.ScriptUtil;
+import org.apache.ofbiz.base.util.UtilGenerics;
 import org.apache.ofbiz.base.util.UtilHttp;
 import org.apache.ofbiz.base.util.UtilMisc;
 import org.apache.ofbiz.webapp.control.ConfigXMLReader.Event;
@@ -61,7 +62,7 @@ public final class ScriptEventHandler implements EventHandler {
     private static final Set<String> protectedKeys = createProtectedKeys();
 
     private static Set<String> createProtectedKeys() {
-        Set<String> newSet = new HashSet<String>();
+        Set<String> newSet = new HashSet<>();
         newSet.add("request");
         newSet.add("response");
         newSet.add("session");
@@ -84,7 +85,7 @@ public final class ScriptEventHandler implements EventHandler {
     @Override
     public String invoke(Event event, RequestMap requestMap, HttpServletRequest request, HttpServletResponse response) throws EventHandlerException {
         try {
-            Map<String, Object> context = new HashMap<String, Object>();
+            Map<String, Object> context = new HashMap<>();
             context.put("request", request);
             context.put("response", response);
             HttpSession session = request.getSession();
@@ -109,7 +110,7 @@ public final class ScriptEventHandler implements EventHandler {
                 return "error";
             }
             if (result instanceof Map) {
-                Map resultMap = (Map)result;
+                Map<String, Object> resultMap = UtilGenerics.cast(result);
                 String successMessage = (String)resultMap.get("_event_message_");
                 if (successMessage != null) {
                     request.setAttribute("_EVENT_MESSAGE_", successMessage);

@@ -21,10 +21,10 @@ package org.apache.ofbiz.base.start;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
 
+import org.apache.ofbiz.base.container.ContainerLoader;
 import org.apache.ofbiz.base.start.Start.ServerState;
 
 /**
@@ -58,47 +58,31 @@ final class StartupControlPanel {
     /**
      * Execute the startup sequence for OFBiz
      */
-    static void start(Config config,
-            AtomicReference<ServerState> serverState,
-            List<StartupCommand> ofbizCommands) throws StartupException {
+    static void start(Config config, AtomicReference<ServerState> serverState, List<StartupCommand> ofbizCommands,
+            ContainerLoader loader) throws StartupException {
+        createLogDirectoryIfMissing(config.logDir.toString());
 
-        //TODO loaders should be converted to a single loader
-        List<StartupLoader> loaders = new ArrayList<>();
-        Thread adminServer = createAdminServer(config, serverState, loaders);
-
-        createLogDirectoryIfMissing(config);
-        createRuntimeShutdownHook(config, loaders, serverState);
-        loadStartupLoaders(config, loaders, ofbizCommands, serverState);
-        printStartupMessage(config);
-        executeShutdownAfterLoadIfConfigured(config, loaders, serverState, adminServer);
-    }
-
-    /**
-     * Print OFBiz startup message only if the OFBiz server is not scheduled for shutdown.
-     * @param config contains parameters for system startup
-     */
-    private static void printStartupMessage(Config config) {
-        if (!config.shutdownAfterLoad) {
-            String lineSeparator = System.lineSeparator();
-            System.out.println(lineSeparator + "   ____  __________  _" +
-                               lineSeparator + "  / __ \\/ ____/ __ )(_)___" +
-                               lineSeparator + " / / / / /_  / __  / /_  /" +
-                               lineSeparator + "/ /_/ / __/ / /_/ / / / /_" +
-                               lineSeparator + "\\____/_/   /_____/_/ /___/  is started and ready." +
-                               lineSeparator);
+        if (config.useShutdownHook) {
+            Runtime.getRuntime().addShutdownHook(new Thread(() -> shutdownServer(loader, serverState)));
+        } else {
+            System.out.println("Shutdown hook disabled");
         }
-    }
 
-    /**
-     * Shutdown the OFBiz server. This method is invoked in one of the
-     * following ways:
-     *
-     * - Manually if requested by the client AdminClient
-     * - Automatically if Config.shutdownAfterLoad is set to true
-     */
-    static void stop(List<StartupLoader> loaders, AtomicReference<ServerState> serverState, Thread adminServer) {
-        shutdownServer(loaders, serverState, adminServer);
-        System.exit(0);
+        loadContainers(config, loader, ofbizCommands, serverState);
+
+        if (config.shutdownAfterLoad) {
+            shutdownServer(loader, serverState);
+            System.exit(0);
+        } else {
+            // Print startup message.
+            String ls = System.lineSeparator();
+            System.out.println(ls + "   ____  __________  _" +
+                               ls + "  / __ \\/ ____/ __ )(_)___" +
+                               ls + " / / / / /_  / __  / /_  /" +
+                               ls + "/ /_/ / __/ / /_/ / / / /_" +
+                               ls + "\\____/_/   /_____/_/ /___/  is started and ready." +
+                               ls);
+        }
     }
 
     /**
@@ -121,7 +105,7 @@ final class StartupControlPanel {
         System.exit(1);
     }
 
-    private static void shutdownServer(List<StartupLoader> loaders, AtomicReference<ServerState> serverState, Thread adminServer) {
+    static void shutdownServer(ContainerLoader loader, AtomicReference<ServerState> serverState) {
         ServerState currentState;
         do {
             currentState = serverState.get();
@@ -129,21 +113,10 @@ final class StartupControlPanel {
                 return;
             }
         } while (!serverState.compareAndSet(currentState, ServerState.STOPPING));
-        // The current thread was the one that successfully changed the state;
-        // continue with further processing.
-        synchronized (loaders) {
-            // Unload in reverse order
-            for (int i = loaders.size(); i > 0; i--) {
-                StartupLoader loader = loaders.get(i - 1);
-                try {
-                    loader.unload();
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-            }
-        }
-        if (adminServer != null && adminServer.isAlive()) {
-            adminServer.interrupt();
+        try {
+            loader.unload();
+        } catch (Exception e) {
+            e.printStackTrace();
         }
     }
 
@@ -158,23 +131,8 @@ final class StartupControlPanel {
         }
     }
 
-    private static Thread createAdminServer(
-            Config config,
-            AtomicReference<ServerState> serverState,
-            List<StartupLoader> loaders) throws StartupException {
-
-        Thread adminServer = null;
-        if (config.adminPort > 0) {
-            adminServer = new AdminServer(loaders, serverState, config);
-            adminServer.start();
-        } else {
-            System.out.println("Admin socket not configured; set to port 0");
-        }
-        return adminServer;
-    }
-
-    private static void createLogDirectoryIfMissing(Config config) {
-        File logDir = new File(config.logDir);
+    private static void createLogDirectoryIfMissing(String logDirName) {
+        File logDir = new File(logDirName);
         if (!logDir.exists()) {
             if (logDir.mkdir()) {
                 System.out.println("Created OFBiz log dir [" + logDir.getAbsolutePath() + "]");
@@ -182,55 +140,16 @@ final class StartupControlPanel {
         }
     }
 
-    private static void createRuntimeShutdownHook(
-            Config config,
-            List<StartupLoader> loaders,
-            AtomicReference<ServerState> serverState) {
-
-        if (config.useShutdownHook) {
-            Runtime.getRuntime().addShutdownHook(new Thread() {
-                @Override
-                public void run() {
-                    shutdownServer(loaders, serverState, this);
-                }
-            });
-        } else {
-            System.out.println("Shutdown hook disabled");
-        }
-    }
-
-    private static void loadStartupLoaders(Config config,
-            List<StartupLoader> loaders,
+    private static void loadContainers(Config config,
+            ContainerLoader loader,
             List<StartupCommand> ofbizCommands,
             AtomicReference<ServerState> serverState) throws StartupException {
-
-        String startupLoaderName = "org.apache.ofbiz.base.container.ContainerLoader";
-        ClassLoader classloader = Thread.currentThread().getContextClassLoader();
-
-        synchronized (loaders) {
+        synchronized (StartupControlPanel.class) {
             if (serverState.get() == ServerState.STOPPING) {
                 return;
             }
-            try {
-                Class<?> loaderClass = classloader.loadClass(startupLoaderName);
-                StartupLoader loader = (StartupLoader) loaderClass.newInstance();
-                loaders.add(loader); // add before loading, so unload can occur if error during loading
-                loader.load(config, ofbizCommands);
-            } catch (ReflectiveOperationException e) {
-                throw new StartupException(e);
-            }
+            loader.load(config, ofbizCommands);
         }
         serverState.compareAndSet(ServerState.STARTING, ServerState.RUNNING);
-    }
-
-    private static void executeShutdownAfterLoadIfConfigured(
-            Config config,
-            List<StartupLoader> loaders,
-            AtomicReference<ServerState> serverState,
-            Thread adminServer) {
-
-        if (config.shutdownAfterLoad) {
-            stop(loaders, serverState, adminServer);
-        }
     }
 }

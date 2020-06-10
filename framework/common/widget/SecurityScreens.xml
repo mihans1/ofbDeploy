@@ -33,7 +33,9 @@ under the License.
                         <container style="page-title">
                             <label text="${uiLabelMap.NewSecurityGroup}"/>
                         </container>
-                        <include-form name="CreateSecurityGroup" location="component://common/widget/SecurityForms.xml"/>
+                        <screenlet>
+                            <include-form name="CreateSecurityGroup" location="component://common/widget/SecurityForms.xml"/>
+                        </screenlet>
                     </decorator-section>
                 </decorator-screen>
             </widgets>
@@ -54,7 +56,9 @@ under the License.
                         <container style="page-title">
                             <label text="${uiLabelMap.CreateUserLogin}"/>
                         </container>
-                        <include-form name="AddUserLogin" location="component://common/widget/SecurityForms.xml"/>
+                        <screenlet>
+                            <include-form name="AddUserLogin" location="component://common/widget/SecurityForms.xml"/>
+                        </screenlet>
                     </decorator-section>
                 </decorator-screen>
             </widgets>
@@ -75,7 +79,9 @@ under the License.
                         <container style="page-title">
                             <label text="${uiLabelMap.PageTitleEditSecurityGroup} - ${groupId}"/>
                         </container>
-                        <include-form name="EditSecurityGroup" location="component://common/widget/SecurityForms.xml"/>
+                          <screenlet>
+                            <include-form name="EditSecurityGroup" location="component://common/widget/SecurityForms.xml"/>
+                          </screenlet>
                     </decorator-section>
                 </decorator-screen>
             </widgets>
@@ -131,7 +137,9 @@ under the License.
                         <screenlet id="AddSecurityGroupProtectedViewsPanel" title="${uiLabelMap.AddProtectedViewToSecurityGroup}" collapsible="true">
                             <include-form name="AddSecurityGroupProtectedView" location="component://common/widget/SecurityForms.xml"/>
                         </screenlet>
-                        <include-form name="ListSecurityGroupProtectedViews" location="component://common/widget/SecurityForms.xml"/>
+                        <screenlet>
+                          <include-form name="ListSecurityGroupProtectedViews" location="component://common/widget/SecurityForms.xml"/>
+                        </screenlet>
                     </decorator-section>
                 </decorator-screen>
             </widgets>
@@ -155,7 +163,9 @@ under the License.
                         <screenlet id="AddSecurityGroupUserLoginsPanel" title="${uiLabelMap.AddUserLoginToSecurityGroup}" collapsible="true">
                             <include-form name="AddSecurityGroupUserLogin" location="component://common/widget/SecurityForms.xml"/>
                         </screenlet>
-                        <include-form name="ListSecurityGroupUserLogins" location="component://common/widget/SecurityForms.xml"/>
+                        <screenlet>
+                            <include-form name="ListSecurityGroupUserLogins" location="component://common/widget/SecurityForms.xml"/>
+                        </screenlet>
                     </decorator-section>
                 </decorator-screen>
             </widgets>
@@ -209,7 +219,9 @@ under the License.
                         <screenlet id="AddUserLoginSecurityGroupsPanel" title="${uiLabelMap.AddUserLoginToSecurityGroup}" collapsible="true">
                             <include-form name="AddUserLoginSecurityGroup" location="component://common/widget/SecurityForms.xml"/>
                         </screenlet>
-                        <include-form name="ListUserLoginSecurityGroups" location="component://common/widget/SecurityForms.xml"/>
+                        <screenlet>
+                          <include-form name="ListUserLoginSecurityGroups" location="component://common/widget/SecurityForms.xml"/>
+                        </screenlet>
                     </decorator-section>
                 </decorator-screen>
             </widgets>
@@ -259,9 +271,11 @@ under the License.
                             <label text="${uiLabelMap.PageTitleFindSecurityGroup}"/>
                         </container>
                         <container style="button-bar">
-                            <link target="CreateNewSecurityGroup" style="buttontext create" text="${uiLabelMap.CommonCreateNew}"/>
+                            <link target="CreateNewSecurityGroup" style="buttontext create" text="${uiLabelMap.CommonCreate}"/>
                         </container>
-                        <include-form name="ListSecurityGroups" location="component://common/widget/SecurityForms.xml"/>
+                        <screenlet>
+                            <include-form name="ListSecurityGroups" location="component://common/widget/SecurityForms.xml"/>
+                        </screenlet>
                     </decorator-section>
                 </decorator-screen>
             </widgets>
@@ -284,9 +298,11 @@ under the License.
                             <label text="${uiLabelMap.FindUserLogin}"/>
                         </container>
                         <container style="button-bar">
-                            <link target="createnewlogin" style="buttontext create" text="${uiLabelMap.CommonCreateNew}"/>
+                            <link target="createnewlogin" style="buttontext create" text="${uiLabelMap.CommonCreate}"/>
                         </container>
-                        <include-form name="ListUserLogins" location="component://common/widget/SecurityForms.xml"/>
+                        <screenlet>
+                            <include-form name="ListUserLogins" location="component://common/widget/SecurityForms.xml"/>
+                        </screenlet>
                     </decorator-section>
                 </decorator-screen>
             </widgets>

@@ -22,6 +22,7 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 import org.apache.ofbiz.base.util.Debug;
 import org.apache.ofbiz.base.util.UtilGenerics;
@@ -134,9 +135,9 @@ public class ServiceEcaAction implements java.io.Serializable {
 
         // put the results in to the defined map
         if (UtilValidate.isNotEmpty(resultMapName)) {
-            Map<String, Object> resultMap = UtilGenerics.checkMap(context.get(resultMapName));
+            Map<String, Object> resultMap = UtilGenerics.cast(context.get(resultMapName));
             if (resultMap == null) {
-                resultMap = new HashMap<String, Object>();
+                resultMap = new HashMap<>();
             }
             resultMap.putAll(dctx.getModelService(this.serviceName).makeValid(actionResult, ModelService.OUT_PARAM, false, null));
             context.put(resultMapName, resultMap);
@@ -184,17 +185,17 @@ public class ServiceEcaAction implements java.io.Serializable {
         if ((!success || resultToResult) && UtilValidate.isNotEmpty(actionResult)) {
             String errorMessage = (String) actionResult.get(ModelService.ERROR_MESSAGE);
             String failMessage = (String) actionResult.get("failMessage");
-            List<? extends Object> errorMessageList = UtilGenerics.checkList(actionResult.get(ModelService.ERROR_MESSAGE_LIST));
-            Map<String, ? extends Object> errorMessageMap = UtilGenerics.checkMap(actionResult.get(ModelService.ERROR_MESSAGE_MAP));
+            List<? extends Object> errorMessageList = UtilGenerics.cast(actionResult.get(ModelService.ERROR_MESSAGE_LIST));
+            Map<String, ? extends Object> errorMessageMap = UtilGenerics.cast(actionResult.get(ModelService.ERROR_MESSAGE_MAP));
 
             // do something with the errorMessage
             if (UtilValidate.isNotEmpty(errorMessage)) {
                 if (UtilValidate.isEmpty(result.get(ModelService.ERROR_MESSAGE))) {
                     result.put(ModelService.ERROR_MESSAGE, errorMessage);
                 } else {
-                    List<Object> origErrorMessageList = UtilGenerics.checkList(result.get(ModelService.ERROR_MESSAGE_LIST));
+                    List<Object> origErrorMessageList = UtilGenerics.cast(result.get(ModelService.ERROR_MESSAGE_LIST));
                     if (origErrorMessageList == null) {
-                        origErrorMessageList = new LinkedList<Object>();
+                        origErrorMessageList = new LinkedList<>();
                         result.put(ModelService.ERROR_MESSAGE_LIST, origErrorMessageList);
                     }
                     origErrorMessageList.add(0, errorMessage);
@@ -202,7 +203,7 @@ public class ServiceEcaAction implements java.io.Serializable {
             }
             // do something with the errorMessageList
             if (UtilValidate.isNotEmpty(errorMessageList)) {
-                List<Object> origErrorMessageList = UtilGenerics.checkList(result.get(ModelService.ERROR_MESSAGE_LIST));
+                List<Object> origErrorMessageList = UtilGenerics.cast(result.get(ModelService.ERROR_MESSAGE_LIST));
                 if (origErrorMessageList == null) {
                     result.put(ModelService.ERROR_MESSAGE_LIST, errorMessageList);
                 } else {
@@ -211,7 +212,7 @@ public class ServiceEcaAction implements java.io.Serializable {
             }
             // do something with the errorMessageMap
             if (UtilValidate.isNotEmpty(errorMessageMap)) {
-                Map<String, Object> origErrorMessageMap = UtilGenerics.checkMap(result.get(ModelService.ERROR_MESSAGE_MAP));
+                Map<String, Object> origErrorMessageMap = UtilGenerics.cast(result.get(ModelService.ERROR_MESSAGE_MAP));
                 if (origErrorMessageMap == null) {
                     result.put(ModelService.ERROR_MESSAGE_MAP, errorMessageMap);
                 } else {
@@ -272,11 +273,11 @@ public class ServiceEcaAction implements java.io.Serializable {
         if (obj instanceof ServiceEcaAction) {
             ServiceEcaAction other = (ServiceEcaAction) obj;
 
-            if (!UtilValidate.areEqual(this.eventName, other.eventName)) return false;
-            if (!UtilValidate.areEqual(this.serviceName, other.serviceName)) return false;
-            if (!UtilValidate.areEqual(this.serviceMode, other.serviceMode)) return false;
-            if (!UtilValidate.areEqual(this.resultMapName, other.resultMapName)) return false;
-            if (!UtilValidate.areEqual(this.runAsUser, other.runAsUser)) return false;
+            if (!Objects.equals(this.eventName, other.eventName)) return false;
+            if (!Objects.equals(this.serviceName, other.serviceName)) return false;
+            if (!Objects.equals(this.serviceMode, other.serviceMode)) return false;
+            if (!Objects.equals(this.resultMapName, other.resultMapName)) return false;
+            if (!Objects.equals(this.runAsUser, other.runAsUser)) return false;
 
             if (this.newTransaction != other.newTransaction) return false;
             if (this.resultToContext != other.resultToContext) return false;

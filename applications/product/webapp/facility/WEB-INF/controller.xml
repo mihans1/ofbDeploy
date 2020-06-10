@@ -53,7 +53,7 @@ under the License.
         <response name="success" type="view" value="FindFacility"/>
     </request-map>
     <request-map uri="FacilitySearchResults">
-        <security https="true" auth="false"/>
+        <security https="true" auth="true"/>
         <response name="success" type="view" value="FacilitySearchResults"/>
     </request-map>
     <request-map uri="EditFacility">
@@ -366,6 +366,14 @@ under the License.
         <security https="true" auth="true"/>
         <event type="service" path="" invoke="addPartyToFacility"/>
         <response name="success" type="view" value="EditFacilityParties"/>
+        <response name="error" type="view" value="EditFacilityParties"/>
+    </request-map>
+    <request-map uri="updateFacilityParty">
+        <security https="true" auth="true"/>
+        <event type="service" path="" invoke="updateFacilityParty"/>
+        <response name="success" type="request-redirect" value="EditFacilityParties">
+            <redirect-parameter name="facilityId"/>
+        </response>
         <response name="error" type="view" value="EditFacilityParties"/>
     </request-map>
     <request-map uri="removePartyFromFacility">
@@ -819,7 +827,7 @@ under the License.
     </request-map>
     <request-map uri="createFacilityContent">
         <security auth="true" https="true"/>
-        <event path="component://product/minilang/product/storage/FacilityEvents.xml" type="simple" invoke="createFacilityContent"/>
+        <event type="simple" invoke="createFacilityContent" path="component://product/minilang/product/storage/FacilityEvents.xml"/>
         <response name="success" type="request-redirect" value="EditFacilityContent">
             <redirect-parameter name="facilityId"/>
         </response>
@@ -827,7 +835,7 @@ under the License.
     </request-map>
     <request-map uri="deleteFacilityContent">
         <security auth="true" https="true"/>
-        <event invoke="deleteFacilityContent" type="service"/>
+        <event type="service" invoke="deleteFacilityContent"/>
         <response name="success" type="request-redirect" value="EditFacilityContent">
             <redirect-parameter name="facilityId"/>
         </response>
@@ -925,9 +933,9 @@ under the License.
         <security https="true" auth="true"/>
         <response name="success" type="view" value="QuickShipOrder"/>
     </request-map>
-    <request-map uri="quickShipPurchaseOrder">
+    <request-map uri="quickReceivePurchaseOrder">
         <security https="true" auth="true"/>
-        <event type="service" invoke="quickShipPurchaseOrder"/>
+        <event type="service" invoke="quickReceivePurchaseOrder"/>
         <response name="success" type="view" value="ReceiveInventory"/>
         <response name="error" type="view" value="ReceiveInventory"/>
     </request-map>
@@ -1339,6 +1347,7 @@ under the License.
     <request-map uri="LookupOrderHeaderAndShipInfo"><security https="true" auth="true"/><response name="success" type="view" value="LookupOrderHeaderAndShipInfo"/></request-map>
     <request-map uri="LookupPurchaseOrderHeaderAndShipInfo"><security https="true" auth="true"/><response name="success" type="view" value="LookupPurchaseOrderHeaderAndShipInfo"/></request-map>
     <request-map uri="LookupOrderHeader"><security https="true" auth="true"/><response name="success" type="view" value="LookupOrderHeader"/></request-map>
+    <request-map uri="LookupReturnHeader"><security https="true" auth="true"/><response name="success" type="view" value="LookupReturnHeader"/></request-map>
     <request-map uri="LookupProduct"><security auth="true" https="true"/><response name="success" type="view" value="LookupProduct"/></request-map>
     <request-map uri="LookupVariantProduct"><security auth="true" https="true"/><response name="success" type="view" value="LookupVariantProduct"/></request-map>
     <request-map uri="LookupProductCategory"><security auth="true" https="true"/><response name="success" type="view" value="LookupProductCategory"/></request-map>
@@ -1443,6 +1452,7 @@ under the License.
     <view-map name="LookupOrderHeaderAndShipInfo" type="screen" page="component://order/widget/ordermgr/LookupScreens.xml#LookupOrderHeaderAndShipInfo"/>
     <view-map name="LookupPurchaseOrderHeaderAndShipInfo" type="screen" page="component://order/widget/ordermgr/LookupScreens.xml#LookupPurchaseOrderHeaderAndShipInfo"/>
     <view-map name="LookupOrderHeader" type="screen" page="component://order/widget/ordermgr/LookupScreens.xml#LookupOrderHeader"/>
+    <view-map name="LookupReturnHeader" type="screen" page="component://order/widget/ordermgr/LookupScreens.xml#LookupReturnHeader"/>
     <view-map name="LookupProduct" type="screen" page="component://product/widget/catalog/LookupScreens.xml#LookupProduct"/>
     <view-map name="LookupVariantProduct" type="screen" page="component://product/widget/catalog/LookupScreens.xml#LookupVariantProduct"/>
     <view-map name="LookupProductCategory" type="screen" page="component://product/widget/catalog/LookupScreens.xml#LookupProductCategory"/>

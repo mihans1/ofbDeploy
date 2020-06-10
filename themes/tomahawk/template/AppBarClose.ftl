@@ -16,7 +16,7 @@ KIND, either express or implied.  See the License for the
 specific language governing permissions and limitations
 under the License.
 -->
-<#assign appModelMenu = Static["org.apache.ofbiz.widget.model.MenuFactory"].getMenuFromLocation(applicationMenuLocation,applicationMenuName)>
+<#assign appModelMenu = Static["org.apache.ofbiz.widget.model.MenuFactory"].getMenuFromLocation(applicationMenuLocation,applicationMenuName,visualTheme)>
 <#if person?has_content>
   <#assign userName = (person.firstName!) + " " + (person.middleName!) + " " + person.lastName!>
 <#elseif partyGroup?has_content>
@@ -85,7 +85,7 @@ under the License.
     <li <#if companyListSize?default(0) &lt;= 1>class="language"</#if>><a href="<@ofbizUrl>ListLocales</@ofbizUrl>">${uiLabelMap.CommonLanguageTitle}</a></li>
     <#if userLogin?exists>
       <#if userLogin.partyId?exists>
-        <li class="user"><a href="/partymgr/control/viewprofile?partyId=${userLogin.partyId}${externalKeyParam!}">${userName}</a>&nbsp;&nbsp;&nbsp;&nbsp;</li>
+        <li class="user"><a href="<@ofbizUrl controlPath="/partymgr/control">viewprofile?partyId=${userLogin.partyId}${externalKeyParam!}</@ofbizUrl>">${userName}</a>&nbsp;&nbsp;&nbsp;&nbsp;</li>
         <#assign size = companyListSize?default(0)>
         <#if size &gt; 1>
             <#assign currentCompany = delegator.findOne("PartyNameView", {"partyId" : organizationPartyId}, false)>
@@ -106,7 +106,7 @@ under the License.
 </div>
 
 <#if userLogin??>
-<script type="text/javascript">
+<script type="application/javascript">
   var mainmenu = new DropDownMenu(jQuery('#main-navigation'));
   var appmenu = new DropDownMenu(jQuery('#app-navigation'));
 </script>

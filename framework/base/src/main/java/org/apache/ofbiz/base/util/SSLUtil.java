@@ -19,10 +19,12 @@
 package org.apache.ofbiz.base.util;
 
 import java.io.IOException;
+import java.math.BigInteger;
 import java.security.GeneralSecurityException;
 import java.security.KeyStore;
 import java.security.Principal;
 import java.security.SecureRandom;
+import java.security.cert.Certificate;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.util.Arrays;
@@ -67,6 +69,7 @@ public final class SSLUtil {
 
     private static class TrustAnyManager implements X509TrustManager {
 
+        @Override
         public void checkClientTrusted(X509Certificate[] certs, String string) throws CertificateException {
             Debug.logImportant("Trusting (un-trusted) client certificate chain:", module);
             for (X509Certificate cert: certs) {
@@ -75,6 +78,7 @@ public final class SSLUtil {
             }
         }
 
+        @Override
         public void checkServerTrusted(X509Certificate[] certs, String string) throws CertificateException {
             Debug.logImportant("Trusting (un-trusted) server certificate chain:", module);
             for (X509Certificate cert: certs) {
@@ -82,6 +86,7 @@ public final class SSLUtil {
             }
         }
 
+        @Override
         public X509Certificate[] getAcceptedIssuers() {
             return new X509Certificate[0];
         }
@@ -246,25 +251,26 @@ public final class SSLUtil {
         switch (level) {
             case HOSTCERT_MIN_CHECK:
                 return new HostnameVerifier() {
+                    @Override
                     public boolean verify(String hostname, SSLSession session) {
-                        javax.security.cert.X509Certificate[] peerCerts;
+                        Certificate[] peerCerts;
                         try {
-                            peerCerts = session.getPeerCertificateChain();
+                            peerCerts = session.getPeerCertificates();
                         } catch (SSLPeerUnverifiedException e) {
                             // cert not verified
                             Debug.logWarning(e.getMessage(), module);
                             return false;
                         }
-                        for (javax.security.cert.X509Certificate peerCert: peerCerts) {
-                            Principal x500s = peerCert.getSubjectDN();
-                            Map<String, String> subjectMap = KeyStoreUtil.getX500Map(x500s);
-
-                            if (Debug.infoOn()) {
-                                Debug.logInfo(peerCert.getSerialNumber().toString(16) + " :: " + subjectMap.get("CN"), module);
-                            }
-
+                        for (Certificate peerCert : peerCerts) {
                             try {
-                                peerCert.checkValidity();
+                                Principal x500s = session.getPeerPrincipal();
+                                Map<String, String> subjectMap = KeyStoreUtil.getX500Map(x500s);
+                                if (Debug.infoOn()) {
+                                    byte[] encodedCert = peerCert.getEncoded();
+                                    Debug.logInfo(new BigInteger(encodedCert).toString(16)
+                                            + " :: " + subjectMap.get("CN"), module);
+                                }
+                                peerCert.verify(peerCert.getPublicKey());
                             } catch (RuntimeException e) {
                                 throw e;
                             } catch (Exception e) {
@@ -278,6 +284,7 @@ public final class SSLUtil {
                 };
             case HOSTCERT_NO_CHECK:
                 return new HostnameVerifier() {
+                    @Override
                     public boolean verify(String hostname, SSLSession session) {
                         return true;
                     }

@@ -18,7 +18,7 @@
  *******************************************************************************/
 package org.apache.ofbiz.common;
 
-import static org.apache.ofbiz.base.util.UtilGenerics.checkList;
+import static org.apache.ofbiz.base.util.UtilGenerics.checkCollection;
 import static org.apache.ofbiz.base.util.UtilGenerics.checkMap;
 
 import java.io.BufferedReader;
@@ -30,6 +30,7 @@ import java.io.OutputStreamWriter;
 import java.io.RandomAccessFile;
 import java.io.Writer;
 import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 import java.sql.Timestamp;
 import java.util.Collection;
 import java.util.LinkedHashMap;
@@ -47,7 +48,6 @@ import org.apache.ofbiz.base.metrics.MetricsFactory;
 import org.apache.ofbiz.base.util.Debug;
 import org.apache.ofbiz.base.util.UtilCodec;
 import org.apache.ofbiz.base.util.UtilDateTime;
-import org.apache.ofbiz.base.util.UtilIO;
 import org.apache.ofbiz.base.util.UtilMisc;
 import org.apache.ofbiz.base.util.UtilProperties;
 import org.apache.ofbiz.base.util.UtilValidate;
@@ -304,7 +304,7 @@ public class CommonServices {
 
     public static Map<String, Object> makeALotOfVisits(DispatchContext dctx, Map<String, ?> context) {
         Delegator delegator = dctx.getDelegator();
-        int count = ((Integer) context.get("count")).intValue();
+        int count = (Integer) context.get("count");
 
         for (int i = 0; i < count; i++) {
             GenericValue v = delegator.makeValue("Visit");
@@ -432,7 +432,7 @@ public class CommonServices {
     }
 
     public static Map<String, Object> simpleMapListTest(DispatchContext dctx, Map<String, ?> context) {
-        List<String> listOfStrings = checkList(context.get("listOfStrings"), String.class);
+        List<String> listOfStrings = checkCollection(context.get("listOfStrings"), String.class);
         Map<String, String> mapOfStrings = checkMap(context.get("mapOfStrings"), String.class, String.class);
 
         for (String str: listOfStrings) {
@@ -472,8 +472,8 @@ public class CommonServices {
 
         String line;
 
-        try (BufferedReader reader = new BufferedReader(new InputStreamReader(in, UtilIO.getUtf8()));
-                Writer writer = new OutputStreamWriter(out, UtilIO.getUtf8())) {
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(in, StandardCharsets.UTF_8));
+                Writer writer = new OutputStreamWriter(out, StandardCharsets.UTF_8)) {
             while ((line = reader.readLine()) != null) {
                 Debug.logInfo("Read line: " + line, module);
                 writer.write(line);

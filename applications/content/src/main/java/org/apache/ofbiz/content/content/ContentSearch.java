@@ -113,17 +113,17 @@ public class ContentSearch {
 
     public static class ContentSearchContext {
         public int index = 1;
-        public List<EntityCondition> entityConditionList = new LinkedList<EntityCondition>();
-        public List<String> orderByList = new LinkedList<String>();
+        public List<EntityCondition> entityConditionList = new LinkedList<>();
+        public List<String> orderByList = new LinkedList<>();
         public Set<String> fieldsToSelect = UtilMisc.toSet("contentId");
         public DynamicViewEntity dynamicViewEntity = new DynamicViewEntity();
         public boolean contentIdGroupBy = false;
         public boolean includedKeywordSearch = false;
         public Timestamp nowTimestamp = UtilDateTime.nowTimestamp();
-        public List<Set<String>> keywordFixedOrSetAndList = new LinkedList<Set<String>>();
-        public Set<String> orKeywordFixedSet = new HashSet<String>();
-        public Set<String> andKeywordFixedSet = new HashSet<String>();
-        public List<GenericValue> contentSearchConstraintList = new LinkedList<GenericValue>();
+        public List<Set<String>> keywordFixedOrSetAndList = new LinkedList<>();
+        public Set<String> orKeywordFixedSet = new HashSet<>();
+        public Set<String> andKeywordFixedSet = new HashSet<>();
+        public List<GenericValue> contentSearchConstraintList = new LinkedList<>();
         public ResultSortOrder resultSortOrder = null;
         public Integer resultOffset = null;
         public Integer maxResults = null;
@@ -179,7 +179,7 @@ public class ContentSearch {
             double totalSeconds = ((double)endMillis - (double)startMillis)/1000.0;
 
             // store info about results in the database, attached to the user's visitId, if specified
-            this.saveSearchResultInfo(Long.valueOf(contentIds.size()), Double.valueOf(totalSeconds));
+            this.saveSearchResultInfo((long) contentIds.size(), totalSeconds);
 
             return contentIds;
         }
@@ -250,7 +250,7 @@ public class ContentSearch {
                     dynamicViewEntity.addMemberEntity(entityAlias, "ContentKeyword");
                     dynamicViewEntity.addAlias(entityAlias, prefix + "Keyword", "keyword", null, null, null, null);
                     dynamicViewEntity.addViewLink("CNT", entityAlias, Boolean.FALSE, ModelKeyMap.makeKeyMapList("contentId"));
-                    List<EntityExpr> keywordOrList = new LinkedList<EntityExpr>();
+                    List<EntityExpr> keywordOrList = new LinkedList<>();
                     for (String keyword: keywordFixedOrSet) {
                         keywordOrList.add(EntityCondition.makeCondition(prefix + "Keyword", EntityOperator.LIKE, keyword));
                     }
@@ -284,7 +284,7 @@ public class ContentSearch {
             if (resultSortOrder != null) {
                 resultSortOrder.setSortOrder(this);
             }
-            dynamicViewEntity.addAlias("CNT", "contentId", null, null, null, Boolean.valueOf(contentIdGroupBy), null);
+            dynamicViewEntity.addAlias("CNT", "contentId", null, null, null, contentIdGroupBy, null);
             EntityCondition whereCondition = EntityCondition.makeCondition(entityConditionList, EntityOperator.AND);
 
             EntityListIterator eli = null;
@@ -305,7 +305,7 @@ public class ContentSearch {
         }
 
         public ArrayList<String> makeContentIdList(EntityListIterator eli) {
-            ArrayList<String> contentIds = new ArrayList<String>(maxResults == null ? 100 : maxResults.intValue());
+            ArrayList<String> contentIds = new ArrayList<>(maxResults == null ? 100 : maxResults);
             if (eli == null) {
                 Debug.logWarning("The eli is null, returning zero results", module);
                 return contentIds;
@@ -318,9 +318,9 @@ public class ContentSearch {
                 if (initialResult != null) {
                     hasResults = true;
                 }
-                if (resultOffset != null && resultOffset.intValue() > 1) {
+                if (resultOffset != null && resultOffset > 1) {
                     if (Debug.infoOn()) Debug.logInfo("Before relative, current index=" + eli.currentIndex(), module);
-                    hasResults = eli.relative(resultOffset.intValue() - 1);
+                    hasResults = eli.relative(resultOffset - 1);
                     initialResult = null;
                 }
 
@@ -338,9 +338,9 @@ public class ContentSearch {
                     // nothing to get...
                     int failTotal = 0;
                     if (this.resultOffset != null) {
-                        failTotal = this.resultOffset.intValue() - 1;
+                        failTotal = this.resultOffset - 1;
                     }
-                    this.totalResults = Integer.valueOf(failTotal);
+                    this.totalResults = failTotal;
                     return contentIds;
                 }
 
@@ -349,12 +349,12 @@ public class ContentSearch {
                 int numRetreived = 1;
                 int duplicatesFound = 0;
 
-                Set<String> contentIdSet = new HashSet<String>();
+                Set<String> contentIdSet = new HashSet<>();
 
                 contentIds.add(searchResult.getString("contentId"));
                 contentIdSet.add(searchResult.getString("contentId"));
 
-                while (((searchResult = eli.next()) != null) && (maxResults == null || numRetreived < maxResults.intValue())) {
+                while (((searchResult = eli.next()) != null) && (maxResults == null || numRetreived < maxResults)) {
                     String contentId = searchResult.getString("contentId");
                     if (!contentIdSet.contains(contentId)) {
                         contentIds.add(contentId);
@@ -368,12 +368,12 @@ public class ContentSearch {
                 if (searchResult != null) {
                     this.totalResults = eli.getResultsSizeAfterPartialList();
                 }
-                if (this.totalResults == null || this.totalResults.intValue() == 0) {
+                if (this.totalResults == null || this.totalResults == 0) {
                     int total = numRetreived;
                     if (this.resultOffset != null) {
-                        total += (this.resultOffset.intValue() - 1);
+                        total += (this.resultOffset - 1);
                     }
-                    this.totalResults = Integer.valueOf(total);
+                    this.totalResults = total;
                 }
 
                 Debug.logInfo("Got search values, numRetreived=" + numRetreived + ", totalResults=" + totalResults + ", maxResults=" + maxResults + ", resultOffset=" + resultOffset + ", duplicatesFound(in the current results)=" + duplicatesFound, module);
@@ -456,7 +456,7 @@ public class ContentSearch {
 
         @Override
         public void addConstraint(ContentSearchContext contentSearchContext) {
-            Set<String> contentIdSet = new HashSet<String>();
+            Set<String> contentIdSet = new HashSet<>();
             if (includeSubContents) {
                 // find all sub-categories recursively, make a Set of contentId
                 ContentSearch.getAllSubContentIds(contentId, contentIdSet, contentSearchContext.getDelegator(), contentSearchContext.nowTimestamp);
@@ -483,7 +483,7 @@ public class ContentSearch {
             contentSearchContext.dynamicViewEntity.addAlias(entityAlias, prefix + "ThruDate", "thruDate", null, null, null, null);
             contentSearchContext.dynamicViewEntity.addViewLink("CNT", entityAlias, Boolean.TRUE, ModelKeyMap.makeKeyMapList("contentId"));
 
-            List<EntityExpr> assocConditionFromTo = new LinkedList<EntityExpr>();
+            List<EntityExpr> assocConditionFromTo = new LinkedList<>();
             assocConditionFromTo.add(EntityCondition.makeCondition(prefix + "ContentIdTo", EntityOperator.IN, contentIdSet));
             if (UtilValidate.isNotEmpty(contentAssocTypeId)) {
                 assocConditionFromTo.add(EntityCondition.makeCondition(prefix + "ContentAssocTypeId", EntityOperator.EQUALS, contentAssocTypeId));
@@ -504,7 +504,7 @@ public class ContentSearch {
             contentSearchContext.dynamicViewEntity.addAlias(entityAlias, prefix + "ThruDate", "thruDate", null, null, null, null);
             contentSearchContext.dynamicViewEntity.addViewLink("CNT", entityAlias, Boolean.TRUE, ModelKeyMap.makeKeyMapList("contentId","contentIdTo"));
 
-            List<EntityExpr> assocConditionToFrom = new LinkedList<EntityExpr>();
+            List<EntityExpr> assocConditionToFrom = new LinkedList<>();
             assocConditionToFrom.add(EntityCondition.makeCondition(prefix + "ContentIdFrom", EntityOperator.IN, contentIdSet));
             if (UtilValidate.isNotEmpty(contentAssocTypeId)) {
                 assocConditionToFrom.add(EntityCondition.makeCondition(prefix + "ContentAssocTypeId", EntityOperator.EQUALS, contentAssocTypeId));
@@ -618,7 +618,7 @@ public class ContentSearch {
             this.anySuffix = anySuffix;
             this.isAnd = isAnd;
             if (removeStems != null) {
-                this.removeStems = removeStems.booleanValue();
+                this.removeStems = removeStems;
             } else {
                 this.removeStems = UtilProperties.propertyValueEquals("keywordsearch", "remove.stems", "true");
             }
@@ -626,11 +626,11 @@ public class ContentSearch {
 
         public Set<String> makeFullKeywordSet(Delegator delegator) {
             Set<String> keywordSet = KeywordSearchUtil.makeKeywordSet(this.keywordsString, null, true);
-            Set<String> fullKeywordSet = new TreeSet<String>();
+            Set<String> fullKeywordSet = new TreeSet<>();
 
             // expand the keyword list according to the thesaurus and create a new set of keywords
             for (String keyword: keywordSet) {
-                Set<String> expandedSet = new TreeSet<String>();
+                Set<String> expandedSet = new TreeSet<>();
                 boolean replaceEntered = KeywordSearchUtil.expandKeywordForSearch(keyword, expandedSet, delegator);
                 fullKeywordSet.addAll(expandedSet);
                 if (!replaceEntered) {
@@ -655,13 +655,13 @@ public class ContentSearch {
 
                 // expand the keyword list according to the thesaurus and create a new set of keywords
                 for (String keyword: keywordSet) {
-                    Set<String> expandedSet = new TreeSet<String>();
+                    Set<String> expandedSet = new TreeSet<>();
                     boolean replaceEntered = KeywordSearchUtil.expandKeywordForSearch(keyword, expandedSet, contentSearchContext.getDelegator());
                     if (!replaceEntered) {
                         expandedSet.add(keyword);
                     }
                     Set<String> fixedSet = KeywordSearchUtil.fixKeywordsForSearch(expandedSet, anyPrefix, anySuffix, removeStems, isAnd);
-                    Set<String> fixedKeywordSet = new HashSet<String>();
+                    Set<String> fixedKeywordSet = new HashSet<>();
                     fixedKeywordSet.addAll(fixedSet);
                     contentSearchContext.keywordFixedOrSetAndList.add(fixedKeywordSet);
                 }
@@ -697,16 +697,10 @@ public class ContentSearch {
                 ContentSearchConstraint psc = (ContentSearchConstraint) obj;
                 if (psc instanceof KeywordConstraint) {
                     KeywordConstraint that = (KeywordConstraint) psc;
-                    if (this.anyPrefix != that.anyPrefix) {
-                        return false;
-                    }
-                    if (this.anySuffix != that.anySuffix) {
-                        return false;
-                    }
-                    if (this.isAnd != that.isAnd) {
-                        return false;
-                    }
-                    if (this.removeStems != that.removeStems) {
+                    if (this.anyPrefix != that.anyPrefix
+                            || this.anySuffix != that.anySuffix
+                            || this.isAnd != that.isAnd
+                            || this.removeStems != that.removeStems) {
                         return false;
                     }
                     if (this.keywordsString == null) {

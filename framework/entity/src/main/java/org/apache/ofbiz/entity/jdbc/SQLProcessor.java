@@ -56,7 +56,7 @@ public class SQLProcessor implements AutoCloseable {
     public static final String module = SQLProcessor.class.getName();
 
     /** Used for testing connections when test is enabled */
-    private static final List<String> CONNECTION_TEST_LIST = new ArrayList<String>();
+    private static final List<String> CONNECTION_TEST_LIST = new ArrayList<>();
     public static final int MAX_CONNECTIONS = 1000;
     public static final boolean ENABLE_TEST = false;
 
@@ -631,7 +631,7 @@ public class SQLProcessor implements AutoCloseable {
      */
     public void setValue(Integer field) throws SQLException {
         if (field != null) {
-            _ps.setInt(_ind, field.intValue());
+            _ps.setInt(_ind, field);
         } else {
             _ps.setNull(_ind, Types.NUMERIC);
         }
@@ -647,7 +647,7 @@ public class SQLProcessor implements AutoCloseable {
      */
     public void setValue(Long field) throws SQLException {
         if (field != null) {
-            _ps.setLong(_ind, field.longValue());
+            _ps.setLong(_ind, field);
         } else {
             _ps.setNull(_ind, Types.NUMERIC);
         }
@@ -663,7 +663,7 @@ public class SQLProcessor implements AutoCloseable {
      */
     public void setValue(Float field) throws SQLException {
         if (field != null) {
-            _ps.setFloat(_ind, field.floatValue());
+            _ps.setFloat(_ind, field);
         } else {
             _ps.setNull(_ind, Types.NUMERIC);
         }
@@ -679,7 +679,7 @@ public class SQLProcessor implements AutoCloseable {
      */
     public void setValue(Double field) throws SQLException {
         if (field != null) {
-            _ps.setDouble(_ind, field.doubleValue());
+            _ps.setDouble(_ind, field);
         } else {
             _ps.setNull(_ind, Types.NUMERIC);
         }
@@ -711,7 +711,7 @@ public class SQLProcessor implements AutoCloseable {
      */
     public void setValue(Boolean field) throws SQLException {
         if (field != null) {
-            _ps.setBoolean(_ind, field.booleanValue());
+            _ps.setBoolean(_ind, field);
         } else {
             _ps.setNull(_ind, Types.BOOLEAN);
         }
@@ -827,16 +827,6 @@ public class SQLProcessor implements AutoCloseable {
             }
         }
         _ind++;
-    }
-
-    @Override
-    protected void finalize() throws Throwable {
-        try {
-            this.close();
-        } catch (Exception e) {
-            Debug.logError(e, "Error closing the result, connection, etc in finalize SQLProcessor", module);
-        }
-        super.finalize();
     }
 
     protected void testConnection(Connection con) throws GenericEntityException {

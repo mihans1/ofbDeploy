@@ -152,7 +152,7 @@ public abstract class ModelMenuAction {
                     newValue = new LinkedList();
                 } else {
                     try {
-                        newValue = ObjectType.simpleTypeConvert(newValue, this.type, null, (TimeZone) context.get("timeZone"), (Locale) context.get("locale"), true);
+                        newValue = ObjectType.simpleTypeOrObjectConvert(newValue, this.type, null, (TimeZone) context.get("timeZone"), (Locale) context.get("locale"), true);
                     } catch (GeneralException e) {
                         String errMsg = "Could not convert field value for the field: [" + this.field.getOriginalName() + "] to the [" + this.type + "] type for the value [" + newValue + "]: " + e.toString();
                         Debug.logError(e, errMsg, module);
@@ -188,7 +188,7 @@ public abstract class ModelMenuAction {
             }
 
             if (global) {
-                Map<String, Object> globalCtx = UtilGenerics.checkMap(context.get("globalContext"));
+                Map<String, Object> globalCtx = UtilGenerics.cast(context.get("globalContext"));
                 if (globalCtx != null) {
                     this.field.put(globalCtx, newValue);
                 }

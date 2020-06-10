@@ -272,7 +272,7 @@
         </menu-item>
     </menu>
 
-    <menu name="PersonUpdate">
+    <menu name="PersonUpdate" menu-container-style="basic-nav">
         <menu-item name="update" title="${uiLabelMap.CommonUpdate}">
             <link target="editperson">
                 <parameter param-name="partyId" from-field="parameters.partyId"/>
@@ -317,7 +317,7 @@
         </menu-item>
     </menu>
 
-    <menu name="GroupUpdate">
+    <menu name="GroupUpdate" menu-container-style="basic-nav">
         <menu-item name="update" title="${uiLabelMap.CommonUpdate}">
             <link target="editpartygroup">
                 <parameter param-name="partyId" from-field="party.partyId"/>
@@ -326,8 +326,8 @@
         </menu-item>
     </menu>
 
-    <menu name="AddShipper">
-        <menu-item name="new" title="${uiLabelMap.CommonCreateNew}">
+    <menu name="AddShipper" menu-container-style="basic-nav">
+        <menu-item name="new" title="${uiLabelMap.CommonCreate}">
             <condition>
                 <if-has-permission permission="PARTYMGR" action="_CREATE"/>
             </condition>
@@ -616,6 +616,9 @@
         <menu-item name="FindCommunicationByOrder" title="${uiLabelMap.PartyFindCommunicationsByOrder}">
             <link target="FindCommunicationByOrder"/>
         </menu-item>
+        <menu-item name="FindCommunicationByReturn" title="${uiLabelMap.PartyFindCommunicationsByReturn}">
+            <link target="FindCommunicationByReturn"/>
+        </menu-item>
         <menu-item name="UpdateCommOrders" title="${uiLabelMap.OrderOrders}">
             <condition><not><if-empty field="communicationEvent"/></not></condition>
             <link target="UpdateCommOrders">
@@ -625,6 +628,12 @@
         <menu-item name="UpdateCommProducts" title="${uiLabelMap.ProductProducts}">
             <condition><not><if-empty field="communicationEvent"/></not></condition>
             <link target="UpdateCommProducts">
+                <parameter param-name="communicationEventId" from-field="parameters.communicationEventId"/>
+            </link>
+        </menu-item>
+        <menu-item name="UpdateCommReturns" title="${uiLabelMap.Return}">
+            <condition><not><if-empty field="communicationEvent"/></not></condition>
+            <link target="UpdateCommReturns">
                 <parameter param-name="communicationEventId" from-field="parameters.communicationEventId"/>
             </link>
         </menu-item>
@@ -723,8 +732,8 @@
         </menu-item>
     </menu>
 
-    <menu name="AddRelContactAccounts">
-        <menu-item name="add" title="${uiLabelMap.CommonCreateNew}">
+    <menu name="AddRelContactAccounts" menu-container-style="basic-nav">
+        <menu-item name="add" title="${uiLabelMap.CommonCreate}">
             <link target="AddPartyRelatedAccount">
                 <parameter param-name="partyId"/>
                 <parameter param-name="portalPageId"/>
@@ -733,8 +742,8 @@
         </menu-item>
     </menu>
 
-    <menu name="AddRelAccountContacts">
-        <menu-item name="add" title="${uiLabelMap.CommonCreateNew}">
+    <menu name="AddRelAccountContacts" menu-container-style="basic-nav">
+        <menu-item name="add" title="${uiLabelMap.CommonCreate}">
             <link target="AddAccountRelatedContact">
                 <parameter param-name="partyId"/>
                 <parameter param-name="portalPageId"/>
@@ -743,7 +752,7 @@
         </menu-item>
     </menu>
 
-    <menu name="NewPartyIdentification">
+    <menu name="NewPartyIdentification" menu-container-style="basic-nav">
         <menu-item name="new" title="${uiLabelMap.CommonNew}">
             <link target="viewidentifications">
                 <parameter param-name="partyId" from-field="parameters.partyId"/>
@@ -763,5 +772,11 @@
             </link>
         </menu-item>
     </menu>
-    
+    <menu name="listAllVisits">
+        <menu-item name="listAll" title="${uiLabelMap.CommonListAll}">
+            <link target="findVisits">
+                <parameter param-name="partyId" from-field="parameters.partyId"/>
+            </link>
+        </menu-item>
+    </menu>
 </menus>

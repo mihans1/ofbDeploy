@@ -38,13 +38,12 @@ public class MapStack<K> extends MapContext<K, Object> {
         return newValue;
     }
 
-    @SuppressWarnings("unchecked")
     public static <K> MapStack<K> create(Map<K, Object> baseMap) {
         MapStack<K> newValue = new MapStack<>();
         if (baseMap instanceof MapStack) {
-            newValue.stackList.addAll(((MapStack<K>) baseMap).stackList);
+            newValue.contexts.addAll(((MapStack<K>) baseMap).contexts);
         } else {
-            newValue.stackList.add(0, baseMap);
+            newValue.contexts.addFirst(baseMap);
         }
         return newValue;
     }
@@ -52,7 +51,7 @@ public class MapStack<K> extends MapContext<K, Object> {
     /** Does a shallow copy of the internal stack of the passed MapStack; enables simultaneous stacks that share common parent Maps */
     public static <K> MapStack<K> create(MapStack<K> source) {
         MapStack<K> newValue = new MapStack<>();
-        newValue.stackList.addAll(source.stackList);
+        newValue.contexts.addAll(source.contexts);
         return newValue;
     }
 
@@ -66,7 +65,6 @@ public class MapStack<K> extends MapContext<K, Object> {
      * situation where a parent and child context are operating simultaneously
      * using two different MapStack objects, but sharing the Maps in common
      */
-    @Override
     public MapStack<K> standAloneStack() {
         MapStack<K> standAlone = MapStack.create(this);
         return standAlone;
@@ -78,7 +76,6 @@ public class MapStack<K> extends MapContext<K, Object> {
      * situation where a parent and child context are operating simultaneously
      * using two different MapStack objects, but sharing the Maps in common
      */
-    @Override
     public MapStack<K> standAloneChildStack() {
         MapStack<K> standAloneChild = MapStack.create(this);
         standAloneChild.push();

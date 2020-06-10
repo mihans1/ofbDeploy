@@ -24,7 +24,6 @@ import java.net.URLEncoder;
 import java.util.Iterator;
 import java.util.Map;
 
-import javax.servlet.ServletContext;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
@@ -53,7 +52,7 @@ import freemarker.template.TemplateTransformModel;
 
 /**
  * UrlRegexpTransform - Freemarker Transform for Products URLs (links)
- * 
+ *
  */
 public class UrlRegexpTransform implements TemplateTransformModel {
 
@@ -83,33 +82,37 @@ public class UrlRegexpTransform implements TemplateTransformModel {
     public boolean checkArg(Map<?, ?> args, String key, boolean defaultValue) {
         if (!args.containsKey(key)) {
             return defaultValue;
-        } else {
-            Object o = args.get(key);
-            if (o instanceof SimpleScalar) {
-                SimpleScalar s = (SimpleScalar) o;
-                return "true".equalsIgnoreCase(s.getAsString());
-            }
-            return defaultValue;
         }
+        Object o = args.get(key);
+        if (o instanceof SimpleScalar) {
+            SimpleScalar s = (SimpleScalar) o;
+            return "true".equalsIgnoreCase(s.getAsString());
+        }
+        return defaultValue;
     }
 
-    public Writer getWriter(final Writer out, Map args) {
+    @Override
+    public Writer getWriter(final Writer out, @SuppressWarnings("rawtypes") Map args) {
         final StringBuffer buf = new StringBuffer();
         final boolean fullPath = checkArg(args, "fullPath", false);
         final boolean secure = checkArg(args, "secure", false);
         final boolean encode = checkArg(args, "encode", true);
+        final String controlPath = convertToString(args.get("controlPath"));
         final String webSiteId = convertToString(args.get("webSiteId"));
 
         return new Writer(out) {
 
+            @Override
             public void write(char cbuf[], int off, int len) {
                 buf.append(cbuf, off, len);
             }
 
+            @Override
             public void flush() throws IOException {
                 out.flush();
             }
 
+            @Override
             public void close() throws IOException {
                 try {
                     Environment env = Environment.getCurrentEnvironment();
@@ -118,7 +121,6 @@ public class UrlRegexpTransform implements TemplateTransformModel {
                     Object prefix = env.getVariable("urlPrefix");
                     if (req != null) {
                         HttpServletRequest request = (HttpServletRequest) req.getWrappedObject();
-                        ServletContext ctx = (ServletContext) request.getAttribute("servletContext");
                         HttpServletResponse response = null;
                         if (res != null) {
                             response = (HttpServletResponse) res.getWrappedObject();
@@ -131,8 +133,9 @@ public class UrlRegexpTransform implements TemplateTransformModel {
                             userLogin = null;
                         }
 
-                        RequestHandler rh = (RequestHandler) ctx.getAttribute("_REQUEST_HANDLER_");
-                        out.write(seoUrl(rh.makeLink(request, response, buf.toString(), fullPath, secure || request.isSecure() , encode), userLogin == null));
+                        RequestHandler rh = RequestHandler.from(request);
+                        String link = rh.makeLink(request, response, buf.toString(), fullPath, secure || request.isSecure() , encode, controlPath);
+                        out.write(seoUrl(link, userLogin == null));
                     } else if (!webSiteId.isEmpty()) {
                         Delegator delegator = FreeMarkerWorker.unwrap(env.getVariable("delegator"));
                         if (delegator == null) {
@@ -177,13 +180,11 @@ public class UrlRegexpTransform implements TemplateTransformModel {
 
     /**
      * Transform a url according to seo pattern regular expressions.
-     * 
-     * @param url
-     *            , String to do the seo transform
-     * @param isAnon
-     *            , boolean to indicate whether it's an anonymous visit.
-     * 
-     * @return String, the transformed url.
+     *
+     * @param url String to do the seo transform
+     * @param isAnon boolean to indicate whether it's an anonymous visit.
+     *
+     * @return String the transformed url.
      */
     public static String seoUrl(String url, boolean isAnon) {
         Perl5Matcher matcher = new Perl5Matcher();
@@ -201,17 +202,16 @@ public class UrlRegexpTransform implements TemplateTransformModel {
                     } else {
                         if (SeoConfigUtil.isJSessionIdUserEnabled()) {
                             continue;
-                        } else {
-                            boolean foundException = false;
-                            for (int i = 0; i < SeoConfigUtil.getUserExceptionPatterns().size(); i++) {
-                                if (matcher.matches(url, SeoConfigUtil.getUserExceptionPatterns().get(i))) {
-                                    foundException = true;
-                                    break;
-                                }
+                        }
+                        boolean foundException = false;
+                        for (int i = 0; i < SeoConfigUtil.getUserExceptionPatterns().size(); i++) {
+                            if (matcher.matches(url, SeoConfigUtil.getUserExceptionPatterns().get(i))) {
+                                foundException = true;
+                                break;
                             }
-                            if (foundException) {
-                                continue;
-                            }
+                        }
+                        if (foundException) {
+                            continue;
                         }
                     }
                 }
@@ -227,7 +227,9 @@ public class UrlRegexpTransform implements TemplateTransformModel {
                 }
             }
             if (!foundMatch) {
-                if (Debug.verboseOn()) Debug.logVerbose("Can NOT find a seo transform pattern for this url: " + url, module);
+                if (Debug.verboseOn()) {
+                    Debug.logVerbose("Can NOT find a seo transform pattern for this url: " + url, module);
+                }
             }
         }
         return url;
@@ -239,9 +241,8 @@ public class UrlRegexpTransform implements TemplateTransformModel {
 
     /**
      * Forward a uri according to forward pattern regular expressions. Note: this is developed for Filter usage.
-     * 
-     * @param uri
-     *            String to reverse transform
+     *
+     * @param uri String to reverse transform
      * @return String
      */
     public static boolean forwardUri(HttpServletResponse response, String uri) {
@@ -270,7 +271,7 @@ public class UrlRegexpTransform implements TemplateTransformModel {
             if (responseCodeInt == null) {
                 response.setStatus(SeoConfigUtil.getDefaultResponseCode());
             } else {
-                response.setStatus(responseCodeInt.intValue());
+                response.setStatus(responseCodeInt);
             }
             response.setHeader("Location", uri);
         } else {

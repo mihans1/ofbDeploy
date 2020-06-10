@@ -87,11 +87,11 @@ public abstract class GenericTestCaseBase extends TestCase {
         }
     }
 
-    public static <T> void assertNotEquals(Object wanted, Object got) {
+    public static void assertNotEquals(Object wanted, Object got) {
         assertNotEquals(null, wanted, got);
     }
 
-    public static <T> void assertNotEquals(String msg, Object wanted, Object got) {
+    public static void assertNotEquals(String msg, Object wanted, Object got) {
         if (wanted == null) {
             if (got != null) {
                 return;
@@ -223,7 +223,7 @@ OUTER:
         }
     }
 
-    private static <T> void assertEqualsArrayArray(String msg, Object wanted, Object got) {
+    private static void assertEqualsArrayArray(String msg, Object wanted, Object got) {
         int i = 0;
         while (i < Array.getLength(wanted) && i < Array.getLength(got)) {
             Object left = Array.get(wanted, i);
@@ -341,7 +341,6 @@ OUTER:
         assertEquals(null, wanted, got);
     }
 
-    @SuppressWarnings("unchecked")
     public static void assertEquals(String msg, Object wanted, Object got) {
         if (wanted instanceof List) {
             assertEquals(msg, (List<?>) wanted, got);
@@ -359,7 +358,7 @@ OUTER:
             } else if (got.getClass().isArray()) {
                 assertEqualsArrayArray(msg, wanted, got);
             } else if (got instanceof List) {
-                assertEqualsArrayList(msg, wanted, (List) got);
+                assertEqualsArrayList(msg, wanted, (List<?>) got);
             } else {
                 TestCase.assertEquals(msg, wanted, got);
             }
@@ -374,6 +373,7 @@ OUTER:
         return list;
     }
 
+    @SafeVarargs
     public static <T> List<T> list(T... list) {
         return new ArrayList<>(Arrays.asList(list));
     }
@@ -384,6 +384,7 @@ OUTER:
         return set;
     }
 
+    @SafeVarargs
     public static <T> Set<T> set(T... list) {
         return new HashSet<>(Arrays.asList(list));
     }

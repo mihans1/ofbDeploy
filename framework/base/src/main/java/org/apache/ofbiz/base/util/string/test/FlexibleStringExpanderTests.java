@@ -223,6 +223,7 @@ public class FlexibleStringExpanderTests extends TestCase {
         Debug.set(Debug.VERBOSE, wasVerbose);
     }
 
+    @SuppressWarnings("serial")
     public static class ThrowException extends Exception{
         public Object getValue() throws Exception {
             throw new Exception();
@@ -240,6 +241,7 @@ public class FlexibleStringExpanderTests extends TestCase {
             super(SpecialNumber.class, String.class);
         }
 
+        @Override
         public String convert(SpecialNumber obj) throws ConversionException {
             throw new NullPointerException();
         }
@@ -265,7 +267,7 @@ public class FlexibleStringExpanderTests extends TestCase {
         everythingTest();
     }
 
-    private void everythingTest() {
+    private static void everythingTest() {
         Map<String, Object> testMap = new HashMap<>();
         testMap.put("date", new java.util.Date(1234567890));
         testMap.put("usd", "USD");

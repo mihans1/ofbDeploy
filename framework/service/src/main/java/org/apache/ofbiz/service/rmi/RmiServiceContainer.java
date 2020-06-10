@@ -29,6 +29,7 @@ import javax.naming.NamingException;
 
 import org.apache.ofbiz.base.container.Container;
 import org.apache.ofbiz.base.container.ContainerConfig;
+import org.apache.ofbiz.base.container.ContainerConfig.Configuration;
 import org.apache.ofbiz.base.container.ContainerException;
 import org.apache.ofbiz.base.start.Start;
 import org.apache.ofbiz.base.start.StartupCommand;
@@ -37,6 +38,8 @@ import org.apache.ofbiz.entity.Delegator;
 import org.apache.ofbiz.entity.DelegatorFactory;
 import org.apache.ofbiz.service.LocalDispatcher;
 import org.apache.ofbiz.service.ServiceContainer;
+
+import static org.apache.ofbiz.testtools.ModelTestSuite.DELEGATOR_NAME;
 
 /**
  * RMI Service Engine Container / Dispatcher
@@ -57,32 +60,33 @@ public class RmiServiceContainer implements Container {
         this.configFile = configFile;
     }
 
+    @Override
     public boolean start() throws ContainerException {
         // get the container config
-        ContainerConfig.Configuration cfg = ContainerConfig.getConfiguration(containerName, configFile);
-        ContainerConfig.Configuration.Property initialCtxProp = cfg.getProperty("use-initial-context");
-        ContainerConfig.Configuration.Property lookupHostProp = cfg.getProperty("bound-host");
-        ContainerConfig.Configuration.Property lookupPortProp = cfg.getProperty("bound-port");
-        ContainerConfig.Configuration.Property lookupNameProp = cfg.getProperty("bound-name");
-        ContainerConfig.Configuration.Property delegatorProp = cfg.getProperty("delegator-name");
-        ContainerConfig.Configuration.Property clientProp = cfg.getProperty("client-factory");
-        ContainerConfig.Configuration.Property serverProp = cfg.getProperty("server-factory");
+        Configuration cfg = ContainerConfig.getConfiguration(containerName);
+        Configuration.Property initialCtxProp = cfg.getProperty("use-initial-context");
+        Configuration.Property lookupHostProp = cfg.getProperty("bound-host");
+        Configuration.Property lookupPortProp = cfg.getProperty("bound-port");
+        Configuration.Property lookupNameProp = cfg.getProperty("bound-name");
+        Configuration.Property delegatorProp = cfg.getProperty(DELEGATOR_NAME);
+        Configuration.Property clientProp = cfg.getProperty("client-factory");
+        Configuration.Property serverProp = cfg.getProperty("server-factory");
 
         // check the required lookup-name property
-        if (lookupNameProp == null || UtilValidate.isEmpty(lookupNameProp.value)) {
+        if (lookupNameProp == null || UtilValidate.isEmpty(lookupNameProp.value())) {
             throw new ContainerException("Invalid lookup-name defined in container configuration");
         } else {
-            this.name = lookupNameProp.value;
+            this.name = lookupNameProp.value();
         }
 
         // check the required delegator-name property
-        if (delegatorProp == null || UtilValidate.isEmpty(delegatorProp.value)) {
+        if (delegatorProp == null || UtilValidate.isEmpty(delegatorProp.value())) {
             throw new ContainerException("Invalid delegator-name defined in container configuration");
         }
 
-        String useCtx = initialCtxProp == null || initialCtxProp.value == null ? "false" : initialCtxProp.value;
-        String host = lookupHostProp == null || lookupHostProp.value == null ? "localhost" : lookupHostProp.value;
-        String port = lookupPortProp == null || lookupPortProp.value == null ? "1099" : lookupPortProp.value;
+        String useCtx = initialCtxProp == null || initialCtxProp.value() == null ? "false" : initialCtxProp.value();
+        String host = lookupHostProp == null || lookupHostProp.value() == null ? "localhost" : lookupHostProp.value();
+        String port = lookupPortProp == null || lookupPortProp.value() == null ? "1099" : lookupPortProp.value();
         if (Start.getInstance().getConfig().portOffset != 0) {
             Integer portValue = Integer.valueOf(port);
             portValue += Start.getInstance().getConfig().portOffset;
@@ -102,18 +106,18 @@ public class RmiServiceContainer implements Container {
         ClassLoader loader = Thread.currentThread().getContextClassLoader();
 
         // load the factories
-        if (clientProp != null && UtilValidate.isNotEmpty(clientProp.value)) {
+        if (clientProp != null && UtilValidate.isNotEmpty(clientProp.value())) {
             try {
-                Class<?> c = loader.loadClass(clientProp.value);
-                csf = (RMIClientSocketFactory) c.newInstance();
+                Class<?> c = loader.loadClass(clientProp.value());
+                csf = (RMIClientSocketFactory) c.getDeclaredConstructor().newInstance();
             } catch (Exception e) {
                 throw new ContainerException(e);
             }
         }
-        if (serverProp != null && UtilValidate.isNotEmpty(serverProp.value)) {
+        if (serverProp != null && UtilValidate.isNotEmpty(serverProp.value())) {
             try {
-                Class<?> c = loader.loadClass(serverProp.value);
-                ssf = (RMIServerSocketFactory) c.newInstance();
+                Class<?> c = loader.loadClass(serverProp.value());
+                ssf = (RMIServerSocketFactory) c.getDeclaredConstructor().newInstance();
             } catch (Exception e) {
                 throw new ContainerException(e);
             }
@@ -129,7 +133,7 @@ public class RmiServiceContainer implements Container {
         }
 
         // get the delegator for this container
-        Delegator delegator = DelegatorFactory.getDelegator(delegatorProp.value);
+        Delegator delegator = DelegatorFactory.getDelegator(delegatorProp.value());
 
         // create the LocalDispatcher
         LocalDispatcher dispatcher = ServiceContainer.getLocalDispatcher(name, delegator);
@@ -174,10 +178,12 @@ public class RmiServiceContainer implements Container {
         return true;
     }
 
-    public void stop() throws ContainerException {
+    @Override
+    public void stop() {
         remote.deregister();
     }
 
+    @Override
     public String getName() {
         return containerName;
     }

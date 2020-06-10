@@ -31,83 +31,25 @@ import java.io.Writer;
 import java.nio.ByteBuffer;
 import java.nio.CharBuffer;
 import java.nio.charset.Charset;
-
-import org.apache.commons.io.IOUtils;
+import java.nio.charset.StandardCharsets;
 
 public final class UtilIO {
-    private static final Charset UTF8 = Charset.forName("UTF-8");
     public static final String module = UtilIO.class.getName();
 
     private UtilIO () {}
-    /** Copy an InputStream to an OutputStream, optionally closing either
-     *  the input or the output.
-     *
-     * @param in the InputStream to copy from
-     * @param closeIn whether to close the input when the copy is done
-     * @param out the OutputStream to copy to
-     * @param closeOut whether to close the output when the copy is done
-     * @throws IOException if an error occurs
-     */
-    public static void copy(InputStream in, boolean closeIn, OutputStream out, boolean closeOut) throws IOException {
-        try {
-            try {
-                IOUtils.copy(in, out);
-            } finally {
-                if (closeIn) {
-                    IOUtils.closeQuietly(in);
-                }
-            }
-        } finally {
-            if (closeOut) {
-                IOUtils.closeQuietly(out);
-            }
-        }
-    }
 
-    /** Copy a Reader to a Writer, optionally closing either the input or
-     *  the output.
+    /** Copy a Reader to an Appendable.
      *
      * @param reader the Reader to copy from
-     * @param closeIn whether to close the input when the copy is done
-     * @param writer the Writer to copy to
-     * @param closeOut whether to close the output when the copy is done
-     * @throws IOException if an error occurs
-     */
-    public static void copy(Reader reader, boolean closeIn, Writer writer, boolean closeOut) throws IOException {
-        try {
-            try {
-                IOUtils.copy(reader, writer);
-            } finally {
-                if (closeIn) {
-                    IOUtils.closeQuietly(reader);
-                }
-            }
-        } finally {
-            if (closeOut) {
-                IOUtils.closeQuietly(writer);
-            }
-        }
-    }
-
-    /** Copy a Reader to an Appendable, optionally closing the input.
-     *
-     * @param reader the Reader to copy from
-     * @param closeIn whether to close the input when the copy is done
      * @param out the Appendable to copy to
      * @throws IOException if an error occurs
      */
-    public static void copy(Reader reader, boolean closeIn, Appendable out) throws IOException {
-        try {
-            CharBuffer buffer = CharBuffer.allocate(4096);
-            while (reader.read(buffer) > 0) {
-                buffer.flip();
-                buffer.rewind();
-                out.append(buffer);
-            }
-        } finally {
-            if (closeIn) {
-                IOUtils.closeQuietly(reader);
-            }
+    public static void copy(Reader reader, Appendable out) throws IOException {
+        CharBuffer buffer = CharBuffer.allocate(4096);
+        while (reader.read(buffer) > 0) {
+            buffer.flip();
+            buffer.rewind();
+            out.append(buffer);
         }
     }
 
@@ -119,7 +61,7 @@ public final class UtilIO {
      * to \n
      */
     public static final String readString(byte[] bytes) {
-        return readString(bytes, 0, bytes.length, UTF8);
+        return readString(bytes, 0, bytes.length, StandardCharsets.UTF_8);
     }
 
     /** Convert a byte array to a string; consistently uses \n line endings
@@ -133,7 +75,7 @@ public final class UtilIO {
      * to \n
      */
     public static final String readString(byte[] bytes, int offset, int length) {
-        return readString(bytes, offset, length, UTF8);
+        return readString(bytes, offset, length, StandardCharsets.UTF_8);
     }
 
     /** Convert a byte array to a string; consistently uses \n line endings
@@ -204,7 +146,7 @@ public final class UtilIO {
      * to \n
      */
     public static final String readString(InputStream stream) throws IOException {
-        return readString(stream, UTF8);
+        return readString(stream, StandardCharsets.UTF_8);
     }
 
     /** Convert an {@link InputStream} to a string; consistently uses \n line endings
@@ -279,7 +221,7 @@ public final class UtilIO {
      * @param value the value to write
      */
     public static void writeString(File file, String value) throws IOException {
-        writeString(new FileOutputStream(file), UTF8, value);
+        writeString(new FileOutputStream(file), StandardCharsets.UTF_8, value);
     }
 
     /** Convert a \n string to a platform encoding.  This uses a default
@@ -289,7 +231,7 @@ public final class UtilIO {
      * @param value the value to write
      */
     public static void writeString(OutputStream out, String value) throws IOException {
-        writeString(out, UTF8, value);
+        writeString(out, StandardCharsets.UTF_8, value);
     }
 
     /** Convert a \n string to a platform encoding.  This uses the
@@ -326,9 +268,5 @@ public final class UtilIO {
             }
             writer.write(value.substring(r));
         }
-    }
-
-    public static Charset getUtf8() {
-        return UTF8;
     }
 }

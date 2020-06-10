@@ -82,15 +82,13 @@ public class LoopSubContentTransform implements TemplateTransformModel {
     }
 
     public static boolean prepCtx(Delegator delegator, Map<String, Object> ctx) {
-        List<GenericValue> lst = UtilGenerics.checkList(ctx.get("entityList"));
+        List<GenericValue> lst = UtilGenerics.cast(ctx.get("entityList"));
         Integer idx = (Integer) ctx.get("entityIndex");
         if (idx == null) {
-            idx = Integer.valueOf(0);
+            idx = 0;
         }
-        int i = idx.intValue();
-        if (UtilValidate.isEmpty(lst)) {
-            return false;
-        } else  if (i >= lst.size()) {
+        int i = idx;
+        if (UtilValidate.isEmpty(lst) || i >= lst.size()) {
             return false;
         }
         GenericValue subContentDataResourceView = lst.get(i);
@@ -139,7 +137,7 @@ public class LoopSubContentTransform implements TemplateTransformModel {
             ctx.put("textData", null);
         }
         ctx.put("content", subContentDataResourceView);
-        ctx.put("entityIndex", Integer.valueOf(i + 1));
+        ctx.put("entityIndex", i + 1);
         ctx.put("subContentId", subContentIdSub);
         ctx.put("drDataResourceId", dataResourceId);
         ctx.put("mimeTypeId", mimeTypeId);
@@ -151,7 +149,7 @@ public class LoopSubContentTransform implements TemplateTransformModel {
 
     @Override
     @SuppressWarnings("unchecked")
-    public Writer getWriter(final Writer out, Map args) {
+    public Writer getWriter(Writer out, @SuppressWarnings("rawtypes") Map args) {
         final StringBuilder buf = new StringBuilder();
         final Environment env = Environment.getCurrentEnvironment();
         final Map<String, Object> templateCtx = FreeMarkerWorker.getWrappedObject("context", env);
@@ -188,7 +186,7 @@ public class LoopSubContentTransform implements TemplateTransformModel {
         //DEJ20080730 Should always use contentId, not subContentId since we're searching for that and it is confusing
         String thisMapKey = (String)templateCtx.get("mapKey");
         Map<String, Object> results = ContentServicesComplex.getAssocAndContentAndDataResourceMethod(delegator, thisContentId, thisMapKey, null, fromDate, null, null, null, assocTypes, null);
-        List<GenericValue> entityList = UtilGenerics.checkList(results.get("entityList"));
+        List<GenericValue> entityList = UtilGenerics.cast(results.get("entityList"));
         templateCtx.put("entityList", entityList);
 
         return new LoopWriter(out) {
@@ -205,7 +203,7 @@ public class LoopSubContentTransform implements TemplateTransformModel {
 
             @Override
             public int onStart() throws TemplateModelException, IOException {
-                templateCtx.put("entityIndex", Integer.valueOf(0));
+                templateCtx.put("entityIndex", 0);
                 boolean inProgress = prepCtx(delegator, templateCtx);
                 if (inProgress) {
                     return TransformControl.EVALUATE_BODY;

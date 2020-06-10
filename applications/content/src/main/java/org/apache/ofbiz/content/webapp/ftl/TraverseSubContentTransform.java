@@ -80,8 +80,9 @@ public class TraverseSubContentTransform implements TemplateTransformModel {
         return FreeMarkerWorker.getArg(args, key, ctx);
     }
 
+    @Override
     @SuppressWarnings("unchecked")
-    public Writer getWriter(final Writer out, Map args) {
+    public Writer getWriter(final Writer out, @SuppressWarnings("rawtypes") Map args) {
         final StringBuilder buf = new StringBuilder();
         final Environment env = Environment.getCurrentEnvironment();
         final Map<String, Object> templateCtx = FreeMarkerWorker.getWrappedObject("context", env);
@@ -110,9 +111,9 @@ public class TraverseSubContentTransform implements TemplateTransformModel {
         }
 
         final GenericValue subContentDataResourceView = view;
-        final Map<String, Object> traverseContext = new HashMap<String, Object>();
+        final Map<String, Object> traverseContext = new HashMap<>();
         traverseContext.put("delegator", delegator);
-        Map<String, Object> whenMap = new HashMap<String, Object>();
+        Map<String, Object> whenMap = new HashMap<>();
         whenMap.put("followWhen", templateCtx.get("followWhen"));
         whenMap.put("pickWhen", templateCtx.get("pickWhen"));
         whenMap.put("returnBeforePickWhen", templateCtx.get("returnBeforePickWhen"));
@@ -154,7 +155,7 @@ public class TraverseSubContentTransform implements TemplateTransformModel {
 
             @Override
             public int onStart() throws TemplateModelException, IOException {
-                List<Map<String, Object>> nodeTrail = new LinkedList<Map<String,Object>>();
+                List<Map<String, Object>> nodeTrail = new LinkedList<>();
                 traverseContext.put("nodeTrail", nodeTrail);
                 Map<String, Object> rootNode = ContentWorker.makeNode(subContentDataResourceView);
                 ContentWorker.traceNodeTrail("1", nodeTrail);
@@ -162,7 +163,7 @@ public class TraverseSubContentTransform implements TemplateTransformModel {
                 ContentWorker.traceNodeTrail("2", nodeTrail);
                 nodeTrail.add(rootNode);
                 boolean isPick = checkWhen(subContentDataResourceView, (String)traverseContext.get("contentAssocTypeId"));
-                rootNode.put("isPick", Boolean.valueOf(isPick));
+                rootNode.put("isPick", isPick);
                 if (!isPick) {
                     ContentWorker.traceNodeTrail("3", nodeTrail);
                     isPick = ContentWorker.traverseSubContent(traverseContext);
@@ -179,7 +180,7 @@ public class TraverseSubContentTransform implements TemplateTransformModel {
 
             @Override
             public int afterBody() throws TemplateModelException, IOException {
-                List<Map<String, Object>> nodeTrail = UtilGenerics.checkList(traverseContext.get("nodeTrail"));
+                List<Map<String, Object>> nodeTrail = UtilGenerics.cast(traverseContext.get("nodeTrail"));
                 ContentWorker.traceNodeTrail("6",nodeTrail);
                 boolean inProgress = ContentWorker.traverseSubContent(traverseContext);
                 ContentWorker.traceNodeTrail("7",nodeTrail);
@@ -224,7 +225,7 @@ public class TraverseSubContentTransform implements TemplateTransformModel {
 
             private boolean checkWhen (GenericValue thisContent, String contentAssocTypeId) {
                 boolean isPick = false;
-                Map<String, Object> assocContext = new HashMap<String, Object>();
+                Map<String, Object> assocContext = new HashMap<>();
                 if (UtilValidate.isEmpty(contentAssocTypeId)) {
                     contentAssocTypeId = "";
                 }
@@ -239,7 +240,7 @@ public class TraverseSubContentTransform implements TemplateTransformModel {
                 assocContext.put("content", thisContent);
                 List<Object> purposes = ContentWorker.getPurposes(thisContent);
                 assocContext.put("purposes", purposes);
-                List<String> contentTypeAncestry = new LinkedList<String>();
+                List<String> contentTypeAncestry = new LinkedList<>();
                 String contentTypeId = (String)thisContent.get("contentTypeId");
                 try {
                     ContentWorker.getContentTypeAncestry(delegator, contentTypeId, contentTypeAncestry);
@@ -247,23 +248,23 @@ public class TraverseSubContentTransform implements TemplateTransformModel {
                     return false;
                 }
                 assocContext.put("typeAncestry", contentTypeAncestry);
-                Map<String, Object> whenMap = UtilGenerics.checkMap(traverseContext.get("whenMap"));
-                List<Map<String, ? extends Object>> nodeTrail = UtilGenerics.checkList(traverseContext.get("nodeTrail"));
-                int indentSz = indent.intValue() + nodeTrail.size();
-                assocContext.put("indentObj", Integer.valueOf(indentSz));
+                Map<String, Object> whenMap = UtilGenerics.cast(traverseContext.get("whenMap"));
+                List<Map<String, ? extends Object>> nodeTrail = UtilGenerics.cast(traverseContext.get("nodeTrail"));
+                int indentSz = indent + nodeTrail.size();
+                assocContext.put("indentObj", indentSz);
                 isPick = ContentWorker.checkWhen(assocContext, (String)whenMap.get("pickWhen"), true);
                 return isPick;
             }
 
             public void populateContext(Map<String, Object> traverseContext, Map<String, Object> templateContext) {
-                List<Map<String, Object>> nodeTrail = UtilGenerics.checkList(traverseContext.get("nodeTrail"));
+                List<Map<String, Object>> nodeTrail = UtilGenerics.cast(traverseContext.get("nodeTrail"));
                 int sz = nodeTrail.size();
                 Map<String, Object> node = nodeTrail.get(sz - 1);
                 String contentId = (String)node.get("contentId");
                 templateContext.put("subContentId", contentId);
                 templateContext.put("subContentDataResourceView", null);
-                int indentSz = indent.intValue() + nodeTrail.size();
-                templateContext.put("indent", Integer.valueOf(indentSz));
+                int indentSz = indent + nodeTrail.size();
+                templateContext.put("indent", indentSz);
                 if (sz >= 2) {
                     Map<String, Object> parentNode = nodeTrail.get(sz - 2);
                     GenericValue parentContent = (GenericValue)parentNode.get("value");

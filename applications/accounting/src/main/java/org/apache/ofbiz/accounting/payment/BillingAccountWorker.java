@@ -20,10 +20,10 @@ package org.apache.ofbiz.accounting.payment;
 
 import java.io.Serializable;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Locale;
@@ -54,18 +54,9 @@ public class BillingAccountWorker {
 
     public static final String module = BillingAccountWorker.class.getName();
     public static final String resourceError = "AccountingUiLabels";
-    private static BigDecimal ZERO = BigDecimal.ZERO;
-    private static int decimals = -1;
-    private static int rounding = -1;
-    static {
-        decimals = UtilNumber.getBigDecimalScale("order.decimals");
-        rounding = UtilNumber.getBigDecimalRoundingMode("order.rounding");
-
-        // set zero to the proper scale
-        if (decimals != -1) {
-            ZERO = ZERO.setScale(decimals);
-        }
-    }
+    public static final int decimals = UtilNumber.getBigDecimalScale("order.decimals");
+    public static final RoundingMode rounding = UtilNumber.getRoundingMode("order.rounding");
+    public static final BigDecimal ZERO = BigDecimal.ZERO.setScale(decimals, rounding);
 
     public static List<Map<String, Object>> makePartyBillingAccountList(GenericValue userLogin, String currencyUomId, String partyId, Delegator delegator, LocalDispatcher dispatcher) throws GeneralException {
         List<Map<String, Object>> billingAccountList = new LinkedList<>();
@@ -75,7 +66,7 @@ public class BillingAccountWorker {
         if (ServiceUtil.isError(agentResult)) {
             throw new GeneralException("Error while finding party BillingAccounts when getting Customers that this party is an agent of: " + ServiceUtil.getErrorMessage(agentResult));
         }
-        List<String> relatedPartyIdList = UtilGenerics.checkList(agentResult.get("relatedPartyIdList"));
+        List<String> relatedPartyIdList = UtilGenerics.cast(agentResult.get("relatedPartyIdList"));
 
         List<GenericValue> billingAccountRoleList = EntityQuery.use(delegator).from("BillingAccountRole")
                 .where(EntityCondition.makeCondition("partyId", EntityOperator.IN, relatedPartyIdList),
@@ -218,6 +209,7 @@ public class BillingAccountWorker {
     
     @SuppressWarnings("serial")
     protected static class BillingAccountComparator implements Comparator<Map<String, Object>>, Serializable{
+        @Override
         public int compare(Map<String, Object> billingAccount1, Map<String, Object> billingAccount2) {
             return ((BigDecimal)billingAccount1.get("accountBalance")).compareTo((BigDecimal)billingAccount2.get("accountBalance"));
         }

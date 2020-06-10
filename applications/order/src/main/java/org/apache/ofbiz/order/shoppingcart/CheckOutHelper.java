@@ -19,6 +19,7 @@
 package org.apache.ofbiz.order.shoppingcart;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -74,7 +75,7 @@ public class CheckOutHelper {
     public static final String resource_error = "OrderErrorUiLabels";
 
     public static final int scale = UtilNumber.getBigDecimalScale("order.decimals");
-    public static final int rounding = UtilNumber.getBigDecimalRoundingMode("order.rounding");
+    public static final RoundingMode rounding = UtilNumber.getRoundingMode("order.rounding");
 
     protected LocalDispatcher dispatcher = null;
     protected Delegator delegator = null;
@@ -514,6 +515,9 @@ public class CheckOutHelper {
                 Map<String, Object> gcResult = null;
                 try {
                     gcResult = dispatcher.runSync("createGiftCard", gcCtx);
+                    if (ServiceUtil.isError(gcResult)) {
+                        return ServiceUtil.returnError(ServiceUtil.getErrorMessage(gcResult));
+                    }
                 } catch (GenericServiceException e) {
                     Debug.logError(e, module);
                     errorMessages.add(e.getMessage());
@@ -569,6 +573,7 @@ public class CheckOutHelper {
         String originOrderId = (String) this.cart.getAttribute("originOrderId");
 
         this.cart.clearAllItemStatus();
+        this.cart.removeEmptyCartItems();
 
         BigDecimal grandTotal = this.cart.getGrandTotal();
 
@@ -595,6 +600,7 @@ public class CheckOutHelper {
         }
         context.put("webSiteId", webSiteId);
         context.put("originOrderId", originOrderId);
+        context.put("agreementId", cart.getAgreementId());
 
         // need the partyId; don't use userLogin in case of an order via order mgr
         String partyId = this.cart.getPartyId();
@@ -632,7 +638,7 @@ public class CheckOutHelper {
         // ----------
         // If needed, the production runs are created and linked to the order lines.
         //
-        List<GenericValue> orderItems = UtilGenerics.checkList(context.get("orderItems"));
+        List<GenericValue> orderItems = UtilGenerics.cast(context.get("orderItems"));
         int counter = 0;
         for (GenericValue orderItem : orderItems) {
             String productId = orderItem.getString("productId");
@@ -686,7 +692,10 @@ public class CheckOutHelper {
                 try {
                     /* OrderRequirementCommitment records will map which POs which are created from which requirements. With the help of this mapping requirements will be updated to Ordered when POs will be approved.  */
                     Map<String, Object> inputMap = UtilMisc.toMap("userLogin", userLogin, "orderId", orderId, "orderItemSeqId", shoppingCartItem.getOrderItemSeqId(), "requirementId", requirementId, "quantity", shoppingCartItem.getQuantity());
-                    dispatcher.runSync("createOrderRequirementCommitment", inputMap);
+                    Map<String, Object> serviceResult = dispatcher.runSync("createOrderRequirementCommitment", inputMap);
+                    if (ServiceUtil.isError(serviceResult)) {
+                        return ServiceUtil.returnError(ServiceUtil.getErrorMessage(serviceResult));
+                    }
                 } catch (GenericServiceException e) {
                     String service = e.getMessage();
                     Map<String, String> messageMap = UtilMisc.toMap("service", service);
@@ -787,19 +796,19 @@ public class CheckOutHelper {
                 csi.clearAllTaxInfo();
                 continue;
             }
-            List<List<? extends Object>> taxReturn = this.getTaxAdjustments(dispatcher, "calcTax", serviceContext);
+            List<List<? extends Object>> taxReturn = getTaxAdjustments(dispatcher, "calcTax", serviceContext);
 
             if (Debug.verboseOn()) {
                 Debug.logVerbose("ReturnList: " + taxReturn, module);
             }
-            List<GenericValue> orderAdj = UtilGenerics.checkList(taxReturn.get(0));
-            List<List<GenericValue>> itemAdj = UtilGenerics.checkList(taxReturn.get(1));
+            List<GenericValue> orderAdj = UtilGenerics.cast(taxReturn.get(0));
+            List<List<GenericValue>> itemAdj = UtilGenerics.cast(taxReturn.get(1));
 
             // set the item adjustments
             if (itemAdj != null) {
                 for (int x = 0; x < itemAdj.size(); x++) {
                     List<GenericValue> adjs = itemAdj.get(x);
-                    ShoppingCartItem item = shoppingCartItemIndexMap.get(Integer.valueOf(x));
+                    ShoppingCartItem item = shoppingCartItemIndexMap.get(x);
                     if (adjs == null) {
                         adjs = new LinkedList<>();
                     }
@@ -835,7 +844,7 @@ public class CheckOutHelper {
             price.add(i, cartItem.getBasePrice());
             quantity.add(i, cartItem.getQuantity());
             shipAmt.add(i, BigDecimal.ZERO); // no per item shipping yet
-            shoppingCartItemIndexMap.put(Integer.valueOf(i), cartItem);
+            shoppingCartItemIndexMap.put(i, cartItem);
         }
 
         //add promotion adjustments
@@ -899,23 +908,24 @@ public class CheckOutHelper {
     }
 
     // Calc the tax adjustments.
-    private List<List<? extends Object>> getTaxAdjustments(LocalDispatcher dispatcher, String taxService, Map<String, Object> serviceContext) throws GeneralException {
+    private static List<List<? extends Object>> getTaxAdjustments(LocalDispatcher dispatcher, String taxService,
+            Map<String, Object> serviceContext) throws GeneralException {
         Map<String, Object> serviceResult = null;
 
         try {
             serviceResult = dispatcher.runSync(taxService, serviceContext);
+            if (ServiceUtil.isError(serviceResult)) {
+                String errorMessage = ServiceUtil.getErrorMessage(serviceResult);
+                Debug.logError(errorMessage, module);
+                throw new GeneralException(errorMessage);
+            }
         } catch (GenericServiceException e) {
             Debug.logError(e, module);
             throw new GeneralException("Problem occurred in tax service (" + e.getMessage() + ")", e);
         }
-
-        if (ServiceUtil.isError(serviceResult)) {
-            throw new GeneralException(ServiceUtil.getErrorMessage(serviceResult));
-        }
-
         // the adjustments (returned in order) from taxware.
-        List<GenericValue> orderAdj = UtilGenerics.checkList(serviceResult.get("orderAdjustments"));
-        List<List<GenericValue>> itemAdj = UtilGenerics.checkList(serviceResult.get("itemAdjustments"));
+        List<GenericValue> orderAdj = UtilGenerics.cast(serviceResult.get("orderAdjustments"));
+        List<List<GenericValue>> itemAdj = UtilGenerics.cast(serviceResult.get("itemAdjustments"));
 
         return UtilMisc.toList(orderAdj, itemAdj);
     }
@@ -969,8 +979,10 @@ public class CheckOutHelper {
                 authCtx.put("currencyUomId", currencyUomId);
 
                 Map<String, Object> authResp = dispatcher.runSync("processAuthResult", authCtx);
-                if (authResp != null && ServiceUtil.isError(authResp)) {
-                    throw new GeneralException(ServiceUtil.getErrorMessage(authResp));
+                if (ServiceUtil.isError(authResp)) {
+                    String errorMessage = ServiceUtil.getErrorMessage(authResp);
+                    Debug.logError(errorMessage, module);
+                    throw new GeneralException(errorMessage);
                 }
 
                 // approve the order
@@ -990,8 +1002,10 @@ public class CheckOutHelper {
                     captCtx.put("currencyUomId", currencyUomId);
 
                     Map<String, Object> capResp = dispatcher.runSync("processCaptureResult", captCtx);
-                    if (capResp != null && ServiceUtil.isError(capResp)) {
-                        throw new GeneralException(ServiceUtil.getErrorMessage(capResp));
+                    if (ServiceUtil.isError(capResp)) {
+                        String errorMessage = ServiceUtil.getErrorMessage(capResp);
+                        Debug.logError(errorMessage, module);
+                        throw new GeneralException(errorMessage);
                     }
                 }
             }
@@ -1030,6 +1044,11 @@ public class CheckOutHelper {
                 // invoke the payment gateway service.
                 paymentResult = dispatcher.runSync("authOrderPayments",
                         UtilMisc.<String, Object>toMap("orderId", orderId, "userLogin", userLogin), 180, false);
+                if (ServiceUtil.isError(paymentResult)) {
+                    String errorMessage = ServiceUtil.getErrorMessage(paymentResult);
+                    Debug.logError(errorMessage, module);
+                    throw new GeneralException(errorMessage);
+                }
             } catch (GenericServiceException e) {
                 Debug.logWarning(e, module);
                 throw new GeneralException("Error in authOrderPayments service: " + e.toString(), e.getNested());
@@ -1037,15 +1056,9 @@ public class CheckOutHelper {
             if (Debug.verboseOn()) {
                 Debug.logVerbose("Finished w/ Payment Service", module);
             }
-
-            if (paymentResult != null && ServiceUtil.isError(paymentResult)) {
-                throw new GeneralException(ServiceUtil.getErrorMessage(paymentResult));
-            }
-
-
             if (paymentResult != null && paymentResult.containsKey("processResult")) {
                 // grab the customer messages -- only passed back in the case of an error or failure
-                List<String> messages = UtilGenerics.checkList(paymentResult.get("authResultMsgs"));
+                List<String> messages = UtilGenerics.cast(paymentResult.get("authResultMsgs"));
 
                 String authResp = (String) paymentResult.get("processResult");
 
@@ -1368,10 +1381,12 @@ public class CheckOutHelper {
      *
      * @param shipGroupIndex The index of the ship group in the cart
      * @param shippingContactMechId The identifier of the contact
+     * @param supplierPartyId The identifier of the supplier to use for the drop shipment
+     * @param supplierAgreementId The identifier of the agreement with the supplier
      * @return A Map conforming to the OFBiz Service conventions containing
      * any error messages
      */
-    public Map<String, Object> finalizeOrderEntryShip(int shipGroupIndex, String shippingContactMechId, String supplierPartyId) {
+    public Map<String, Object> finalizeOrderEntryShip(int shipGroupIndex, String shippingContactMechId, String supplierPartyId, String supplierAgreementId) {
         Map<String, Object> result;
         String errMsg=null;
         //Verify the field is valid
@@ -1379,6 +1394,9 @@ public class CheckOutHelper {
             this.cart.setShippingContactMechId(shipGroupIndex, shippingContactMechId);
             if (UtilValidate.isNotEmpty(supplierPartyId)) {
                 this.cart.setSupplierPartyId(shipGroupIndex, supplierPartyId);
+                if (UtilValidate.isNotEmpty(supplierAgreementId)) {
+                    this.cart.setSupplierAgreementId(shipGroupIndex, supplierAgreementId);
+                }
             }
             result = ServiceUtil.returnSuccess();
         } else {
@@ -1455,7 +1473,7 @@ public class CheckOutHelper {
            }
 
            try {
-               this.cart.setShipBeforeDate(shipGroupIndex, (Timestamp) ObjectType.simpleTypeConvert(shipBeforeDate, "Timestamp", null, null));
+               this.cart.setShipBeforeDate(shipGroupIndex, (Timestamp) ObjectType.simpleTypeOrObjectConvert(shipBeforeDate, "Timestamp", null, null));
            } catch (Exception e) {
                errMsg = "Ship Before Date must be a valid date formed ";
                result = ServiceUtil.returnError(errMsg);
@@ -1470,7 +1488,7 @@ public class CheckOutHelper {
            }
 
            try {
-               this.cart.setShipAfterDate(shipGroupIndex, (Timestamp) ObjectType.simpleTypeConvert(shipAfterDate,"Timestamp", null, null));
+               this.cart.setShipAfterDate(shipGroupIndex, (Timestamp) ObjectType.simpleTypeOrObjectConvert(shipAfterDate,"Timestamp", null, null));
             } catch (Exception e) {
               errMsg = "Ship After Date must be a valid date formed ";
               result = ServiceUtil.returnError(errMsg);
@@ -1511,6 +1529,10 @@ public class CheckOutHelper {
         }
         try {
             Map<String, Object> res = dispatcher.runSync("calcBillingAccountBalance", UtilMisc.toMap("billingAccountId", billingAccountId));
+            if (ServiceUtil.isError(res)) {
+                Debug.logError(ServiceUtil.getErrorMessage(res), module);
+                return BigDecimal.ZERO;
+            }
             BigDecimal availableBalance = (BigDecimal) res.get("accountBalance");
             if (availableBalance != null) {
                 return availableBalance;
@@ -1661,6 +1683,9 @@ public class CheckOutHelper {
                     ctx.put("cardNumber", gc.getString("cardNumber"));
                     ctx.put("pinNumber", gc.getString("pinNumber"));
                     gcBalanceMap = dispatcher.runSync("checkGiftCertificateBalance", ctx);
+                    if (ServiceUtil.isError(gcBalanceMap)) {
+                        Debug.logError(ServiceUtil.getErrorMessage(gcBalanceMap), module);
+                    }
                 }
                 if ("valuelink".equalsIgnoreCase(giftCardType)) {
                     balanceField = "balance";
@@ -1668,6 +1693,9 @@ public class CheckOutHelper {
                     ctx.put("cardNumber", gc.getString("cardNumber"));
                     ctx.put("pin", gc.getString("pinNumber"));
                     gcBalanceMap = dispatcher.runSync("balanceInquireGiftCard", ctx);
+                    if (ServiceUtil.isError(gcBalanceMap)) {
+                        Debug.logError(ServiceUtil.getErrorMessage(gcBalanceMap), module);
+                    }
                 }
             } catch (GenericServiceException e) {
                 Debug.logError(e, module);

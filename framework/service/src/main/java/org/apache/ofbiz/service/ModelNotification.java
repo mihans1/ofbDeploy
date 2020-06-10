@@ -60,7 +60,7 @@ public class ModelNotification {
     }
 
     public Map<String, Object> buildContext(Map<String, ? extends Object> context, Map<String, Object> result, ModelService model) throws GenericServiceException {
-        Map<String, Object> userLogin = UtilGenerics.checkMap(context.get("userLogin"));
+        Map<String, Object> userLogin = UtilGenerics.cast(context.get("userLogin"));
         String partyId = null;
         if (userLogin != null) {
             partyId = (String) userLogin.get("partyId");
@@ -128,7 +128,7 @@ public class ModelNotification {
         }
     }
 
-    private String getCommaSeparatedAddressList(NotificationGroup notificationGroup, String notifyType) {
+    private static String getCommaSeparatedAddressList(NotificationGroup notificationGroup, String notifyType) {
         if (notificationGroup != null) {
             List<String> addr = getAddressesByType(notificationGroup, notifyType);
             if (UtilValidate.isNotEmpty(addr)) {
@@ -138,7 +138,7 @@ public class ModelNotification {
         return null;
     }
 
-    private List<String> getAddressesByType(NotificationGroup group, String type) {
+    private static List<String> getAddressesByType(NotificationGroup group, String type) {
         List<String> l = new ArrayList<>();
         for (Notify n : group.getNotifyList()) {
             if (n.getType().equals(type)) {

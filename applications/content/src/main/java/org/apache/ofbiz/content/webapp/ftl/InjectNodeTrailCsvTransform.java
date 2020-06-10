@@ -76,7 +76,7 @@ public class InjectNodeTrailCsvTransform implements TemplateTransformModel {
 
     @Override
     @SuppressWarnings("unchecked")
-    public Writer getWriter(final Writer out, Map args) {
+    public Writer getWriter(Writer out, @SuppressWarnings("rawtypes") Map args) {
         final StringBuilder buf = new StringBuilder();
         final Environment env = Environment.getCurrentEnvironment();
         final Map<String, Object> templateCtx = FreeMarkerWorker.getWrappedObject("context", env);
@@ -103,7 +103,7 @@ public class InjectNodeTrailCsvTransform implements TemplateTransformModel {
             public int onStart() throws TemplateModelException, IOException {
                 String csvTrail = null;
 
-                List<Map<String, ? extends Object>> trail = UtilGenerics.checkList(templateCtx.get("globalNodeTrail"));
+                List<Map<String, ? extends Object>> trail = UtilGenerics.cast(templateCtx.get("globalNodeTrail"));
 
                 if (Debug.infoOn()) {
                     Debug.logInfo("in InjectNodeTrailCsv(0), trail:"+trail,module);

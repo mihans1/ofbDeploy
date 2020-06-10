@@ -21,6 +21,8 @@ package org.apache.ofbiz.service;
 import java.io.Serializable;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
+import java.util.Objects;
 
 import javax.wsdl.Definition;
 import javax.wsdl.Part;
@@ -30,6 +32,7 @@ import org.apache.ofbiz.base.util.Debug;
 import org.apache.ofbiz.base.util.ObjectType;
 import org.apache.ofbiz.base.util.UtilProperties;
 import org.apache.ofbiz.base.util.UtilValidate;
+import org.apache.ofbiz.base.util.string.FlexibleStringExpander;
 
 /**
  * Generic Service Model Parameter
@@ -76,7 +79,7 @@ public class ModelParam implements Serializable {
     public List<ModelParamValidator> validators;
 
     /** Default value */
-    private String defaultValue = null;
+    private FlexibleStringExpander defaultValue = null;
 
     /** Is this Parameter required or optional? Default to false, or required */
     public boolean optional = false;
@@ -108,7 +111,7 @@ public class ModelParam implements Serializable {
         this.stringListSuffix = param.stringListSuffix;
         this.validators = param.validators;
         if (param.defaultValue != null) {
-            this.setDefaultValue(param.defaultValue);
+            this.setDefaultValue(param.defaultValue.getOriginal());
         }
         this.optional = param.optional;
         this.overrideOptional = param.overrideOptional;
@@ -177,11 +180,15 @@ public class ModelParam implements Serializable {
         return this.optional;
     }
 
-    public Object getDefaultValue() {
+    public FlexibleStringExpander getDefaultValue() {
+        return this.defaultValue;
+    }
+
+    public Object getDefaultValue(Map<String, Object> context) {
         Object defaultValueObj = null;
         if (this.type != null) {
             try {
-                defaultValueObj = ObjectType.simpleTypeConvert(this.defaultValue, this.type, null, null, false);
+                defaultValueObj = ObjectType.simpleTypeOrObjectConvert(this.defaultValue.expandString(context), this.type, null, null, false);
             } catch (Exception e) {
                 Debug.logWarning(e, "Service attribute [" + name + "] default value could not be converted to type [" + type + "]: " + e.toString(), module);
             }
@@ -195,20 +202,28 @@ public class ModelParam implements Serializable {
         return defaultValueObj;
     }
     public void setDefaultValue(String defaultValue) {
-        this.defaultValue = defaultValue;
+        this.defaultValue = FlexibleStringExpander.getInstance(defaultValue);
         if (this.defaultValue != null) {
             this.optional = true;
         }
         if (Debug.verboseOn()) Debug.logVerbose("Default value for attribute [" + this.name + "] set to [" + this.defaultValue + "]", module);
     }
     public void copyDefaultValue(ModelParam param) {
-        this.setDefaultValue(param.defaultValue);
+        this.setDefaultValue(param.defaultValue.getOriginal());
     }
 
     public boolean equals(ModelParam model) {
         return model.name.equals(this.name);
     }
 
+    @Override
+    public int hashCode() {
+        return Objects.hash(allowHtml, defaultValue, description, entityName, fieldName, entityName,
+                fieldName, formDisplay, formLabel, internal, mode, name, optional, overrideFormDisplay,
+                overrideOptional, requestAttributeName, stringListSuffix, stringMapPrefix, type, validators);
+    }
+
+    @Override
     public boolean equals(Object obj) {
         if (!(obj instanceof ModelParam)) {
             return false;

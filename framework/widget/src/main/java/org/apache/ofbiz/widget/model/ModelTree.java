@@ -180,7 +180,7 @@ public class ModelTree extends ModelWidget {
             }
         }
         //append also the request parameters
-        Map<String, Object> paramMap = UtilGenerics.checkMap(context.get("requestParameters"));
+        Map<String, Object> paramMap = UtilGenerics.cast(context.get("requestParameters"));
         if (UtilValidate.isNotEmpty(paramMap)) {
             Map<String, Object> requestParameters = new HashMap<>(paramMap);
             requestParameters.remove(this.getTrailName(context));
@@ -231,7 +231,7 @@ public class ModelTree extends ModelWidget {
     @SuppressWarnings("rawtypes")
     public void renderTreeString(Appendable writer, Map<String, Object> context, TreeStringRenderer treeStringRenderer)
             throws GeneralException {
-        Map<String, Object> parameters = UtilGenerics.checkMap(context.get("parameters"));
+        Map<String, Object> parameters = UtilGenerics.cast(context.get("parameters"));
         ModelNode node = nodeMap.get(rootNodeName);
         String trailName = trailNameExdr.expandString(context);
         String treeString = (String) context.get(trailName);
@@ -488,7 +488,7 @@ public class ModelTree extends ModelWidget {
             }
             if (nodeCount == null && modelField != null || this.modelTree.forceChildCheck) {
                 getChildren(context);
-                nodeCount = Long.valueOf(subNodeValues.size());
+                nodeCount = (long) subNodeValues.size();
                 String pkName = this.getPkName(context);
                 String id = null;
                 if (!this.entryName.isEmpty()) {
@@ -510,9 +510,9 @@ public class ModelTree extends ModelWidget {
                 }
             } else if (nodeCount == null) {
                 getChildren(context);
-                nodeCount = Long.valueOf(subNodeValues.size());
+                nodeCount = (long) subNodeValues.size();
             }
-            if (nodeCount != null && nodeCount.intValue() > 0) {
+            if (nodeCount.intValue() > 0) {
                 hasChildren = true;
             }
             return hasChildren;
@@ -549,7 +549,8 @@ public class ModelTree extends ModelWidget {
                 }
             }
             if (passed) {
-                List<String> currentNodeTrail = UtilGenerics.toList(context.get("currentNodeTrail"));
+                Object obj = context.get("currentNodeTrail");
+                List<String> currentNodeTrail = (obj instanceof List) ? UtilGenerics.cast(obj) : null;
                 context.put("processChildren", Boolean.TRUE);
                 // this action will usually obtain the "current" entity
                 ModelTreeAction.runSubActions(this.actions, context);
@@ -584,12 +585,12 @@ public class ModelTree extends ModelWidget {
                     }
                     treeStringRenderer.renderLastElement(writer, context, this);
                     Boolean processChildren = (Boolean) context.get("processChildren");
-                    if (processChildren.booleanValue()) {
+                    if (processChildren) {
                         List<Object[]> subNodeValues = getChildren(context);
                         int newDepth = depth + 1;
                         for (Object[] arr : subNodeValues) {
                             ModelNode node = (ModelNode) arr[0];
-                            Map<String, Object> val = UtilGenerics.checkMap(arr[1]);
+                            Map<String, Object> val = UtilGenerics.cast(arr[1]);
                             String thisPkName = node.getPkName(context);
                             String thisEntityId = (String) val.get(thisPkName);
                             MapStack<String> newContext = MapStack.create(context);
@@ -601,7 +602,7 @@ public class ModelTree extends ModelWidget {
                                 newContext.putAll(val);
                             }
                             String targetEntityId = null;
-                            List<String> targetNodeTrail = UtilGenerics.checkList(context.get("targetNodeTrail"));
+                            List<String> targetNodeTrail = UtilGenerics.cast(context.get("targetNodeTrail"));
                             if (newDepth < targetNodeTrail.size()) {
                                 targetEntityId = targetNodeTrail.get(newDepth);
                             }
@@ -626,7 +627,7 @@ public class ModelTree extends ModelWidget {
 
         public boolean showPeers(int currentDepth, Map<String, Object> context) {
             int trailSize = 0;
-            List<?> trail = UtilGenerics.checkList(context.get("targetNodeTrail"));
+            List<?> trail = UtilGenerics.cast(context.get("targetNodeTrail"));
             int openDepth = modelTree.getOpenDepth();
             int postTrailOpenDepth = modelTree.getPostTrailOpenDepth();
             if (trail != null) {
@@ -639,7 +640,7 @@ public class ModelTree extends ModelWidget {
                 showPeers = true;
             } else if (!isFollowTrail()) {
                 showPeers = true;
-            } else if ((currentDepth < trailSize) && (rStyle != null)
+            } else if ((currentDepth < trailSize)
                     && ("show-peers".equals(rStyle) || "expand-collapse".equals(rStyle))) {
                 showPeers = true;
             } else if (openDepth >= currentDepth) {

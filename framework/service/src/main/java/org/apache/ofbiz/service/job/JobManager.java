@@ -20,6 +20,8 @@ package org.apache.ofbiz.service.job;
 
 import java.io.IOException;
 import java.sql.Timestamp;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
@@ -213,7 +215,10 @@ public final class JobManager {
                 Debug.logWarning("Unable to poll JobSandbox for jobs; unable to begin transaction.", module);
                 return poll;
             }
-            try (EntityListIterator jobsIterator = EntityQuery.use(delegator).from("JobSandbox").where(mainCondition).orderBy("runTime").queryIterator()) {
+            try (EntityListIterator jobsIterator = EntityQuery.use(delegator)
+                    .from("JobSandbox").where(mainCondition)
+                    .orderBy("priority DESC NULLS LAST", "runTime")
+                    .maxRows(limit).queryIterator()) {
                 GenericValue jobValue = jobsIterator.next();
                 while (jobValue != null) {
                     // Claim ownership of this value. Using storeByCondition to avoid a race condition.
@@ -243,19 +248,24 @@ public final class JobManager {
         }
         if (poll.isEmpty()) {
             // No jobs to run, see if there are any jobs to purge
-            Calendar cal = Calendar.getInstance();
+            Timestamp purgeTime;
             try {
                 int daysToKeep = ServiceConfigUtil.getServiceEngine().getThreadPool().getPurgeJobDays();
-                cal.add(Calendar.DAY_OF_YEAR, -daysToKeep);
+                purgeTime = Timestamp.from(Instant.now().minus(Duration.ofDays(daysToKeep)));
             } catch (GenericConfigException e) {
                 Debug.logWarning(e, "Unable to get purge job days: ", module);
                 return Collections.emptyList();
             }
-            Timestamp purgeTime = new Timestamp(cal.getTimeInMillis());
-            List<EntityExpr> finExp = UtilMisc.toList(EntityCondition.makeCondition("finishDateTime", EntityOperator.NOT_EQUAL, null), EntityCondition.makeCondition("finishDateTime", EntityOperator.LESS_THAN, purgeTime));
-            List<EntityExpr> canExp = UtilMisc.toList(EntityCondition.makeCondition("cancelDateTime", EntityOperator.NOT_EQUAL, null), EntityCondition.makeCondition("cancelDateTime", EntityOperator.LESS_THAN, purgeTime));
-            EntityCondition doneCond = EntityCondition.makeCondition(UtilMisc.toList(EntityCondition.makeCondition(canExp), EntityCondition.makeCondition(finExp)), EntityOperator.OR);
-            mainCondition = EntityCondition.makeCondition(UtilMisc.toList(EntityCondition.makeCondition("runByInstanceId", instanceId), doneCond));
+            List<EntityCondition> purgeCondition = UtilMisc.toList(
+                    EntityCondition.makeCondition("runByInstanceId", instanceId),
+                    EntityCondition.makeCondition(UtilMisc.toList(
+                            EntityCondition.makeCondition(UtilMisc.toList(
+                                    EntityCondition.makeCondition("finishDateTime", EntityOperator.NOT_EQUAL, null),
+                                    EntityCondition.makeCondition("finishDateTime", EntityOperator.LESS_THAN, purgeTime))),
+                            EntityCondition.makeCondition(UtilMisc.toList(
+                                    EntityCondition.makeCondition("cancelDateTime", EntityOperator.NOT_EQUAL, null),
+                                    EntityCondition.makeCondition("cancelDateTime", EntityOperator.LESS_THAN, purgeTime)))),
+                            EntityOperator.OR));
             beganTransaction = false;
             try {
                 beganTransaction = TransactionUtil.begin();
@@ -263,18 +273,12 @@ public final class JobManager {
                     Debug.logWarning("Unable to poll JobSandbox for jobs; unable to begin transaction.", module);
                     return Collections.emptyList();
                 }
-                try (EntityListIterator jobsIterator = EntityQuery.use(delegator).from("JobSandbox").where(mainCondition).orderBy("jobId").queryIterator()) {
-                    GenericValue jobValue = jobsIterator.next();
-                    while (jobValue != null) {
-                        poll.add(new PurgeJob(jobValue));
-                        if (poll.size() == limit) {
-                            break;
-                        }
-                        jobValue = jobsIterator.next();
-                    }
-                } catch (GenericEntityException e) {
-                    Debug.logWarning(e, module);
-                }
+                List<GenericValue> jobs = EntityQuery.use(delegator).from("JobSandbox")
+                        .where(purgeCondition)
+                        .select("jobId")
+                        .maxRows(limit)
+                        .queryList();
+                jobs.forEach(jobValue -> poll.add(new PurgeJob(jobValue)));
                 TransactionUtil.commit(beganTransaction);
             } catch (Throwable t) {
                 String errMsg = "Exception thrown while polling JobSandbox: ";
@@ -553,7 +557,8 @@ public final class JobManager {
             jobName = Long.toString((new Date().getTime()));
         }
         Map<String, Object> jFields = UtilMisc.<String, Object> toMap("jobName", jobName, "runTime", new java.sql.Timestamp(startTime),
-                "serviceName", serviceName, "statusId", "SERVICE_PENDING", "recurrenceInfoId", infoId, "runtimeDataId", dataId);
+                "serviceName", serviceName, "statusId", "SERVICE_PENDING", "recurrenceInfoId", infoId, "runtimeDataId", dataId,
+                "priority", JobPriority.NORMAL);
         // set the pool ID
         if (UtilValidate.isNotEmpty(poolName)) {
             jFields.put("poolId", poolName);
@@ -567,8 +572,8 @@ public final class JobManager {
         // set the loader name
         jFields.put("loaderName", delegator.getDelegatorName());
         // set the max retry
-        jFields.put("maxRetry", Long.valueOf(maxRetry));
-        jFields.put("currentRetryCount", Long.valueOf(0));
+        jFields.put("maxRetry", (long) maxRetry);
+        jFields.put("currentRetryCount", 0L);
         // create the value and store
         GenericValue jobV;
         try {

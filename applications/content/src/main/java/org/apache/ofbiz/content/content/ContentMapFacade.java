@@ -51,7 +51,7 @@ public class ContentMapFacade implements Map<Object, Object> {
 
     public static final String module = ContentMapFacade.class.getName();
 
-    private static final Set<String> mapKeySet = new HashSet<String>();
+    private static final Set<String> mapKeySet = new HashSet<>();
     static {
         mapKeySet.add("fields");
         mapKeySet.add("link");
@@ -136,49 +136,60 @@ public class ContentMapFacade implements Map<Object, Object> {
     }
 
     // interface methods
+    @Override
     public int size() {
         return 1;
     }
 
+    @Override
     public boolean isEmpty() {
         return false;
     }
 
+    @Override
     public boolean containsKey(Object object) {
         return false;
     }
 
+    @Override
     public boolean containsValue(Object object) {
         return false;
     }
 
+    @Override
     public Object put(Object name, Object value) {
         Debug.logWarning("This [put()] method is not implemented in ContentMapFacade", module);
         return null;
     }
 
+    @Override
     public Object remove(Object object) {
         Debug.logWarning("This [remove()] method is not implemented in ContentMapFacade", module);
         return null;
     }
 
+    @Override
     public void putAll(Map<?, ?> map) {
         Debug.logWarning("This method [putAll()] is not implemented in ContentMapFacade", module);
     }
 
+    @Override
     public void clear() {
         Debug.logWarning("This method [clear()] is not implemented in ContentMapFacade", module);
     }
 
+    @Override
     public Set<Object> keySet() {
-        return UtilGenerics.checkSet(mapKeySet);
+        return UtilGenerics.cast(mapKeySet);
     }
 
+    @Override
     public Collection<Object> values() {
         Debug.logWarning("This method [values()] is not implemented in ContentMapFacade", module);
         return null;
     }
 
+    @Override
     public Set<Map.Entry<Object, Object>> entrySet() {
         Debug.logWarning("This method [entrySet()] is not implemented in ContentMapFacade", module);
         return null;
@@ -215,6 +226,7 @@ public class ContentMapFacade implements Map<Object, Object> {
     }
 
     // implemented get method
+    @Override
     public Object get(Object obj) {
         if (!(obj instanceof String)) {
             Debug.logWarning("Key parameters must be a string", module);
@@ -277,10 +289,10 @@ public class ContentMapFacade implements Map<Object, Object> {
             return dataResource;
         } else if ("subcontent_all".equalsIgnoreCase(name)) {
             // subcontent list of ordered subcontent
-            List<ContentMapFacade> subContent = new LinkedList<ContentMapFacade>();
+            List<ContentMapFacade> subContent = new LinkedList<>();
             List<GenericValue> subs = null;
             try {
-                Map<String, Object> expressions = new HashMap<String, Object>();
+                Map<String, Object> expressions = new HashMap<>();
                 expressions.put("contentIdStart", contentId);
                 if(!this.mapKeyFilter.equals("")) {
                     expressions.put("caMapKey", this.mapKeyFilter);
@@ -327,7 +339,7 @@ public class ContentMapFacade implements Map<Object, Object> {
             return "=========> " + errorMsg + " <=========";
         }
         // TODO: change to use the MapStack instead of a cloned Map
-        Map<String, Object> renderCtx = new HashMap<String, Object>();
+        Map<String, Object> renderCtx = new HashMap<>();
         renderCtx.putAll(context);
         if (this.decoratedContent != null) {
             renderCtx.put("decoratedContent", decoratedContent);
@@ -354,50 +366,61 @@ public class ContentMapFacade implements Map<Object, Object> {
     }
 
     abstract class AbstractInfo implements Map<Object, Object> {
+        @Override
         public int size() {
             return 1;
         }
 
+        @Override
         public boolean isEmpty() {
             return false;
         }
 
+        @Override
         public boolean containsKey(Object object) {
             return false;
         }
 
+        @Override
         public boolean containsValue(Object object) {
             return false;
         }
 
+        @Override
         public Object put(Object name, Object value) {
             Debug.logWarning("This [put()] method is not implemented in ContentMapFacade.AbstractInfo", module);
             return null;
         }
 
+        @Override
         public Object remove(Object object) {
             Debug.logWarning("This [remove()] method is not implemented in ContentMapFacade.AbstractInfo", module);
             return null;
         }
 
+        @Override
         public void putAll(Map<?, ?> map) {
             Debug.logWarning("This method [putAll()] is not implemented in ContentMapFacade.AbstractInfo", module);
         }
 
+        @Override
         public void clear() {
             Debug.logWarning("This method [clear()] is not implemented in ContentMapFacade.AbstractInfo", module);
         }
 
+        @Override
         public Set<Object> keySet() {
             Debug.logWarning("This method [keySet()] is not implemented in ContentMapFacade.AbstractInfo", module);
             return null;
         }
 
+        @Override
         public Collection<Object> values() {
             Debug.logWarning("This method [values()] is not implemented in ContentMapFacade.AbstractInfo", module);
             return null;
         }
 
+        @Override
         public Set<Map.Entry<Object, Object>> entrySet() {
             Debug.logWarning("This method [entrySet()] is not implemented in ContentMapFacade.AbstractInfo", module);
             return null;
@@ -452,7 +475,7 @@ public class ContentMapFacade implements Map<Object, Object> {
             // key is the mapKey
             GenericValue sub = null;
             try {
-                Map<String, Object> expressions = new HashMap<String, Object>();
+                Map<String, Object> expressions = new HashMap<>();
                 expressions.put("contentIdStart", contentId);
                 expressions.put("caMapKey", name);
                 if(!this.statusFilter.equals("")) {

@@ -66,7 +66,7 @@ public class RequirementServices {
         EntityCondition requirementConditions = (EntityCondition) context.get("requirementConditions");
         String partyId = (String) context.get("partyId");
         String unassignedRequirements = (String) context.get("unassignedRequirements");
-        List<String> statusIds = UtilGenerics.checkList(context.get("statusIds"));
+        List<String> statusIds = UtilGenerics.cast(context.get("statusIds"));
         //TODO currencyUomId still not used
         try {
             List<EntityCondition> conditions = UtilMisc.toList(
@@ -96,23 +96,23 @@ public class RequirementServices {
                     .queryList();
 
             // maps to cache the associated suppliers and products data, so we don't do redundant DB and service requests
-            Map<String, GenericValue> suppliers = new HashMap<String, GenericValue>();
-            Map<String, GenericValue> gids = new HashMap<String, GenericValue>();
-            Map<String, Map<String, Object>> inventories = new HashMap<String, Map<String,Object>>();
-            Map<String, BigDecimal> productsSold = new HashMap<String, BigDecimal>();
+            Map<String, GenericValue> suppliers = new HashMap<>();
+            Map<String, GenericValue> gids = new HashMap<>();
+            Map<String, Map<String, Object>> inventories = new HashMap<>();
+            Map<String, BigDecimal> productsSold = new HashMap<>();
 
             // to count quantity, running total, and distinct products in list
             BigDecimal quantity = BigDecimal.ZERO;
             BigDecimal amountTotal = BigDecimal.ZERO;
-            Set<String> products = new HashSet<String>();
+            Set<String> products = new HashSet<>();
 
             // time period to count products ordered from, six months ago and the 1st of that month
             Timestamp timePeriodStart = UtilDateTime.getMonthStart(UtilDateTime.nowTimestamp(), 0, -6);
 
             // join in fields with extra data about the suppliers and products
-            List<Map<String, Object>> requirements = new LinkedList<Map<String,Object>>();
+            List<Map<String, Object>> requirements = new LinkedList<>();
             for (GenericValue requirement : requirementAndRoles) {
-                Map<String, Object> union = new HashMap<String, Object>();
+                Map<String, Object> union = new HashMap<>();
                 String productId = requirement.getString("productId");
                 partyId = requirement.getString("partyId");
                 String facilityId = requirement.getString("facilityId");
@@ -153,7 +153,7 @@ public class RequirementServices {
                     if (inventory == null) {
                         inventory = dispatcher.runSync("getInventoryAvailableByFacility", UtilMisc.toMap("productId", productId, "facilityId", facilityId));
                         if (ServiceUtil.isError(inventory)) {
-                            return inventory;
+                            return ServiceUtil.returnError(ServiceUtil.getErrorMessage(inventory));
                         }
                         inventories.put(inventoryKey, inventory);
                     }
@@ -195,7 +195,7 @@ public class RequirementServices {
 
             Map<String, Object> results = ServiceUtil.returnSuccess();
             results.put("requirementsForSupplier", requirements);
-            results.put("distinctProductCount", Integer.valueOf(products.size()));
+            results.put("distinctProductCount", products.size());
             results.put("quantityTotal", quantity);
             results.put("amountTotal", amountTotal);
             return results;
@@ -222,9 +222,9 @@ public class RequirementServices {
                 Debug.logInfo("ProductStore for order ID " + orderId + " not found, requirements not created", module);
                 return ServiceUtil.returnSuccess();
             }
-            String facilityId = productStore.getString("inventoryFacilityId");
-            List<GenericValue> orderItems = order.getRelated("OrderItem", null, null, false);
-            for (GenericValue item : orderItems) {
+            List<GenericValue> orderItemAndShipGroups = EntityQuery.use(delegator).select("orderId", "shipGroupSeqId", "orderItemSeqId").from("OrderItemAndShipGroupAssoc").where("orderId", orderId).distinct().queryList();
+            for (GenericValue orderItemAndShipGroup : orderItemAndShipGroups) {
+                GenericValue item = EntityQuery.use(delegator).from("OrderItem").where("orderId", orderItemAndShipGroup.getString("orderId"), "orderItemSeqId", orderItemAndShipGroup.getString("orderItemSeqId")).queryOne();
                 GenericValue product = item.getRelatedOne("Product", false);
                 if (product == null) continue;
                 if ((!"PRODRQM_AUTO".equals(product.get("requirementMethodEnumId")) &&
@@ -235,15 +235,19 @@ public class RequirementServices {
                 BigDecimal cancelQuantity = item.getBigDecimal("cancelQuantity");
                 BigDecimal required = quantity.subtract(cancelQuantity == null ? BigDecimal.ZERO : cancelQuantity);
                 if (required.compareTo(BigDecimal.ZERO) <= 0) continue;
-
-                Map<String, Object> input = UtilMisc.toMap("userLogin", userLogin, "facilityId", facilityId, "productId", product.get("productId"), "quantity", required, "requirementTypeId", "PRODUCT_REQUIREMENT");
+                GenericValue orderItemShipGroup = EntityQuery.use(delegator).from("OrderItemShipGroup").where("orderId", orderId, "shipGroupSeqId", orderItemAndShipGroup.getString("shipGroupSeqId")).cache().queryOne();
+                Map<String, Object> input = UtilMisc.toMap("userLogin", userLogin, "facilityId", orderItemShipGroup.getString("facilityId"), "productId", product.get("productId"), "quantity", required, "requirementTypeId", "PRODUCT_REQUIREMENT");
                 Map<String, Object> results = dispatcher.runSync("createRequirement", input);
-                if (ServiceUtil.isError(results)) return results;
+                if (ServiceUtil.isError(results)) {
+                    return ServiceUtil.returnError(ServiceUtil.getErrorMessage(results));
+                }
                 String requirementId = (String) results.get("requirementId");
 
                 input = UtilMisc.toMap("userLogin", userLogin, "orderId", order.get("orderId"), "orderItemSeqId", item.get("orderItemSeqId"), "requirementId", requirementId, "quantity", required);
                 results = dispatcher.runSync("createOrderRequirementCommitment", input);
-                if (ServiceUtil.isError(results)) return results;
+                if (ServiceUtil.isError(results)) {
+                    return ServiceUtil.returnError(ServiceUtil.getErrorMessage(results));
+                }
             }
         } catch (GenericEntityException e) {
             Debug.logError(e, module);
@@ -304,7 +308,9 @@ public class RequirementServices {
 
                 // get the facility ATP for product, which should be updated for this item's reservation
                 Map<String, Object> results = dispatcher.runSync("getInventoryAvailableByFacility", UtilMisc.toMap("userLogin", userLogin, "productId", product.get("productId"), "facilityId", facilityId));
-                if (ServiceUtil.isError(results)) return results;
+                if (ServiceUtil.isError(results)) {
+                    return ServiceUtil.returnError(ServiceUtil.getErrorMessage(results));
+                }
                 BigDecimal atp = ((BigDecimal) results.get("availableToPromiseTotal")); // safe since this is a required OUT param
 
                 // count all current requirements for this product
@@ -328,12 +334,16 @@ public class RequirementServices {
 
                 Map<String, Object> input = UtilMisc.toMap("userLogin", userLogin, "facilityId", facilityId, "productId", product.get("productId"), "quantity", required, "requirementTypeId", "PRODUCT_REQUIREMENT");
                 results = dispatcher.runSync("createRequirement", input);
-                if (ServiceUtil.isError(results)) return results;
+                if (ServiceUtil.isError(results)) {
+                    return ServiceUtil.returnError(ServiceUtil.getErrorMessage(results));
+                }
                 String requirementId = (String) results.get("requirementId");
 
                 input = UtilMisc.toMap("userLogin", userLogin, "orderId", order.get("orderId"), "orderItemSeqId", item.get("orderItemSeqId"), "requirementId", requirementId, "quantity", required);
                 results = dispatcher.runSync("createOrderRequirementCommitment", input);
-                if (ServiceUtil.isError(results)) return results;
+                if (ServiceUtil.isError(results)) {
+                    return ServiceUtil.returnError(ServiceUtil.getErrorMessage(results));
+                }
             }
         } catch (GenericEntityException e) {
             Debug.logError(e, module);
@@ -359,7 +369,10 @@ public class RequirementServices {
                     /* Change status of requirement to ordered */
                     Map<String, Object> inputMap = UtilMisc.<String, Object>toMap("userLogin", userLogin, "requirementId", requirementId, "statusId", "REQ_ORDERED", "quantity", orderItem.getBigDecimal("quantity"));
                     // TODO: check service result for an error return
-                    dispatcher.runSync("updateRequirement", inputMap);
+                    Map<String, Object> results = dispatcher.runSync("updateRequirement", inputMap);
+                    if (ServiceUtil.isError(results)) {
+                        return ServiceUtil.returnError(ServiceUtil.getErrorMessage(results));
+                    }
                 }
             }
         } catch(GenericEntityException e){

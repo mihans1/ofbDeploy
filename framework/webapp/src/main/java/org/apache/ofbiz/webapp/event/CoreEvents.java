@@ -18,7 +18,6 @@
  *******************************************************************************/
 package org.apache.ofbiz.webapp.event;
 
-import static org.apache.ofbiz.base.util.UtilGenerics.checkCollection;
 import static org.apache.ofbiz.base.util.UtilGenerics.checkMap;
 
 import java.io.File;
@@ -39,11 +38,15 @@ import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 
 import org.apache.ofbiz.base.util.Debug;
+import org.apache.ofbiz.base.util.UtilGenerics;
 import org.apache.ofbiz.base.util.UtilHttp;
 import org.apache.ofbiz.base.util.UtilProperties;
 import org.apache.ofbiz.base.util.UtilValidate;
+import org.apache.ofbiz.entity.Delegator;
 import org.apache.ofbiz.entity.GenericEntity;
+import org.apache.ofbiz.entity.GenericEntityException;
 import org.apache.ofbiz.entity.GenericValue;
+import org.apache.ofbiz.entity.util.EntityQuery;
 import org.apache.ofbiz.security.Security;
 import org.apache.ofbiz.service.GenericServiceException;
 import org.apache.ofbiz.service.LocalDispatcher;
@@ -107,7 +110,7 @@ public class CoreEvents {
         Security security = (Security) request.getAttribute("security");
         GenericValue userLogin = (GenericValue) request.getSession().getAttribute("userLogin");
         LocalDispatcher dispatcher = (LocalDispatcher) request.getAttribute("dispatcher");
-        //Delegator delegator = (Delegator) request.getAttribute("delegator");
+        Delegator delegator = (Delegator) request.getAttribute("delegator");
         Locale locale = UtilHttp.getLocale(request);
         TimeZone timeZone = UtilHttp.getTimeZone(request);
 
@@ -122,17 +125,18 @@ public class CoreEvents {
         String serviceIntr = (String) params.remove("SERVICE_INTERVAL");
         String serviceCnt = (String) params.remove("SERVICE_COUNT");
         String retryCnt = (String) params.remove("SERVICE_MAXRETRY");
+        String runAsSystemUser = (String) params.remove("SERVICE_RUN_AS_SYSTEM");
 
         // the frequency map
-        Map<String, Integer> freqMap = new HashMap<String, Integer>();
+        Map<String, Integer> freqMap = new HashMap<>();
 
-        freqMap.put("SECONDLY", Integer.valueOf(1));
-        freqMap.put("MINUTELY", Integer.valueOf(2));
-        freqMap.put("HOURLY", Integer.valueOf(3));
-        freqMap.put("DAILY", Integer.valueOf(4));
-        freqMap.put("WEEKLY", Integer.valueOf(5));
-        freqMap.put("MONTHLY", Integer.valueOf(6));
-        freqMap.put("YEARLY", Integer.valueOf(7));
+        freqMap.put("SECONDLY", 1);
+        freqMap.put("MINUTELY", 2);
+        freqMap.put("HOURLY", 3);
+        freqMap.put("DAILY", 4);
+        freqMap.put("WEEKLY", 5);
+        freqMap.put("MONTHLY", 6);
+        freqMap.put("YEARLY", 7);
 
         // some defaults
         long startTime = (new Date()).getTime();
@@ -168,7 +172,7 @@ public class CoreEvents {
         }
 
         // make the context valid; using the makeValid method from ModelService
-        Map<String, Object> serviceContext = new HashMap<String, Object>();
+        Map<String, Object> serviceContext = new HashMap<>();
         Iterator<String> ci = modelService.getInParamNames().iterator();
         while (ci.hasNext()) {
             String name = ci.next();
@@ -204,6 +208,17 @@ public class CoreEvents {
 
         if (userLogin != null) {
             serviceContext.put("userLogin", userLogin);
+        }
+
+        // Override the userLogin with system when runAsSystem is Y
+        if ("Y".equals(runAsSystemUser)) {
+            try {
+                userLogin = EntityQuery.use(delegator).from("UserLogin").where("userLoginId", "system").queryOne();
+                serviceContext.put("userLogin", userLogin);
+            } catch (GenericEntityException e) {
+                request.setAttribute("_ERROR_MESSAGE_", e.getMessage());
+                return "error";
+            }
         }
 
         if (locale != null) {
@@ -282,7 +297,7 @@ public class CoreEvents {
                     String errMsg = UtilProperties.getMessage(CoreEvents.err_resource, "coreEvents.invalid_format_frequency", locale);
                     errorBuf.append(errMsg);
                 } else {
-                    frequency = freqMap.get(serviceFreq.toUpperCase()).intValue();
+                    frequency = freqMap.get(serviceFreq.toUpperCase());
                 }
             }
         }
@@ -346,7 +361,7 @@ public class CoreEvents {
             session.removeAttribute("_SAVED_SYNC_RESULT_");
 
         Map<String, String[]> serviceFieldsToSave = checkMap(request.getParameterMap(), String.class, String[].class);
-        Map<String, Object> savedFields = new HashMap<String, Object>();
+        Map<String, Object> savedFields = new HashMap<>();
 
         for (Map.Entry<String, String[]> entry : serviceFieldsToSave.entrySet()) {
             String key = entry.getKey();
@@ -380,17 +395,17 @@ public class CoreEvents {
             servicePathMap = null;
 
             if (servicePathObject instanceof Map<?, ?>) {
-                servicePathMap = checkMap(servicePathObject);
+                servicePathMap = UtilGenerics.cast(servicePathObject);
             } else if (servicePathObject instanceof GenericEntity) {
                 GenericEntity servicePathEntity = (GenericEntity)servicePathObject;
-                servicePathMap = new HashMap<String, Object>();
+                servicePathMap = new HashMap<>();
                 for (Map.Entry<String, Object> entry: servicePathEntity.entrySet()) {
                     servicePathMap.put(entry.getKey(), entry.getValue());
                 }
             } else if (servicePathObject instanceof Collection<?>) {
-                Collection<?> servicePathColl = checkCollection(servicePathObject);
+                Collection<?> servicePathColl = UtilGenerics.cast(servicePathObject);
                 int count=0;
-                servicePathMap = new HashMap<String, Object>();
+                servicePathMap = new HashMap<>();
                 for (Object value: servicePathColl) {
                     servicePathMap.put("_"+count+"_", value);
                     count++;
@@ -472,14 +487,12 @@ public class CoreEvents {
     }
 
     public static String streamFile(HttpServletRequest request, HttpServletResponse response) {
-        //RequestHandler rh = (RequestHandler) request.getAttribute("_REQUEST_HANDLER_");
         String filePath = RequestHandler.getOverrideViewUri(request.getPathInfo());
-        //String fileName = filePath.substring(filePath.lastIndexOf("/")+1);
 
         // load the file
         File file = new File(filePath);
         if (file.exists()) {
-            Long longLen = Long.valueOf(file.length());
+            Long longLen = file.length();
             int length = longLen.intValue();
             try {
                 FileInputStream fis = new FileInputStream(file);

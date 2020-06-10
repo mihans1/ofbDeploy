@@ -94,7 +94,7 @@ public class OutputServices {
             visualTheme = ThemeFactory.resolveVisualTheme(null);
         }        
         String screenLocation = (String) serviceContext.remove("screenLocation");
-        Map<String, Object> screenContext = UtilGenerics.checkMap(serviceContext.remove("screenContext"));
+        Map<String, Object> screenContext = UtilGenerics.cast(serviceContext.remove("screenContext"));
         String contentType = (String) serviceContext.remove("contentType");
         String printerContentType = (String) serviceContext.remove("printerContentType");
 
@@ -142,7 +142,7 @@ public class OutputServices {
             InputStream bais = new ByteArrayInputStream(baos.toByteArray());
 
             DocAttributeSet docAttributeSet = new HashDocAttributeSet();
-            List<Object> docAttributes = UtilGenerics.checkList(serviceContext.remove("docAttributes"));
+            List<Object> docAttributes = UtilGenerics.cast(serviceContext.remove("docAttributes"));
             if (UtilValidate.isNotEmpty(docAttributes)) {
                 for (Object da : docAttributes) {
                     Debug.logInfo("Adding DocAttribute: " + da, module);
@@ -187,7 +187,7 @@ public class OutputServices {
             }
 
             PrintRequestAttributeSet praset = new HashPrintRequestAttributeSet();
-            List<Object> printRequestAttributes = UtilGenerics.checkList(serviceContext.remove("printRequestAttributes"));
+            List<Object> printRequestAttributes = UtilGenerics.cast(serviceContext.remove("printRequestAttributes"));
             if (UtilValidate.isNotEmpty(printRequestAttributes)) {
                 for (Object pra : printRequestAttributes) {
                     Debug.logInfo("Adding PrintRequestAttribute: " + pra, module);
@@ -212,7 +212,7 @@ public class OutputServices {
             visualTheme = ThemeFactory.resolveVisualTheme(null);
         }        
         String screenLocation = (String) serviceContext.remove("screenLocation");
-        Map<String, Object> screenContext = UtilGenerics.checkMap(serviceContext.remove("screenContext"));
+        Map<String, Object> screenContext = UtilGenerics.cast(serviceContext.remove("screenContext"));
         String contentType = (String) serviceContext.remove("contentType");
         String filePath = (String) serviceContext.remove("filePath");
         String fileName = (String) serviceContext.remove("fileName");

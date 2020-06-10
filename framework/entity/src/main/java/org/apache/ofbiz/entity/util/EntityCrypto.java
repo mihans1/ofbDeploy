@@ -19,11 +19,11 @@
 package org.apache.ofbiz.entity.util;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.security.Key;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.util.Random;
-import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
@@ -33,7 +33,6 @@ import org.apache.ofbiz.base.crypto.HashCrypt;
 import org.apache.ofbiz.base.util.Debug;
 import org.apache.ofbiz.base.util.GeneralException;
 import org.apache.ofbiz.base.util.StringUtil;
-import org.apache.ofbiz.base.util.UtilIO;
 import org.apache.ofbiz.base.util.UtilObject;
 import org.apache.ofbiz.base.util.UtilValidate;
 import org.apache.ofbiz.entity.Delegator;
@@ -53,7 +52,7 @@ public final class EntityCrypto {
     public static final String module = EntityCrypto.class.getName();
 
     private final Delegator delegator;
-    private final ConcurrentMap<String, byte[]> keyMap = new ConcurrentHashMap<String, byte[]>();
+    private final ConcurrentMap<String, byte[]> keyMap = new ConcurrentHashMap<>();
     private final StorageHandler[] handlers;
 
     public EntityCrypto(Delegator delegator, String kekText) throws EntityCryptoException {
@@ -206,11 +205,9 @@ public final class EntityCrypto {
         newValue.set("keyName", hashedKeyName);
 
         try {
-            TransactionUtil.doNewTransaction(new Callable<Void>() {
-                public Void call() throws Exception {
-                    delegator.create(newValue);
-                    return null;
-                }
+            TransactionUtil.doNewTransaction(() -> {
+                delegator.create(newValue);
+                return null;
             }, "storing encrypted key", 0, true);
         } catch (GenericEntityException e) {
             throw new EntityCryptoException(e);
@@ -328,7 +325,7 @@ public final class EntityCrypto {
         protected String encryptValue(EncryptMethod encryptMethod, byte[] key, byte[] objBytes) throws GeneralException {
             return StringUtil.toHexString(DesCrypt.encrypt(DesCrypt.getDesKey(key), objBytes));
         }
-    };
+    }
 
     protected static final StorageHandler OldFunnyHashStorageHandler = new LegacyStorageHandler() {
         @Override
@@ -380,7 +377,7 @@ public final class EntityCrypto {
 
         @Override
         protected String getHashedKeyName(String originalKeyName) {
-            return HashCrypt.digestHash64("SHA", originalKeyName.getBytes(UtilIO.getUtf8()));
+            return HashCrypt.digestHash64("SHA", originalKeyName.getBytes(StandardCharsets.UTF_8));
         }
 
         @Override
@@ -435,5 +432,5 @@ public final class EntityCrypto {
             String result = Base64.encodeBase64String(DesCrypt.encrypt(DesCrypt.getDesKey(key), allBytes));
             return result;
         }
-    };
+    }
 }

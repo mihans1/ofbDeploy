@@ -18,8 +18,12 @@
  */
 package org.apache.ofbiz.common;
 
-import static org.junit.Assert.*;
-import static org.hamcrest.CoreMatchers.*;
+import static org.hamcrest.CoreMatchers.both;
+import static org.hamcrest.CoreMatchers.hasItem;
+import static org.hamcrest.CoreMatchers.hasItems;
+import static org.hamcrest.CoreMatchers.not;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertThat;
 
 import java.util.HashMap;
 import java.util.HashSet;
@@ -52,7 +56,7 @@ public class GetLocaleListTests {
         return (List<Map<String, String>>) gContext.get("locales");
     }
 
-    static private List<String> localeStrings(List<Map<String, String>> locales) {
+    private static List<String> localeStrings(List<Map<String, String>> locales) {
         return locales.stream()
             .map(m -> m.get("localeString"))
             .collect(Collectors.toList());
@@ -79,6 +83,6 @@ public class GetLocaleListTests {
         params.put("localeString", "fr");
         List<Map<String, String>> res = runScript();
         assertThat(localeStrings(res), hasItems("en_ZA", "fr", "fr_BE", "fr_CA", "fr_FR", "fr_LU", "fr_CH"));
-        assertEquals(new HashSet<String>(localeStrings(res)).size(), localeStrings(res).size());
+        assertEquals(new HashSet<>(localeStrings(res)).size(), localeStrings(res).size());
     }
 }

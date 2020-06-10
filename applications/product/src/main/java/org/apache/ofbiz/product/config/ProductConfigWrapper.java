@@ -21,9 +21,18 @@ package org.apache.ofbiz.product.config;
 
 import java.io.Serializable;
 import java.math.BigDecimal;
-import java.util.*;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
 
 import org.apache.ofbiz.base.util.Debug;
+import org.apache.ofbiz.base.util.GeneralException;
 import org.apache.ofbiz.base.util.UtilMisc;
 import org.apache.ofbiz.base.util.UtilValidate;
 import org.apache.ofbiz.entity.Delegator;
@@ -33,6 +42,7 @@ import org.apache.ofbiz.entity.GenericValue;
 import org.apache.ofbiz.entity.util.EntityQuery;
 import org.apache.ofbiz.service.LocalDispatcher;
 import org.apache.ofbiz.service.ServiceContainer;
+import org.apache.ofbiz.service.ServiceUtil;
 
 /**
  * Product Config Wrapper: gets product config to display
@@ -105,6 +115,10 @@ public class ProductConfigWrapper implements Serializable {
         Map<String, Object> priceContext = UtilMisc.toMap("product", product, "prodCatalogId", catalogId, "webSiteId", webSiteId, "productStoreId", productStoreId,
                                       "currencyUomId", currencyUomId, "autoUserLogin", autoUserLogin);
         Map<String, Object> priceMap = dispatcher.runSync("calculateProductPrice", priceContext);
+        if (ServiceUtil.isError(priceMap)) {
+            String errorMessage = ServiceUtil.getErrorMessage(priceMap);
+            throw new GeneralException(errorMessage);
+        }
         BigDecimal originalListPrice = (BigDecimal) priceMap.get("listPrice");
         BigDecimal price = (BigDecimal) priceMap.get("price");
         if (originalListPrice != null) {
@@ -126,7 +140,7 @@ public class ProductConfigWrapper implements Serializable {
                     itemIds.add(oneQuestion.getConfigItem().getString("configItemId"));
                 }
                 questions.add(oneQuestion);
-                List<GenericValue> configOptions = EntityQuery.use(delegator).from("ProductConfigOption").where("configItemId", oneQuestion.getConfigItemAssoc().getString("configItemId")).orderBy("sequenceNum").queryList();
+                List<GenericValue> configOptions = EntityQuery.use(delegator).from("ProductConfigOption").where("configItemId", oneQuestion.getConfigItemAssoc().getString("configItemId")).orderBy("sequenceNum").filterByDate().queryList();
                 for (GenericValue configOption: configOptions) {
                     ConfigOption option = new ConfigOption(delegator, dispatcher, configOption, oneQuestion, catalogId, webSiteId, currencyUomId, autoUserLogin);
                     oneQuestion.addOption(option);
@@ -535,6 +549,7 @@ public class ProductConfigWrapper implements Serializable {
         public String toString() {
             return configItem.getString("configItemId");
         }
+
     }
 
     public class ConfigOption implements java.io.Serializable {
@@ -559,6 +574,10 @@ public class ProductConfigWrapper implements Serializable {
                 // Get the component's price
                 Map<String, Object> fieldMap = UtilMisc.toMap("product", oneComponent.getRelatedOne("ProductProduct", false), "prodCatalogId", catalogId, "webSiteId", webSiteId, "currencyUomId", currencyUomId, "productPricePurposeId", "COMPONENT_PRICE", "autoUserLogin", autoUserLogin, "productStoreId",productStoreId);
                 Map<String, Object> priceMap = dispatcher.runSync("calculateProductPrice", fieldMap);
+                if (ServiceUtil.isError(priceMap)) {
+                    String errorMessage = ServiceUtil.getErrorMessage(priceMap);
+                    throw new GeneralException(errorMessage);
+                }
                 BigDecimal componentListPrice = (BigDecimal) priceMap.get("listPrice");
                 BigDecimal componentPrice = (BigDecimal) priceMap.get("price");
                 Boolean validPriceFound = (Boolean)priceMap.get("validPriceFound");
@@ -569,7 +588,7 @@ public class ProductConfigWrapper implements Serializable {
                 if (mult.compareTo(BigDecimal.ZERO) == 0) {
                     mult = BigDecimal.ONE;
                 }
-                if (validPriceFound.booleanValue()) {
+                if (validPriceFound) {
                     if (componentListPrice != null) {
                         listPrice = componentListPrice;
                     }
@@ -579,6 +598,10 @@ public class ProductConfigWrapper implements Serializable {
                 } else {
                     fieldMap.put("productPricePurposeId", "PURCHASE");
                     Map<String, Object> purchasePriceResultMap = dispatcher.runSync("calculateProductPrice", fieldMap);
+                    if (ServiceUtil.isError(purchasePriceResultMap)) {
+                        String errorMessage = ServiceUtil.getErrorMessage(purchasePriceResultMap);
+                        throw new GeneralException(errorMessage);
+                    }
                     BigDecimal purchaseListPrice = (BigDecimal) purchasePriceResultMap.get("listPrice");
                     BigDecimal purchasePrice = (BigDecimal) purchasePriceResultMap.get("price");
                     if (purchaseListPrice != null) {
@@ -625,6 +648,11 @@ public class ProductConfigWrapper implements Serializable {
                 // Get the component's price
                 Map<String, Object> fieldMap = UtilMisc.toMap("product", oneComponentProduct, "prodCatalogId", pcw.catalogId, "webSiteId", pcw.webSiteId, "currencyUomId", pcw.currencyUomId, "productPricePurposeId", "COMPONENT_PRICE", "autoUserLogin", pcw.autoUserLogin, "productStoreId",productStoreId);
                 Map<String, Object> priceMap = pcw.getDispatcher().runSync("calculateProductPrice", fieldMap);
+                Map<String, Object> purchasePriceResultMap = dispatcher.runSync("calculateProductPrice", fieldMap);
+                if (ServiceUtil.isError(purchasePriceResultMap)) {
+                    String errorMessage = ServiceUtil.getErrorMessage(purchasePriceResultMap);
+                    throw new GeneralException(errorMessage);
+                }
                 BigDecimal componentListPrice = (BigDecimal) priceMap.get("listPrice");
                 BigDecimal componentPrice = (BigDecimal) priceMap.get("price");
                 Boolean validPriceFound = (Boolean)priceMap.get("validPriceFound");
@@ -635,7 +663,7 @@ public class ProductConfigWrapper implements Serializable {
                 if (mult.compareTo(BigDecimal.ZERO) == 0) {
                     mult = BigDecimal.ONE;
                 }
-                if (validPriceFound.booleanValue()) {
+                if (validPriceFound) {
                     if (componentListPrice != null) {
                         listPrice = componentListPrice;
                     }
@@ -644,7 +672,11 @@ public class ProductConfigWrapper implements Serializable {
                     }
                 } else {
                     fieldMap.put("productPricePurposeId", "PURCHASE");
-                    Map<String, Object> purchasePriceResultMap = pcw.getDispatcher().runSync("calculateProductPrice", fieldMap);
+                    purchasePriceResultMap = pcw.getDispatcher().runSync("calculateProductPrice", fieldMap);
+                    if (ServiceUtil.isError(purchasePriceResultMap)) {
+                        String errorMessage = ServiceUtil.getErrorMessage(purchasePriceResultMap);
+                        throw new GeneralException(errorMessage);
+                    }
                     BigDecimal purchaseListPrice = (BigDecimal) purchasePriceResultMap.get("listPrice");
                     BigDecimal purchasePrice = (BigDecimal) purchasePriceResultMap.get("price");
                     if (purchaseListPrice != null) {
@@ -716,10 +748,7 @@ public class ProductConfigWrapper implements Serializable {
 
         public boolean isDefault() {
             ConfigOption defaultConfigOption = parentConfigItem.getDefault();
-            if (this.equals(defaultConfigOption)) {
-                return true;
-            }
-            return false;
+            return this.equals(defaultConfigOption);
         }
 
         public boolean hasVirtualComponent () {

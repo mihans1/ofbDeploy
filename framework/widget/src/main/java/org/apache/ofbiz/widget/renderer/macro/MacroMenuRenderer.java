@@ -27,7 +27,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import javax.servlet.ServletContext;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
@@ -85,8 +84,7 @@ public class MacroMenuRenderer implements MenuStringRenderer {
                 boolean fullPath = false;
                 boolean secure = false;
                 boolean encode = false;
-                ServletContext ctx = (ServletContext) request.getAttribute("servletContext");
-                RequestHandler rh = (RequestHandler) ctx.getAttribute("_REQUEST_HANDLER_");
+                RequestHandler rh = RequestHandler.from(request);
                 src = rh.makeLink(request, response, src, fullPath, secure, encode);
             } else if ("content".equalsIgnoreCase(urlMode)) {
                 StringBuilder newURL = new StringBuilder();
@@ -145,7 +143,7 @@ public class MacroMenuRenderer implements MenuStringRenderer {
         return environment;
     }
 
-    private boolean isDisableIfEmpty(ModelMenuItem menuItem, Map<String, Object> context) {
+    private static boolean isDisableIfEmpty(ModelMenuItem menuItem, Map<String, Object> context) {
         boolean disabled = false;
         String disableIfEmpty = menuItem.getDisableIfEmpty();
         if (UtilValidate.isNotEmpty(disableIfEmpty)) {
@@ -161,12 +159,12 @@ public class MacroMenuRenderer implements MenuStringRenderer {
         return disabled;
     }
 
-    private boolean isHideIfSelected(ModelMenuItem menuItem, Map<String, Object> context) {
+    private static boolean isHideIfSelected(ModelMenuItem menuItem, Map<String, Object> context) {
         ModelMenu menu = menuItem.getModelMenu();
         String currentMenuItemName = menu.getSelectedMenuItemContextFieldName(context);
         String currentItemName = menuItem.getName();
         Boolean hideIfSelected = menuItem.getHideIfSelected();
-        return (hideIfSelected != null && hideIfSelected.booleanValue() && currentMenuItemName != null && currentMenuItemName.equals(currentItemName));
+        return (hideIfSelected != null && hideIfSelected && currentMenuItemName != null && currentMenuItemName.equals(currentItemName));
     }
 
     @Override
@@ -313,7 +311,7 @@ public class MacroMenuRenderer implements MenuStringRenderer {
             }
             style += selectedStyle ;
         }
-        if (this.isDisableIfEmpty(menuItem, context)) {
+        if (isDisableIfEmpty(menuItem, context)) {
             style = menuItem.getDisabledTitleStyle();
         }
         if (style == null) {

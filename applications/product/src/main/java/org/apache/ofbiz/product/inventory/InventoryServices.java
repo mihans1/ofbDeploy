@@ -604,7 +604,7 @@ public class InventoryServices {
                 /* Check the split preference. */
                 boolean maySplit = false;
                 if (orderItemShipGroup.get("maySplit") != null) {
-                    maySplit = orderItemShipGroup.getBoolean("maySplit").booleanValue();
+                    maySplit = orderItemShipGroup.getBoolean("maySplit");
                 }
 
                 /* Figure out if we must cancel all items. */
@@ -677,7 +677,7 @@ public class InventoryServices {
      * */
     public static Map<String, Object> getProductInventoryAvailableFromAssocProducts(DispatchContext dctx, Map<String, ? extends Object> context) {
         LocalDispatcher dispatcher = dctx.getDispatcher();
-        List<GenericValue> productAssocList = UtilGenerics.checkList(context.get("assocProducts"));
+        List<GenericValue> productAssocList = UtilGenerics.cast(context.get("assocProducts"));
         String facilityId = (String)context.get("facilityId");
         String statusId = (String)context.get("statusId");
 
@@ -749,7 +749,7 @@ public class InventoryServices {
     public static Map<String, Object> getProductInventorySummaryForItems(DispatchContext dctx, Map<String, ? extends Object> context) {
         Delegator delegator = dctx.getDelegator();
         LocalDispatcher dispatcher = dctx.getDispatcher();
-        List<GenericValue> orderItems = UtilGenerics.checkList(context.get("orderItems"));
+        List<GenericValue> orderItems = UtilGenerics.cast(context.get("orderItems"));
         String facilityId = (String) context.get("facilityId");
         Locale locale = (Locale) context.get("locale");
         Map<String, BigDecimal> atpMap = new HashMap<>();
@@ -937,9 +937,9 @@ public class InventoryServices {
             salesUsageViewEntity.addMemberEntity("OH", "OrderHeader");
             salesUsageViewEntity.addMemberEntity("ItIss", "ItemIssuance");
             salesUsageViewEntity.addMemberEntity("InvIt", "InventoryItem");
-            salesUsageViewEntity.addViewLink("OI", "OH", Boolean.valueOf(false), ModelKeyMap.makeKeyMapList("orderId"));
-            salesUsageViewEntity.addViewLink("OI", "ItIss", Boolean.valueOf(false), ModelKeyMap.makeKeyMapList("orderId", "orderId", "orderItemSeqId", "orderItemSeqId"));
-            salesUsageViewEntity.addViewLink("ItIss", "InvIt", Boolean.valueOf(false), ModelKeyMap.makeKeyMapList("inventoryItemId"));
+            salesUsageViewEntity.addViewLink("OI", "OH", Boolean.FALSE, ModelKeyMap.makeKeyMapList("orderId"));
+            salesUsageViewEntity.addViewLink("OI", "ItIss", Boolean.FALSE, ModelKeyMap.makeKeyMapList("orderId", "orderId", "orderItemSeqId", "orderItemSeqId"));
+            salesUsageViewEntity.addViewLink("ItIss", "InvIt", Boolean.FALSE, ModelKeyMap.makeKeyMapList("inventoryItemId"));
             salesUsageViewEntity.addAlias("OI", "productId");
             salesUsageViewEntity.addAlias("OH", "statusId");
             salesUsageViewEntity.addAlias("OH", "orderTypeId");
@@ -952,8 +952,8 @@ public class InventoryServices {
             productionUsageViewEntity.addMemberEntity("WEIA", "WorkEffortInventoryAssign");
             productionUsageViewEntity.addMemberEntity("WE", "WorkEffort");
             productionUsageViewEntity.addMemberEntity("II", "InventoryItem");
-            productionUsageViewEntity.addViewLink("WEIA", "WE", Boolean.valueOf(false), ModelKeyMap.makeKeyMapList("workEffortId"));
-            productionUsageViewEntity.addViewLink("WEIA", "II", Boolean.valueOf(false), ModelKeyMap.makeKeyMapList("inventoryItemId"));
+            productionUsageViewEntity.addViewLink("WEIA", "WE", Boolean.FALSE, ModelKeyMap.makeKeyMapList("workEffortId"));
+            productionUsageViewEntity.addViewLink("WEIA", "II", Boolean.FALSE, ModelKeyMap.makeKeyMapList("inventoryItemId"));
             productionUsageViewEntity.addAlias("WEIA", "quantity");
             productionUsageViewEntity.addAlias("WE", "actualCompletionDate");
             productionUsageViewEntity.addAlias("WE", "workEffortTypeId");

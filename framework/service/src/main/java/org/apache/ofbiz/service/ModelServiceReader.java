@@ -213,13 +213,13 @@ public class ModelServiceReader implements Serializable {
 
         // set the max retry field
         String maxRetryStr = UtilXml.checkEmpty(serviceElement.getAttribute("max-retry"));
-        int maxRetry = -1;
+        int maxRetry = 0;
         if (UtilValidate.isNotEmpty(maxRetryStr)) {
             try {
                 maxRetry = Integer.parseInt(maxRetryStr);
             } catch (NumberFormatException e) {
-                Debug.logWarning(e, "Setting maxRetry to -1 (default)", module);
-                maxRetry = -1;
+                Debug.logWarning(e, "Setting maxRetry to 0 (default)", module);
+                maxRetry = 0;
             }
         }
         service.maxRetry = maxRetry;
@@ -242,15 +242,15 @@ public class ModelServiceReader implements Serializable {
 
         // construct the context
         service.contextInfo = new HashMap<>();
-        this.createNotification(serviceElement, service);
-        this.createPermission(serviceElement, service);
-        this.createPermGroups(serviceElement, service);
-        this.createGroupDefs(serviceElement, service);
-        this.createImplDefs(serviceElement, service);
+        createNotification(serviceElement, service);
+        createAloneServicePermission(serviceElement, service);
+        createPermGroups(serviceElement, service);
+        createGroupDefs(serviceElement, service);
+        createImplDefs(serviceElement, service);
         this.createAutoAttrDefs(serviceElement, service);
-        this.createAttrDefs(serviceElement, service);
-        this.createOverrideDefs(serviceElement, service);
-        this.createDeprecated(serviceElement, service);
+        createAttrDefs(serviceElement, service);
+        createOverrideDefs(serviceElement, service);
+        createDeprecated(serviceElement, service);
         // Get metrics.
         Element metricsElement = UtilXml.firstChildElement(serviceElement, "metric");
         if (metricsElement != null) {
@@ -259,7 +259,7 @@ public class ModelServiceReader implements Serializable {
         return service;
     }
 
-    private String getCDATADef(Element baseElement, String tagName) {
+    private static String getCDATADef(Element baseElement, String tagName) {
         String value = "";
         NodeList nl = baseElement.getElementsByTagName(tagName);
 
@@ -277,7 +277,7 @@ public class ModelServiceReader implements Serializable {
         return value;
     }
 
-    private void createNotification(Element baseElement, ModelService model) {
+    private static void createNotification(Element baseElement, ModelService model) {
         List<? extends Element> n = UtilXml.childElementList(baseElement, "notification");
         // default notification groups
         ModelNotification nSuccess = new ModelNotification();
@@ -305,17 +305,29 @@ public class ModelServiceReader implements Serializable {
         }
     }
 
-    private void createPermission(Element baseElement, ModelService model) {
+    private static ModelPermission createServicePermission(Element e, ModelService model) {
+        ModelPermission modelPermission = new ModelPermission();
+        modelPermission.permissionType = ModelPermission.PERMISSION_SERVICE;
+        modelPermission.permissionServiceName = e.getAttribute("service-name");
+        modelPermission.permissionMainAction = e.getAttribute("main-action");
+        modelPermission.permissionResourceDesc = e.getAttribute("resource-description");
+        modelPermission.permissionRequireNewTransaction = !"false".equalsIgnoreCase(e.getAttribute("require-new-transaction"));
+        modelPermission.serviceModel = model;
+        return modelPermission;
+    }
+
+    private static void createAloneServicePermission(Element baseElement, ModelService model) {
         Element e = UtilXml.firstChildElement(baseElement, "permission-service");
         if (e != null) {
-            model.permissionServiceName = e.getAttribute("service-name");
-            model.permissionMainAction = e.getAttribute("main-action");
-            model.permissionResourceDesc = e.getAttribute("resource-description");
-            model.auth = true; // auth is always required when permissions are set
+            ModelPermission modelPermission = createServicePermission(e, model);
+            model.modelPermission = modelPermission;
+
+            // auth is always required when permissions are set
+            model.auth = true;
         }
     }
 
-    private void createPermGroups(Element baseElement, ModelService model) {
+    private static void createPermGroups(Element baseElement, ModelService model) {
         for (Element element: UtilXml.childElementList(baseElement, "required-permissions")) {
             ModelPermGroup group = new ModelPermGroup();
             group.joinType = element.getAttribute("join-type");
@@ -324,7 +336,7 @@ public class ModelServiceReader implements Serializable {
         }
     }
 
-    private void createGroupPermissions(Element baseElement, ModelPermGroup group, ModelService service) {
+    private static void createGroupPermissions(Element baseElement, ModelPermGroup group, ModelService service) {
         // create the simple permissions
         for (Element element: UtilXml.childElementList(baseElement, "check-permission")) {
             ModelPermission perm = new ModelPermission();
@@ -341,20 +353,15 @@ public class ModelServiceReader implements Serializable {
 
         // Create the permissions based on permission services
         for (Element element : UtilXml.childElementList(baseElement, "permission-service")) {
-            ModelPermission perm = new ModelPermission();
-            if (baseElement != null) {
-                perm.permissionType = ModelPermission.PERMISSION_SERVICE;
-                perm.permissionServiceName = element.getAttribute("service-name");
-                perm.action = element.getAttribute("main-action");
-                perm.permissionResourceDesc = element.getAttribute("resource-description");
-                perm.auth = true; // auth is always required when permissions are set
-                perm.serviceModel = service;
-                group.permissions.add(perm);
-            }
+            group.permissions.add(createServicePermission(element, service));
+        }
+        if (UtilValidate.isNotEmpty(group.permissions)) {
+            // auth is always required when permissions are set
+            service.auth = true;
         }
     }
 
-    private void createGroupDefs(Element baseElement, ModelService service) {
+    private static void createGroupDefs(Element baseElement, ModelService service) {
         List<? extends Element> group = UtilXml.childElementList(baseElement, "group");
         if (UtilValidate.isNotEmpty(group)) {
             Element groupElement = group.get(0);
@@ -367,7 +374,7 @@ public class ModelServiceReader implements Serializable {
         }
     }
 
-    private void createImplDefs(Element baseElement, ModelService service) {
+    private static void createImplDefs(Element baseElement, ModelService service) {
         for (Element implement: UtilXml.childElementList(baseElement, "implements")) {
             String serviceName = UtilXml.checkEmpty(implement.getAttribute("service")).intern();
             boolean optional = UtilXml.checkBoolean(implement.getAttribute("optional"), false);
@@ -454,7 +461,7 @@ public class ModelServiceReader implements Serializable {
         }
     }
 
-    private void createAttrDefs(Element baseElement, ModelService service) {
+    private static void createAttrDefs(Element baseElement, ModelService service) {
         // Add in the defined attributes (override the above defaults if specified)
         for (Element attribute: UtilXml.childElementList(baseElement, "attribute")) {
             ModelParam param = new ModelParam();
@@ -494,7 +501,7 @@ public class ModelServiceReader implements Serializable {
             }
 
             // set the validators
-            this.addValidators(attribute, param);
+            addValidators(attribute, param);
             service.addParam(param);
         }
 
@@ -591,7 +598,7 @@ public class ModelServiceReader implements Serializable {
         service.addParam(def);
     }
 
-    private void createOverrideDefs(Element baseElement, ModelService service) {
+    private static void createOverrideDefs(Element baseElement, ModelService service) {
         for (Element overrideElement: UtilXml.childElementList(baseElement, "override")) {
             String name = UtilXml.checkEmpty(overrideElement.getAttribute("name"));
             ModelParam param = service.getParam(name);
@@ -645,7 +652,7 @@ public class ModelServiceReader implements Serializable {
                 }
 
                 // override validators
-                this.addValidators(overrideElement, param);
+                addValidators(overrideElement, param);
 
                 if (directToParams) {
                     service.addParam(param);
@@ -656,7 +663,7 @@ public class ModelServiceReader implements Serializable {
         }
     }
 
-    private void createDeprecated(Element baseElement, ModelService service) {
+    private static void createDeprecated(Element baseElement, ModelService service) {
         Element deprecated = UtilXml.firstChildElement(baseElement, "deprecated");
         if (deprecated != null) {
             service.deprecatedUseInstead = deprecated.getAttribute("use-instead");
@@ -666,7 +673,7 @@ public class ModelServiceReader implements Serializable {
         }
     }
 
-    private void addValidators(Element attribute, ModelParam param) {
+    private static void addValidators(Element attribute, ModelParam param) {
         List<? extends Element> validateElements = UtilXml.childElementList(attribute, "type-validate");
         if (UtilValidate.isNotEmpty(validateElements)) {
             // always clear out old ones; never append
@@ -691,7 +698,7 @@ public class ModelServiceReader implements Serializable {
         }
     }
 
-    private Document getDocument(URL url) {
+    private static Document getDocument(URL url) {
         if (url == null) {
             return null;
         }

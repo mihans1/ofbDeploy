@@ -18,7 +18,6 @@
  *******************************************************************************/
 package org.apache.ofbiz.product.category;
 
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.net.URL;
 import java.util.HashMap;
@@ -101,15 +100,14 @@ public final class SeoConfigUtil {
      * Initialize url regular express configuration.
      */
     public static void init() {
-        FileInputStream configFileIS = null;
         String result = "success";
-        seoPatterns = new HashMap<String, Pattern>();
-        seoReplacements = new HashMap<String, String>();
-        forwardReplacements = new HashMap<String, String>();
-        forwardResponseCodes = new HashMap<String, Integer>();
-        userExceptionPatterns = new LinkedList<Pattern>();
-        specialProductIds = new HashMap<String, String>();
-        charFilters = new HashMap<String, String>();
+        seoPatterns = new HashMap<>();
+        seoReplacements = new HashMap<>();
+        forwardReplacements = new HashMap<>();
+        forwardResponseCodes = new HashMap<>();
+        userExceptionPatterns = new LinkedList<>();
+        specialProductIds = new HashMap<>();
+        charFilters = new HashMap<>();
         try {
             URL seoConfigFilename = UtilURL.fromResource(SEO_CONFIG_FILENAME);
             Document configDoc = UtilXml.readXmlDocument(seoConfigFilename, false);
@@ -137,7 +135,7 @@ public final class SeoConfigUtil {
                     
                     if (categoryUrlEnabled) {
                         String allowedContextValue = UtilXml.childElementValue(categoryUrlElement, ELEMENT_ALLOWED_CONTEXT_PATHS, null);
-                        allowedContextPaths = new HashSet<String>();
+                        allowedContextPaths = new HashSet<>();
                         if (UtilValidate.isNotEmpty(allowedContextValue)) {
                             List<String> allowedContextPathList = StringUtil.split(allowedContextValue, ALLOWED_CONTEXT_PATHS_SEPERATOR);
                             for (String path : allowedContextPathList) {
@@ -188,7 +186,7 @@ public final class SeoConfigUtil {
                             jSessionIdAnonEnabled = true;
                         }
                     } else {
-                        jSessionIdAnonEnabled = Boolean.valueOf(DEFAULT_ANONYMOUS_VALUE).booleanValue();
+                        jSessionIdAnonEnabled = Boolean.valueOf(DEFAULT_ANONYMOUS_VALUE);
                     }
                     Debug.logInfo("  " + ELEMENT_ANONYMOUS + ": " + jSessionIdAnonEnabled, module);
                     
@@ -220,7 +218,7 @@ public final class SeoConfigUtil {
                             }
                         }
                     } else {
-                        jSessionIdUserEnabled = Boolean.valueOf(DEFAULT_USER_VALUE).booleanValue();
+                        jSessionIdUserEnabled = Boolean.valueOf(DEFAULT_USER_VALUE);
                     }
                     Debug.logInfo("  " + ELEMENT_USER + ": " + jSessionIdUserEnabled, module);
                 }
@@ -322,15 +320,6 @@ public final class SeoConfigUtil {
         } catch (IOException e) {
             result = "error";
             Debug.logError(e, module);
-        } finally {
-            if (configFileIS != null) {
-                try {
-                    configFileIS.close();
-                } catch (IOException e) {
-                    result = "error";
-                    Debug.logError(e, module);
-                }
-            }
         }
         if (seoReplacements.keySet().isEmpty()) {
             useUrlRegexp = false;
@@ -391,11 +380,7 @@ public final class SeoConfigUtil {
             contextPath = "/";
         }
         if (categoryUrlEnabled) {
-            if (allowedContextPaths.contains(contextPath.trim())) {
-                return true;
-            } else {
-                return false;
-            }
+            return allowedContextPaths.contains(contextPath.trim());
         }
         return false;
     }

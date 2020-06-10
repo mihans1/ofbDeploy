@@ -59,7 +59,7 @@ public final class StandardJavaEngine extends GenericAsyncEngine {
         if (result == null || !(result instanceof Map<?, ?>)) {
             throw new GenericServiceException("Service [" + modelService.name + "] did not return a Map object");
         }
-        return UtilGenerics.checkMap(result);
+        return UtilGenerics.cast(result);
     }
 
     // Invoke the static java method service.
@@ -99,7 +99,7 @@ public final class StandardJavaEngine extends GenericAsyncEngine {
             if (Modifier.isStatic(m.getModifiers())) {
                 result = m.invoke(null, dctx, context);
             } else {
-                result = m.invoke(c.newInstance(), dctx, context);
+                result = m.invoke(c.getDeclaredConstructor().newInstance(), dctx, context);
             }
         } catch (ClassNotFoundException cnfe) {
             throw new GenericServiceException("Cannot find service [" + modelService.name + "] location class", cnfe);

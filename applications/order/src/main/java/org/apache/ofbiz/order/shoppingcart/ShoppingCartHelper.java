@@ -113,12 +113,26 @@ public class ShoppingCartHelper {
                 configWrapper,itemGroupNumber,context,parentProductId);
     }
 
-    /** Event to add an item to the shopping cart with accommodation. */
+    /** Overriden for reserveAfterDate. */
     public Map<String, Object> addToCart(String catalogId, String shoppingListId, String shoppingListItemSeqId, String productId,
             String productCategoryId, String itemType, String itemDescription,
             BigDecimal price, BigDecimal amount, BigDecimal quantity,
             java.sql.Timestamp reservStart, BigDecimal reservLength, BigDecimal reservPersons, String accommodationMapId,String accommodationSpotId,
             java.sql.Timestamp shipBeforeDate, java.sql.Timestamp shipAfterDate,
+            ProductConfigWrapper configWrapper, String itemGroupNumber, Map<String, ? extends Object> context, String parentProductId) {
+
+        return addToCart(catalogId,shoppingListId,shoppingListItemSeqId,productId,
+                productCategoryId,itemType,itemDescription,price,amount,quantity,
+                reservStart,reservLength,reservPersons,null,null,shipBeforeDate,shipAfterDate,null,
+                configWrapper,itemGroupNumber,context,parentProductId);
+    }
+
+    /** Event to add an item to the shopping cart with accommodation. */
+    public Map<String, Object> addToCart(String catalogId, String shoppingListId, String shoppingListItemSeqId, String productId,
+            String productCategoryId, String itemType, String itemDescription,
+            BigDecimal price, BigDecimal amount, BigDecimal quantity,
+            java.sql.Timestamp reservStart, BigDecimal reservLength, BigDecimal reservPersons, String accommodationMapId,String accommodationSpotId,
+            java.sql.Timestamp shipBeforeDate, java.sql.Timestamp shipAfterDate, java.sql.Timestamp reserveAfterDate,
             ProductConfigWrapper configWrapper, String itemGroupNumber, Map<String, ? extends Object> context, String parentProductId) {
         Map<String, Object> result = null;
         Map<String, Object> attributes = null;
@@ -242,7 +256,7 @@ public class ShoppingCartHelper {
             if (productId != null) {
 
                        itemId = cart.addOrIncreaseItem(productId, amount, quantity, reservStart, reservLength,
-                                                reservPersons, accommodationMapId, accommodationSpotId, shipBeforeDate, shipAfterDate, additionalFeaturesMap, attributes,
+                                                reservPersons, accommodationMapId, accommodationSpotId, shipBeforeDate, shipAfterDate, reserveAfterDate, additionalFeaturesMap, attributes,
                                                 orderItemAttributes, catalogId, configWrapper, itemType, itemGroupNumber, pProductId, dispatcher);
 
             } else {
@@ -271,7 +285,7 @@ public class ShoppingCartHelper {
         // Indicate there were no critical errors
         result = ServiceUtil.returnSuccess();
         if (itemId != -1) {
-            result.put("itemId", Integer.valueOf(itemId));
+            result.put("itemId", itemId);
         }
         return result;
     }
@@ -447,9 +461,9 @@ public class ShoppingCartHelper {
                             if (remainder.compareTo(BigDecimal.ZERO) != 0) {
                                 return ServiceUtil.returnError(UtilProperties.getMessage(resource_error, "cart.addToCart.quantityInDecimalNotAllowed", this.cart.getLocale()));
                             }
-                            quantity = quantity.setScale(0, UtilNumber.getBigDecimalRoundingMode("order.rounding"));
+                            quantity = quantity.setScale(0, UtilNumber.getRoundingMode("order.rounding"));
                         } else {
-                            quantity = quantity.setScale(UtilNumber.getBigDecimalScale("order.decimals"), UtilNumber.getBigDecimalRoundingMode("order.rounding"));
+                            quantity = quantity.setScale(UtilNumber.getBigDecimalScale("order.decimals"), UtilNumber.getRoundingMode("order.rounding"));
                         }
                     } catch(GenericEntityException e) {
                         Debug.logError(e.getMessage(), module);
@@ -527,7 +541,7 @@ public class ShoppingCartHelper {
                 if (UtilValidate.isNotEmpty(quantStr)) {
                     BigDecimal quantity;
                     try {
-                        quantity = (BigDecimal) ObjectType.simpleTypeConvert(quantStr, "BigDecimal", null, cart.getLocale());
+                        quantity = (BigDecimal) ObjectType.simpleTypeOrObjectConvert(quantStr, "BigDecimal", null, cart.getLocale());
                     } catch (GeneralException ge) {
                         quantity = BigDecimal.ZERO;
                     }
@@ -643,7 +657,9 @@ public class ShoppingCartHelper {
                     } catch (CartItemModifyException e) {
                         errorMsgs.add(e.getMessage());
                     }
-                } catch (NumberFormatException nfe) {}
+                } catch (NumberFormatException nfe) {
+                    Debug.logError("Error deleting from cart: " + nfe.getMessage(), module);
+                }
             }
         }
 
@@ -728,12 +744,12 @@ public class ShoppingCartHelper {
                         }
                     } else if (parameterName.startsWith("reservLength")) {
                         if (item != null) {
-                            BigDecimal reservLength = (BigDecimal) ObjectType.simpleTypeConvert(quantString, "BigDecimal", null, locale);
+                            BigDecimal reservLength = (BigDecimal) ObjectType.simpleTypeOrObjectConvert(quantString, "BigDecimal", null, locale);
                             item.setReservLength(reservLength);
                         }
                     } else if (parameterName.startsWith("reservPersons")) {
                         if (item != null) {
-                            BigDecimal reservPersons = (BigDecimal) ObjectType.simpleTypeConvert(quantString, "BigDecimal", null, locale);
+                            BigDecimal reservPersons = (BigDecimal) ObjectType.simpleTypeOrObjectConvert(quantString, "BigDecimal", null, locale);
                             item.setReservPersons(reservPersons);
                         }
                     } else if (parameterName.startsWith("shipBeforeDate")) {
@@ -768,7 +784,7 @@ public class ShoppingCartHelper {
                             item.setItemType(quantString);
                         }
                     } else {
-                        quantity = (BigDecimal) ObjectType.simpleTypeConvert(quantString, "BigDecimal", null, locale);
+                        quantity = (BigDecimal) ObjectType.simpleTypeOrObjectConvert(quantString, "BigDecimal", null, locale);
                         //For quantity we should test if we allow to add decimal quantity for this product an productStore :
                         // if not and if quantity is in decimal format then return error.
                         if (!ProductWorker.isDecimalQuantityOrderAllowed(delegator, item.getProductId(), cart.getProductStoreId()) && parameterName.startsWith("update")) {
@@ -779,10 +795,10 @@ public class ShoppingCartHelper {
                                 result = ServiceUtil.returnError(errorMsgs);
                                 return result;
                             }
-                            quantity = quantity.setScale(0, UtilNumber.getBigDecimalRoundingMode("order.rounding"));
+                            quantity = quantity.setScale(0, UtilNumber.getRoundingMode("order.rounding"));
                         }
                         else {
-                            quantity = quantity.setScale(UtilNumber.getBigDecimalScale("order.decimals"), UtilNumber.getBigDecimalRoundingMode("order.rounding"));
+                            quantity = quantity.setScale(UtilNumber.getBigDecimalScale("order.decimals"), UtilNumber.getRoundingMode("order.rounding"));
                         }
                         if (quantity.compareTo(BigDecimal.ZERO) < 0) {
                             String errMsg = UtilProperties.getMessage(resource_error, "cart.quantity_not_positive_number", this.cart.getLocale());

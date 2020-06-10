@@ -42,15 +42,15 @@ public class PickListServices {
     public static Map<String, Object> convertOrderIdListToHeaders(DispatchContext dctx, Map<String, ? extends Object> context) {
         Delegator delegator = dctx.getDelegator();
 
-        List<GenericValue> orderHeaderList = UtilGenerics.checkList(context.get("orderHeaderList"));
-        List<String> orderIdList = UtilGenerics.checkList(context.get("orderIdList"));
+        List<GenericValue> orderHeaderList = UtilGenerics.cast(context.get("orderHeaderList"));
+        List<String> orderIdList = UtilGenerics.cast(context.get("orderIdList"));
 
         // we don't want to process if there is already a header list
         if (orderHeaderList == null) {
             // convert the ID list to headers
             if (orderIdList != null) {
-                List<EntityCondition> conditionList1 = new LinkedList<EntityCondition>();
-                List<EntityCondition> conditionList2 = new LinkedList<EntityCondition>();
+                List<EntityCondition> conditionList1 = new LinkedList<>();
+                List<EntityCondition> conditionList2 = new LinkedList<>();
 
                 // we are only concerned about approved sales orders
                 conditionList2.add(EntityCondition.makeCondition("statusId", EntityOperator.EQUALS, "ORDER_APPROVED"));

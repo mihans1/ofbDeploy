@@ -21,6 +21,7 @@ package org.apache.ofbiz.service.eca;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 import org.apache.ofbiz.base.util.Debug;
 import org.apache.ofbiz.base.util.ObjectType;
@@ -127,7 +128,7 @@ public class ServiceEcaCondition implements java.io.Serializable {
             } else {
                 conditionReply = (Boolean) conditionServiceResult.get("conditionReply");
             }
-            return conditionReply.booleanValue();
+            return conditionReply;
         }
 
         Object lhsValue = null;
@@ -135,7 +136,7 @@ public class ServiceEcaCondition implements java.io.Serializable {
         if (UtilValidate.isNotEmpty(lhsMapName)) {
             try {
                 if (context.containsKey(lhsMapName)) {
-                    Map<String, ? extends Object> envMap = UtilGenerics.checkMap(context.get(lhsMapName));
+                    Map<String, ? extends Object> envMap = UtilGenerics.cast(context.get(lhsMapName));
                     lhsValue = envMap.get(lhsValueName);
                 } else {
                     Debug.logInfo("From Map (" + lhsMapName + ") not found in context, defaulting to null.", module);
@@ -156,7 +157,7 @@ public class ServiceEcaCondition implements java.io.Serializable {
         } else if (UtilValidate.isNotEmpty(rhsMapName)) {
             try {
                 if (context.containsKey(rhsMapName)) {
-                    Map<String, ? extends Object> envMap = UtilGenerics.checkMap(context.get(rhsMapName));
+                    Map<String, ? extends Object> envMap = UtilGenerics.cast(context.get(rhsMapName));
                     rhsValue = envMap.get(rhsValueName);
                 } else {
                     Debug.logInfo("To Map (" + rhsMapName + ") not found in context for " + serviceName + ", defaulting to null.", module);
@@ -175,7 +176,7 @@ public class ServiceEcaCondition implements java.io.Serializable {
         if (Debug.verboseOn()) Debug.logVerbose("Comparing : " + lhsValue + " " + operator + " " + rhsValue, module);
 
         // evaluate the condition & invoke the action(s)
-        List<Object> messages = new LinkedList<Object>();
+        List<Object> messages = new LinkedList<>();
         Boolean cond = ObjectType.doRealCompare(lhsValue, rhsValue, operator, compareType, format, messages, null, dctx.getClassLoader(), isConstant);
 
         // if any messages were returned send them out
@@ -184,12 +185,10 @@ public class ServiceEcaCondition implements java.io.Serializable {
                 Debug.logWarning(message.toString(), module);
             }
         }
-        if (cond != null) {
-            return cond.booleanValue();
-        } else {
+        if (!cond) {
             Debug.logWarning("doRealCompare returned null, returning false", module);
-            return false;
         }
+        return cond;
     }
 
     @Override
@@ -230,14 +229,14 @@ public class ServiceEcaCondition implements java.io.Serializable {
         if (obj instanceof ServiceEcaCondition) {
             ServiceEcaCondition other = (ServiceEcaCondition) obj;
 
-            if (!UtilValidate.areEqual(this.conditionService, other.conditionService)) return false;
-            if (!UtilValidate.areEqual(this.lhsValueName, other.lhsValueName)) return false;
-            if (!UtilValidate.areEqual(this.rhsValueName, other.rhsValueName)) return false;
-            if (!UtilValidate.areEqual(this.lhsMapName, other.lhsMapName)) return false;
-            if (!UtilValidate.areEqual(this.rhsMapName, other.rhsMapName)) return false;
-            if (!UtilValidate.areEqual(this.operator, other.operator)) return false;
-            if (!UtilValidate.areEqual(this.compareType, other.compareType)) return false;
-            if (!UtilValidate.areEqual(this.format, other.format)) return false;
+            if (!Objects.equals(this.conditionService, other.conditionService)) return false;
+            if (!Objects.equals(this.lhsValueName, other.lhsValueName)) return false;
+            if (!Objects.equals(this.rhsValueName, other.rhsValueName)) return false;
+            if (!Objects.equals(this.lhsMapName, other.lhsMapName)) return false;
+            if (!Objects.equals(this.rhsMapName, other.rhsMapName)) return false;
+            if (!Objects.equals(this.operator, other.operator)) return false;
+            if (!Objects.equals(this.compareType, other.compareType)) return false;
+            if (!Objects.equals(this.format, other.format)) return false;
 
             if (this.isConstant != other.isConstant) return false;
             if (this.isService != other.isService) return false;

@@ -41,7 +41,7 @@ public class SimpleMapProcessor {
     private static final UtilCache<URL, Map<String, MapProcessor>> simpleMapProcessorsURLCache = UtilCache.createUtilCache("minilang.SimpleMapProcessorsURL", 0, 0);
 
     protected static Map<String, MapProcessor> getAllProcessors(URL xmlURL) throws MiniLangException {
-        Map<String, MapProcessor> mapProcessors = new HashMap<String, MapProcessor>();
+        Map<String, MapProcessor> mapProcessors = new HashMap<>();
         // read in the file
         Document document = null;
         try {
@@ -101,8 +101,7 @@ public class SimpleMapProcessor {
         MapProcessor processor = mapProcessors.get(name);
         if (processor == null) {
             throw new MiniLangException("Could not find SimpleMapProcessor named " + name + " in XML document resource: " + xmlResource);
-        }
-        if (processor != null) {
+        } else {
             processor.exec(inMap, results, messages, locale, loader);
         }
     }
@@ -114,8 +113,7 @@ public class SimpleMapProcessor {
         MapProcessor processor = mapProcessors.get(name);
         if (processor == null) {
             throw new MiniLangException("Could not find SimpleMapProcessor named " + name + " in XML document: " + xmlURL.toString());
-        }
-        if (processor != null) {
+        } else {
             processor.exec(inMap, results, messages, locale, loader);
         }
     }

@@ -83,11 +83,10 @@ public class VCard {
         ByteBuffer byteBuffer = (ByteBuffer) context.get("infile");
         byte[] inputByteArray = byteBuffer.array();
         InputStream in = new ByteArrayInputStream(inputByteArray);
-        Map<String, Object> serviceCtx = new HashMap<String, Object>();
+        Map<String, Object> serviceCtx = new HashMap<>();
         boolean isGroup = false;
-        List<Map<String, String>> partiesCreated = new ArrayList<Map<String,String>>();
-        List<Map<String, String>> partiesExist = new ArrayList<Map<String,String>>();
-        String partyName = ""; // TODO this is not used yet
+        List<Map<String, String>> partiesCreated = new ArrayList<>();
+        List<Map<String, String>> partiesExist = new ArrayList<>();
 
         try (VCardReader vCardReader = new VCardReader(in)) {
             ezvcard.VCard vcard = null;
@@ -113,7 +112,6 @@ public class VCard {
                 if (!isGroup) {
                     serviceCtx.put("firstName", structuredName.getGiven());
                     serviceCtx.put("lastName", structuredName.getFamily());
-                    partyName = structuredName.getGiven() + " " + structuredName.getFamily();
                 }
 
                 // Resolve all postal Address
@@ -164,9 +162,7 @@ public class VCard {
                     } else {
                         //TODO change uncorrect labellisation
                         String emailFormatErrMsg = UtilProperties.getMessage(resourceError, "SfaImportVCardEmailFormatError", locale);
-                        vCardReader.close();
                         return ServiceUtil.returnError(UtilProperties.getMessage(resourceError, "MarketingEmailFormatError", UtilMisc.toMap("firstName", structuredName.getGiven(), "lastName", structuredName.getFamily(), "emailFOrmatErrMsg", emailFormatErrMsg), locale));
-
                     }
                 }
 
@@ -208,6 +204,9 @@ public class VCard {
                     }
                 }
                 Map<String, Object> resp = dispatcher.runSync(serviceName, serviceCtx);
+                if (ServiceUtil.isError(resp)) {
+                    return ServiceUtil.returnError(ServiceUtil.getErrorMessage(resp));
+                }
                 partiesCreated.add(UtilMisc.toMap("partyId", (String) resp.get("partyId")));
 
                 if (formattedName != null) {
@@ -217,6 +216,9 @@ public class VCard {
                     createPartyIdentificationMap.put("partyIdentificationTypeId", "VCARD_FN_ORIGIN");
                     createPartyIdentificationMap.put("idValue", formattedName.getValue());
                     resp = dispatcher.runSync("createPartyIdentification", createPartyIdentificationMap);
+                    if (ServiceUtil.isError(resp)) {
+                        return ServiceUtil.returnError(ServiceUtil.getErrorMessage(resp));
+                    }
                 }
             }
         } catch (IOException | GenericEntityException | GenericServiceException e) {
@@ -262,7 +264,7 @@ public class VCard {
                 if (countryGeo != null) {
                     String country = postalAddress.getRelatedOne("CountryGeo", false).getString("geoName");
                     address.setCountry(country);
-                    address.getTypes().add(AddressType.WORK);;
+                    address.getTypes().add(AddressType.WORK);
                     //TODO : this can be better set by checking contactMechPurposeTypeId
                 }
                 vcard.addAddress(address);

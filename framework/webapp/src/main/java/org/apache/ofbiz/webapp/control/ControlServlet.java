@@ -18,14 +18,14 @@
  *******************************************************************************/
 package org.apache.ofbiz.webapp.control;
 
-import freemarker.template.Template;
+import static org.apache.ofbiz.base.util.StringUtil.replaceString;
+
 import java.io.IOException;
 import java.util.Enumeration;
-
 import java.util.HashMap;
 import java.util.Map;
+
 import javax.servlet.RequestDispatcher;
-import javax.servlet.ServletConfig;
 import javax.servlet.ServletContext;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
@@ -34,7 +34,6 @@ import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 
 import org.apache.ofbiz.base.util.Debug;
-import org.apache.ofbiz.base.util.StringUtil;
 import org.apache.ofbiz.base.util.UtilCodec;
 import org.apache.ofbiz.base.util.UtilGenerics;
 import org.apache.ofbiz.base.util.UtilHttp;
@@ -54,6 +53,7 @@ import org.apache.ofbiz.webapp.stats.VisitHandler;
 import org.apache.ofbiz.widget.renderer.VisualTheme;
 
 import freemarker.ext.servlet.ServletContextHashModel;
+import freemarker.template.Template;
 
 /**
  * ControlServlet.java - Master servlet for the web application.
@@ -61,46 +61,56 @@ import freemarker.ext.servlet.ServletContextHashModel;
 @SuppressWarnings("serial")
 public class ControlServlet extends HttpServlet {
 
-    public static final String module = ControlServlet.class.getName();
+    private static final String MODULE = ControlServlet.class.getName();
 
-    public ControlServlet() {
-        super();
-    }
-
-    /**
-     * @see javax.servlet.Servlet#init(javax.servlet.ServletConfig)
-     */
     @Override
-    public void init(ServletConfig config) throws ServletException {
-        super.init(config);
+    public void init() throws ServletException {
+        ServletContext ctx = getServletContext();
         if (Debug.infoOn()) {
-            ServletContext servletContext = config.getServletContext();
-            String webappName = servletContext.getContextPath().length() != 0 ? servletContext.getContextPath().substring(1) : "";
-            Debug.logInfo("Loading webapp [" + webappName + "], located at " + servletContext.getRealPath("/"), module);
+            String path = ctx.getContextPath();
+            String webappName = path.isEmpty() ? path : path.substring(1);
+            Debug.logInfo("Loading webapp [" + webappName + "], located at " + ctx.getRealPath("/"), MODULE);
         }
 
-        // initialize the request handler
-        getRequestHandler();
+        // Initialize the request handler.
+        RequestHandler.getRequestHandler(ctx);
+    }
+
+    @Override
+    public void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+        handle(req, resp);
+    }
+
+    @Override
+    public void doDelete(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+        handle(req, resp);
+    }
+
+    @Override
+    public void doPut(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+        handle(req, resp);
+    }
+
+    @Override
+    public void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+        handle(req, resp);
     }
 
     /**
-     * @see javax.servlet.http.HttpServlet#doPost(javax.servlet.http.HttpServletRequest, javax.servlet.http.HttpServletResponse)
+     * Invokes {@link RequestHandler#doRequest} with error handling.
+     *
+     * @param request  an {@link HttpServletRequest} object that contains the request
+     *                 the client has made of the servlet
+     * @param response an {@link HttpServletResponse} object that contains the response
+     *                 the servlet sends to the client
+     * @throws IOException if an output error is detected when trying to write on the response.
      */
-    @Override
-    public void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
-        doGet(request, response);
-    }
-
-    /**
-     * @see javax.servlet.http.HttpServlet#doGet(javax.servlet.http.HttpServletRequest, javax.servlet.http.HttpServletResponse)
-     */
-    @Override
-    public void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+    public void handle(HttpServletRequest request, HttpServletResponse response) throws IOException {
         long requestStartTime = System.currentTimeMillis();
-        RequestHandler requestHandler = this.getRequestHandler();
         HttpSession session = request.getSession();
 
-        // setup DEFAULT character encoding and content type, this will be overridden in the RequestHandler for view rendering
+        // setup DEFAULT character encoding and content type, this will be overridden
+        // in the RequestHandler for view rendering
         String charset = request.getCharacterEncoding();
 
         // setup content type
@@ -113,7 +123,6 @@ public class ControlServlet extends HttpServlet {
         }
 
         GenericValue userLogin = (GenericValue) session.getAttribute("userLogin");
-        //Debug.logInfo("Cert Chain: " + request.getAttribute("javax.servlet.request.X509Certificate"), module);
 
         // set the Entity Engine user info if we have a userLogin
         if (userLogin != null) {
@@ -135,7 +144,8 @@ public class ControlServlet extends HttpServlet {
         if (Debug.timingOn()) {
             timer = new UtilTimer();
             timer.setLog(true);
-            timer.timerString("[" + rname + "(Domain:" + request.getScheme() + "://" + request.getServerName() + ")] Request Begun, encoding=[" + charset + "]", module);
+            timer.timerString("[" + webappName + "::" + rname + " (Domain:" + request.getScheme() + "://"
+                    + request.getServerName() + ")] Request Begun, encoding=[" + charset + "]", MODULE);
         }
 
         // Setup the CONTROL_PATH for JSP dispatching.
@@ -145,11 +155,12 @@ public class ControlServlet extends HttpServlet {
         }
         request.setAttribute("_CONTROL_PATH_", contextPath + request.getServletPath());
         if (Debug.verboseOn()) {
-             Debug.logVerbose("Control Path: " + request.getAttribute("_CONTROL_PATH_"), module);
+            Debug.logVerbose("Control Path: " + request.getAttribute("_CONTROL_PATH_"), MODULE);
         }
 
         // for convenience, and necessity with event handlers, make security and delegator available in the request:
-        // try to get it from the session first so that we can have a delegator/dispatcher/security for a certain user if desired
+        // try to get it from the session first so that we can have a delegator/dispatcher/security
+        // for a certain user if desired.
         Delegator delegator = null;
         String delegatorName = (String) session.getAttribute("delegatorName");
         if (UtilValidate.isNotEmpty(delegatorName)) {
@@ -159,7 +170,7 @@ public class ControlServlet extends HttpServlet {
             delegator = (Delegator) getServletContext().getAttribute("delegator");
         }
         if (delegator == null) {
-            Debug.logError("[ControlServlet] ERROR: delegator not found in ServletContext", module);
+            Debug.logError("[ControlServlet] ERROR: delegator not found in ServletContext", MODULE);
         } else {
             request.setAttribute("delegator", delegator);
             // always put this in the session too so that session events can use the delegator
@@ -171,7 +182,7 @@ public class ControlServlet extends HttpServlet {
             dispatcher = (LocalDispatcher) getServletContext().getAttribute("dispatcher");
         }
         if (dispatcher == null) {
-            Debug.logError("[ControlServlet] ERROR: dispatcher not found in ServletContext", module);
+            Debug.logError("[ControlServlet] ERROR: dispatcher not found in ServletContext", MODULE);
         }
         request.setAttribute("dispatcher", dispatcher);
 
@@ -180,7 +191,7 @@ public class ControlServlet extends HttpServlet {
             security = (Security) getServletContext().getAttribute("security");
         }
         if (security == null) {
-            Debug.logError("[ControlServlet] ERROR: security not found in ServletContext", module);
+            Debug.logError("[ControlServlet] ERROR: security not found in ServletContext", MODULE);
         }
         request.setAttribute("security", security);
 
@@ -188,9 +199,12 @@ public class ControlServlet extends HttpServlet {
         if (visualTheme != null) {
             UtilHttp.setVisualTheme(request, visualTheme);
         }
-        request.setAttribute("_REQUEST_HANDLER_", requestHandler);
-        
-        ServletContextHashModel ftlServletContext = new ServletContextHashModel(this, FreeMarkerWorker.getDefaultOfbizWrapper());
+
+        RequestHandler handler = RequestHandler.getRequestHandler(getServletContext());
+        request.setAttribute("_REQUEST_HANDLER_", handler);
+
+        ServletContextHashModel ftlServletContext = new ServletContextHashModel(this,
+                FreeMarkerWorker.getDefaultOfbizWrapper());
         request.setAttribute("ftlServletContext", ftlServletContext);
 
         // setup some things that should always be there
@@ -208,40 +222,49 @@ public class ControlServlet extends HttpServlet {
             logRequestInfo(request);
         }
 
-        // some containers call filters on EVERY request, even forwarded ones, so let it know that it came from the control servlet
+        // some containers call filters on EVERY request, even forwarded ones,
+        // so let it know that it came from the control servlet
         request.setAttribute(ControlFilter.FORWARDED_FROM_SERVLET, Boolean.TRUE);
 
         String errorPage = null;
         try {
             // the ServerHitBin call for the event is done inside the doRequest method
-            requestHandler.doRequest(request, response, null, userLogin, delegator);
+            handler.doRequest(request, response, null, userLogin, delegator);
+        } catch (MethodNotAllowedException e) {
+            response.setContentType("text/plain");
+            response.setCharacterEncoding(request.getCharacterEncoding());
+            response.setStatus(HttpServletResponse.SC_METHOD_NOT_ALLOWED);
+            response.getWriter().print(e.getMessage());
+            Debug.logError(e.getMessage(), MODULE);
         } catch (RequestHandlerException e) {
             Throwable throwable = e.getNested() != null ? e.getNested() : e;
             if (throwable instanceof IOException) {
-                // when an IOException occurs (most of the times caused by the browser window being closed before the request is completed)
-                // the connection with the browser is lost and so there is no need to serve the error page; a message is logged to record the event
-                if (Debug.warningOn()) Debug.logWarning(e, "Communication error with the client while processing the request: " + request.getAttribute("_CONTROL_PATH_") + request.getPathInfo(), module);
-                if (Debug.verboseOn()) Debug.logVerbose(throwable, module);
+                // when an IOException occurs (most of the times caused by the browser window being closed
+                // before the request is completed) the connection with the browser is lost and so there is
+                // no need to serve the error page; a message is logged to record the event
+                if (Debug.warningOn()) {
+                    Debug.logWarning(e, "Communication error with the client while processing the request: "
+                            + request.getAttribute("_CONTROL_PATH_") + request.getPathInfo(), MODULE);
+                }
+                if (Debug.verboseOn()) {
+                    Debug.logVerbose(throwable, MODULE);
+                }
             } else {
-                Debug.logError(throwable, "Error in request handler: ", module);
+                Debug.logError(throwable, "Error in request handler: ", MODULE);
                 request.setAttribute("_ERROR_MESSAGE_", UtilCodec.getEncoder("html").encode(throwable.toString()));
-                errorPage = requestHandler.getDefaultErrorPage(request);
+                errorPage = handler.getDefaultErrorPage(request);
             }
-         } catch (RequestHandlerExceptionAllowExternalRequests e) {
-              errorPage = requestHandler.getDefaultErrorPage(request);
-              Debug.logInfo("Going to external page: " + request.getPathInfo(), module);
+        } catch (RequestHandlerExceptionAllowExternalRequests e) {
+            errorPage = handler.getDefaultErrorPage(request);
+            Debug.logInfo("Going to external page: " + request.getPathInfo(), MODULE);
         } catch (Exception e) {
-            Debug.logError(e, "Error in request handler: ", module);
+            Debug.logError(e, "Error in request handler: ", MODULE);
             request.setAttribute("_ERROR_MESSAGE_", UtilCodec.getEncoder("html").encode(e.toString()));
-            errorPage = requestHandler.getDefaultErrorPage(request);
+            errorPage = handler.getDefaultErrorPage(request);
         }
 
-        // Forward to the JSP
-        // if (Debug.infoOn()) Debug.logInfo("[" + rname + "] Event done, rendering page: " + nextPage, module);
-        // if (Debug.timingOn()) timer.timerString("[" + rname + "] Event done, rendering page: " + nextPage, module);
-
         if (errorPage != null) {
-            Debug.logError("An error occurred, going to the errorPage: " + errorPage, module);
+            Debug.logError("An error occurred, going to the errorPage: " + errorPage, MODULE);
 
             Map<String, Object> context = new HashMap<>();
             context.put("request", request);
@@ -262,7 +285,7 @@ public class ControlServlet extends HttpServlet {
                 // use this request parameter to avoid infinite looping on errors in the error page...
                 if (request.getAttribute("_ERROR_OCCURRED_") == null && rd != null) {
                     request.setAttribute("_ERROR_OCCURRED_", Boolean.TRUE);
-                    Debug.logError("Including errorPage: " + errorPage, module);
+                    Debug.logError("Including errorPage: " + errorPage, MODULE);
 
                     try {
                         rd.include(request, response);
@@ -271,7 +294,7 @@ public class ControlServlet extends HttpServlet {
                     }
                 } else {
                     if (rd == null) {
-                        Debug.logError("Could not get RequestDispatcher for errorPage: " + errorPage, module);
+                        Debug.logError("Could not get RequestDispatcher for errorPage: " + errorPage, MODULE);
                     }
                     errorPageFailed = true;
                 }
@@ -290,17 +313,20 @@ public class ControlServlet extends HttpServlet {
                         .append("ERROR in error page, (infinite loop or error page not found with name ")
                         .append("[").append(errorPage).append("]").append("</p><p>")
                         .append("Original error detected, maybe it would be helps you : ")
-                        .append(StringUtil.replaceString((String) request.getAttribute("_ERROR_MESSAGE_"), "\n", "<br>"))
+                        .append(replaceString((String) request.getAttribute("_ERROR_MESSAGE_"), "\n", "<br>"))
                         .append("</p></body></html>");
                 try {
                     response.getWriter().print(errorMessage.toString());
                 } catch (Throwable t) {
                     try {
                         int errorToSend = HttpServletResponse.SC_INTERNAL_SERVER_ERROR;
-                        Debug.logWarning("Error while trying to write error message using response.getOutputStream or response.getWriter, sending error code [" + errorToSend + "], and message [" + errorMessage + "]", module);
+                        Debug.logWarning("Error while trying to write error message using response.getOutputStream "
+                                + "or response.getWriter, sending error code [" + errorToSend + "], "
+                                + "and message [" + errorMessage + "]", MODULE);
                         response.sendError(errorToSend, errorMessage.toString());
                     } catch (Throwable t2) {
-                        // wow, still bad... just throw an IllegalStateException with the message and let the servlet container handle it
+                        // wow, still bad... just throw an IllegalStateException with the message
+                        // and let the servlet container handle it.
                         throw new IllegalStateException(errorMessage.toString());
                     }
                 }
@@ -311,101 +337,94 @@ public class ControlServlet extends HttpServlet {
         try {
             // roll back current TX first
             if (TransactionUtil.isTransactionInPlace()) {
-                Debug.logWarning("*** NOTICE: ControlServlet finished w/ a transaction in place! Rolling back.", module);
+                Debug.logWarning("*** NOTICE: ControlServlet finished w/ a transaction in place! Rolling back.",
+                        MODULE);
                 TransactionUtil.rollback();
             }
 
             // now resume/rollback any suspended txs
             if (TransactionUtil.suspendedTransactionsHeld()) {
                 int suspended = TransactionUtil.cleanSuspendedTransactions();
-                Debug.logWarning("Resumed/Rolled Back [" + suspended + "] transactions.", module);
+                Debug.logWarning("Resumed/Rolled Back [" + suspended + "] transactions.", MODULE);
             }
         } catch (GenericTransactionException e) {
-            Debug.logWarning(e, module);
+            Debug.logWarning(e, MODULE);
         }
 
-        // run these two again before the ServerHitBin.countRequest call because on a logout this will end up creating a new visit
+        // run these two again before the ServerHitBin.countRequest call because on a logout
+        // this will end up creating a new visit.
         if (response.isCommitted() && request.getSession(false) == null) {
             // response committed and no session, and we can't get a new session, what to do!
             // without a session we can't log the hit, etc; so just do nothing; this should NOT happen much!
-            Debug.logError("Error in ControlServlet output where response isCommitted and there is no session (probably because of a logout); not saving ServerHit/Bin information because there is no session and as the response isCommitted we can't get a new one. The output was successful, but we just can't save ServerHit/Bin info.", module);
+            Debug.logError("Error in ControlServlet output where response isCommitted and there is no session "
+                    + "(probably because of a logout); not saving ServerHit/Bin information "
+                    + "because there is no session and as the response isCommitted we can't get a new one. "
+                    + "The output was successful, but we just can't save ServerHit/Bin info.", MODULE);
         } else {
             try {
                 UtilHttp.setInitialRequestInfo(request);
                 VisitHandler.getVisitor(request, response);
-                if (requestHandler.trackStats(request)) {
-                    ServerHitBin.countRequest(webappName + "." + rname, request, requestStartTime, System.currentTimeMillis() - requestStartTime, userLogin);
+                if (handler.trackStats(request)) {
+                    ServerHitBin.countRequest(webappName + "." + rname, request, requestStartTime,
+                            System.currentTimeMillis() - requestStartTime, userLogin);
                 }
             } catch (Throwable t) {
-                Debug.logError(t, "Error in ControlServlet saving ServerHit/Bin information; the output was successful, but can't save this tracking information. The error was: " + t.toString(), module);
+                Debug.logError(t, "Error in ControlServlet saving ServerHit/Bin information; "
+                        + "the output was successful, but can't save this tracking information. The error was: "
+                        + t.toString(), MODULE);
             }
         }
-        if (Debug.timingOn()) timer.timerString("[" + rname + "(Domain:" + request.getScheme() + "://" + request.getServerName() + ")] Request Done", module);
+        if (Debug.timingOn()) {
+            timer.timerString("[" + webappName + "::" + rname + " (Domain:" + request.getScheme() + "://"
+                    + request.getServerName() + ")] Request Done", MODULE);
+        }
 
         // sanity check 2: make sure there are no user or session infos in the delegator, ie clear the thread
         GenericDelegator.clearUserIdentifierStack();
         GenericDelegator.clearSessionIdentifierStack();
     }
 
-    /**
-     * @see javax.servlet.Servlet#destroy()
-     */
-    @Override
-    public void destroy() {
-        super.destroy();
-    }
-
-    protected RequestHandler getRequestHandler() {
-        return RequestHandler.getRequestHandler(getServletContext());
-    }
-
-    protected void logRequestInfo(HttpServletRequest request) {
+    private void logRequestInfo(HttpServletRequest request) {
         ServletContext servletContext = this.getServletContext();
         HttpSession session = request.getSession();
 
-        if (Debug.verboseOn()) Debug.logVerbose("--- Start Request Headers: ---", module);
+        Debug.logVerbose("--- Start Request Headers: ---", MODULE);
         Enumeration<String> headerNames = UtilGenerics.cast(request.getHeaderNames());
         while (headerNames.hasMoreElements()) {
             String headerName = headerNames.nextElement();
-            Debug.logVerbose(headerName + ":" + request.getHeader(headerName), module);
+            Debug.logVerbose(headerName + ":" + request.getHeader(headerName), MODULE);
         }
-        if (Debug.verboseOn()) Debug.logVerbose("--- End Request Headers: ---", module);
-
-        if (Debug.verboseOn()) Debug.logVerbose("--- Start Request Parameters: ---", module);
-        Enumeration<String> paramNames = UtilGenerics.cast(request.getParameterNames());
-        while (paramNames.hasMoreElements()) {
-            String paramName = paramNames.nextElement();
-            Debug.logVerbose(paramName + ":" + request.getParameter(paramName), module);
-        }
-        if (Debug.verboseOn()) Debug.logVerbose("--- End Request Parameters: ---", module);
-
-        if (Debug.verboseOn()) Debug.logVerbose("--- Start Request Attributes: ---", module);
+        Debug.logVerbose("--- End Request Headers: ---", MODULE);
+        Debug.logVerbose("--- Start Request Parameters: ---", MODULE);
+        request.getParameterMap().forEach((name, values) -> {
+            Debug.logVerbose(name + ":" + values, MODULE);
+        });
+        Debug.logVerbose("--- End Request Parameters: ---", MODULE);
+        Debug.logVerbose("--- Start Request Attributes: ---", MODULE);
         Enumeration<String> reqNames = UtilGenerics.cast(request.getAttributeNames());
         while (reqNames != null && reqNames.hasMoreElements()) {
             String attName = reqNames.nextElement();
-            Debug.logVerbose(attName + ":" + request.getAttribute(attName), module);
+            Debug.logVerbose(attName + ":" + request.getAttribute(attName), MODULE);
         }
-        if (Debug.verboseOn()) Debug.logVerbose("--- End Request Attributes ---", module);
-
-        if (Debug.verboseOn()) Debug.logVerbose("--- Start Session Attributes: ---", module);
+        Debug.logVerbose("--- End Request Attributes ---", MODULE);
+        Debug.logVerbose("--- Start Session Attributes: ---", MODULE);
         Enumeration<String> sesNames = null;
         try {
             sesNames = UtilGenerics.cast(session.getAttributeNames());
         } catch (IllegalStateException e) {
-            if (Debug.verboseOn()) Debug.logVerbose("Cannot get session attributes : " + e.getMessage(), module);
+            Debug.logVerbose("Cannot get session attributes : " + e.getMessage(), MODULE);
         }
         while (sesNames != null && sesNames.hasMoreElements()) {
             String attName = sesNames.nextElement();
-            Debug.logVerbose(attName + ":" + session.getAttribute(attName), module);
+            Debug.logVerbose(attName + ":" + session.getAttribute(attName), MODULE);
         }
-        if (Debug.verboseOn()) Debug.logVerbose("--- End Session Attributes ---", module);
-
+        Debug.logVerbose("--- End Session Attributes ---", MODULE);
+        Debug.logVerbose("--- Start ServletContext Attributes: ---", MODULE);
         Enumeration<String> appNames = UtilGenerics.cast(servletContext.getAttributeNames());
-        if (Debug.verboseOn()) Debug.logVerbose("--- Start ServletContext Attributes: ---", module);
         while (appNames != null && appNames.hasMoreElements()) {
             String attName = appNames.nextElement();
-            Debug.logVerbose(attName + ":" + servletContext.getAttribute(attName), module);
+            Debug.logVerbose(attName + ":" + servletContext.getAttribute(attName), MODULE);
         }
-        if (Debug.verboseOn()) Debug.logVerbose("--- End ServletContext Attributes ---", module);
+        Debug.logVerbose("--- End ServletContext Attributes ---", MODULE);
     }
 }

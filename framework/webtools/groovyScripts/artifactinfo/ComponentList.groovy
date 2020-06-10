@@ -33,20 +33,19 @@ components.each { component ->
      webApps.each { webApp ->
          componentMap = [:]
          componentMap.compName = component.getComponentName()
-         componentMap.rootLocation =  component.getRootLocation()
+         componentMap.rootLocation =  component.rootLocation().toString()
          componentMap.enabled = (component.enabled() == true? "Y" : "N")
          componentMap.webAppName = webApp.getName()
          componentMap.contextRoot = webApp.getContextRoot()
-         componentMap.location = webApp.getLocation()
          componentMap.webAppName = webApp.getName()
          componentMap.contextRoot = webApp.getContextRoot()
-         componentMap.location = webApp.getLocation()
+         componentMap.location = webApp.location().toString()
          componentList.add(componentMap)
      }
-     if (UtilValidate.isEmpty(webApps)) {
+     if (!webApps) {
          componentMap = [:]
          componentMap.compName = component.getComponentName()
-         componentMap.rootLocation =  component.getRootLocation()
+         componentMap.rootLocation =  component.rootLocation().toString()
          componentMap.enabled = (component.enabled() == true? "Y" : "N")
          componentList.add(componentMap)
          componentMap.webAppName = ""

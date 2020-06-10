@@ -18,11 +18,8 @@
  *******************************************************************************/
 package org.apache.ofbiz.widget.model;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-
 import org.apache.ofbiz.base.util.Debug;
+import org.apache.ofbiz.base.util.UtilMisc;
 import org.apache.ofbiz.base.util.UtilValidate;
 import org.apache.ofbiz.base.util.UtilXml;
 import org.apache.ofbiz.base.util.collections.FlexibleMapAccessor;
@@ -36,33 +33,13 @@ import org.apache.ofbiz.service.GenericServiceException;
 import org.apache.ofbiz.service.ModelParam;
 import org.apache.ofbiz.service.ModelService;
 import org.apache.ofbiz.widget.model.ModelForm.UpdateArea;
-import org.apache.ofbiz.widget.model.ModelFormField.CheckField;
-import org.apache.ofbiz.widget.model.ModelFormField.ContainerField;
-import org.apache.ofbiz.widget.model.ModelFormField.DateFindField;
-import org.apache.ofbiz.widget.model.ModelFormField.DateTimeField;
-import org.apache.ofbiz.widget.model.ModelFormField.DisplayEntityField;
-import org.apache.ofbiz.widget.model.ModelFormField.DisplayField;
-import org.apache.ofbiz.widget.model.ModelFormField.DropDownField;
-import org.apache.ofbiz.widget.model.ModelFormField.FileField;
-import org.apache.ofbiz.widget.model.ModelFormField.FormField;
-import org.apache.ofbiz.widget.model.ModelFormField.GridField;
-import org.apache.ofbiz.widget.model.ModelFormField.HiddenField;
-import org.apache.ofbiz.widget.model.ModelFormField.HyperlinkField;
-import org.apache.ofbiz.widget.model.ModelFormField.IgnoredField;
-import org.apache.ofbiz.widget.model.ModelFormField.ImageField;
-import org.apache.ofbiz.widget.model.ModelFormField.LookupField;
-import org.apache.ofbiz.widget.model.ModelFormField.MenuField;
-import org.apache.ofbiz.widget.model.ModelFormField.OptionSource;
-import org.apache.ofbiz.widget.model.ModelFormField.PasswordField;
-import org.apache.ofbiz.widget.model.ModelFormField.RadioField;
-import org.apache.ofbiz.widget.model.ModelFormField.RangeFindField;
-import org.apache.ofbiz.widget.model.ModelFormField.ResetField;
-import org.apache.ofbiz.widget.model.ModelFormField.ScreenField;
-import org.apache.ofbiz.widget.model.ModelFormField.SubmitField;
-import org.apache.ofbiz.widget.model.ModelFormField.TextField;
-import org.apache.ofbiz.widget.model.ModelFormField.TextFindField;
-import org.apache.ofbiz.widget.model.ModelFormField.TextareaField;
+import org.apache.ofbiz.widget.model.ModelFormField.*;
 import org.w3c.dom.Element;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
 
 /**
  * A <code>ModelFormField</code> builder.
@@ -88,7 +65,7 @@ public class ModelFormFieldBuilder {
     private String name = "";
     private List<UpdateArea> onChangeUpdateAreas = new ArrayList<>();
     private List<UpdateArea> onClickUpdateAreas = new ArrayList<>();
-    private String parameterName = "";
+    private FlexibleStringExpander parameterName = FlexibleStringExpander.getInstance("");
     private Integer position = null;
     private String redWhen = "";
     private Boolean requiredField = null;
@@ -111,6 +88,44 @@ public class ModelFormFieldBuilder {
     private String widgetStyle = "";
     private String parentFormName = "";
     private String tabindex = "";
+    private String conditionGroup = "";
+
+    protected static final List<String> numericFieldTypes = Collections.unmodifiableList(UtilMisc.toList(
+            "floating-point", "numeric", "fixed-point",
+            "currency-amount", "currency-precise"));
+    protected static final List<String> textFieldTypes = Collections.unmodifiableList(UtilMisc.toList(
+            "id", "id-long", "id-vlong",
+            "very-short", "name", "short-varchar",
+            "value", "comment", "description",
+            "long-varchar", "url", "email"));
+    protected static final Map<String, Integer> textSizeByFieldTypes = Collections.unmodifiableMap(UtilMisc.toMap(
+            "id", 20,
+            "id-long", 40,
+            "id-vlong", 60,
+            "very-short", 6,
+            "name", 40,
+            "short-varchar", 40,
+            "value", 60,
+            "comment", 60,
+            "description", 60,
+            "long-varchar", 60,
+            "url", 60,
+            "email", 60));
+    protected static final Map<String, Integer> textMaxSizeByFieldTypes = Collections.unmodifiableMap(UtilMisc.toMap(
+            "id", 20,
+            "id-long", 60,
+            "id-vlong", 250,
+            "very-short", 10,
+            "name", 60,
+            "short-varchar", 40,
+            "value", 250,
+            "comment", 250,
+            "description", 250,
+            "long-varchar", 250,
+            "url", 250,
+            "email", 250));
+    protected static final List<String> dateFieldTypes = Collections.unmodifiableList(UtilMisc.toList(
+            "date-time", "date", "time"));
 
     public ModelFormFieldBuilder() {
     }
@@ -132,7 +147,7 @@ public class ModelFormFieldBuilder {
         this.mapAcsr = FlexibleMapAccessor.getInstance(fieldElement.getAttribute("map-name"));
         this.modelForm = modelForm;
         this.name = name;
-        this.parameterName = UtilXml.checkEmpty(fieldElement.getAttribute("parameter-name"), name);
+        this.parameterName = FlexibleStringExpander.getInstance(UtilXml.checkEmpty(fieldElement.getAttribute("parameter-name"), name));
         String positionAtttr = fieldElement.getAttribute("position");
         Integer position = null;
         if (!positionAtttr.isEmpty()) {
@@ -162,6 +177,7 @@ public class ModelFormFieldBuilder {
         this.widgetStyle = fieldElement.getAttribute("widget-style");
         this.parentFormName = fieldElement.getAttribute("form-name");
         this.tabindex = fieldElement.getAttribute("tabindex");
+        this.conditionGroup = fieldElement.getAttribute("condition-group");
         Element childElement = null;
         List<? extends Element> subElements = UtilXml.childElementList(fieldElement);
         for (Element subElement : subElements) {
@@ -171,6 +187,15 @@ public class ModelFormFieldBuilder {
                 if ("change".equals(updateArea.getEventType())) {
                     onChangeUpdateAreas.add(updateArea);
                 } else if ("click".equals(updateArea.getEventType())) {
+                    onClickUpdateAreas.add(updateArea);
+                } else if ("post".equals(updateArea.getEventType())
+                        || "setArea".equals(updateArea.getEventType())
+                        || "setWatcher".equals(updateArea.getEventType())
+                        || "submit".equals(updateArea.getEventType())
+                        || "setFieldInForm".equals(updateArea.getEventType())
+                        || "collapse".equals(updateArea.getEventType())
+                        || "closeModal".equals(updateArea.getEventType())
+                        ) {
                     onClickUpdateAreas.add(updateArea);
                 }
             } else {
@@ -277,6 +302,7 @@ public class ModelFormFieldBuilder {
         this.widgetStyle = modelFormField.getWidgetStyle();
         this.parentFormName = modelFormField.getParentFormName();
         this.tabindex = modelFormField.getTabindex();
+        this.conditionGroup = modelFormField.getConditionGroup();
     }
 
     public ModelFormFieldBuilder(ModelFormFieldBuilder builder) {
@@ -318,6 +344,7 @@ public class ModelFormFieldBuilder {
         this.widgetStyle = builder.getWidgetStyle();
         this.parentFormName = builder.getParentFormName();
         this.tabindex = builder.getTabindex();
+        this.conditionGroup = builder.getConditionGroup();
     }
 
     public ModelFormFieldBuilder addOnChangeUpdateArea(UpdateArea onChangeUpdateArea) {
@@ -402,7 +429,7 @@ public class ModelFormFieldBuilder {
         return onClickUpdateAreas;
     }
 
-    public String getParameterName() {
+    public FlexibleStringExpander getParameterName() {
         return parameterName;
     }
 
@@ -494,6 +521,10 @@ public class ModelFormFieldBuilder {
         return tabindex;
     }
 
+    public String getConditionGroup() {
+        return conditionGroup;
+    }
+
     private boolean induceFieldInfo(ModelForm modelForm, String defaultFieldType, ModelReader entityModelReader, DispatchContext dispatchContext) {
         if (induceFieldInfoFromEntityField(defaultFieldType, entityModelReader)) {
             return true;
@@ -510,41 +541,26 @@ public class ModelFormFieldBuilder {
         }
         this.entityName = modelEntity.getEntityName();
         this.fieldName = modelField.getName();
+        String fieldType = modelField.getType();
         if ("find".equals(defaultFieldType)) {
-            if ("id".equals(modelField.getType())) {
-                ModelFormField.TextFindField textField = new ModelFormField.TextFindField(FieldInfo.SOURCE_AUTO_ENTITY, 20,
-                        Integer.valueOf(20), null);
+            if ("indicator".equals(fieldType)) {
+                List<OptionSource> optionSources = UtilMisc.toList(
+                        new ModelFormField.SingleOption("", null, null),
+                        new ModelFormField.SingleOption("Y", null, null),
+                        new ModelFormField.SingleOption("N", null, null));
+                ModelFormField.DropDownField dropDownField = new ModelFormField.DropDownField(FieldInfo.SOURCE_AUTO_ENTITY,
+                        optionSources);
+                this.setFieldInfo(dropDownField);
+            } else if (textFieldTypes.contains(fieldType)) {
+                ModelFormField.TextFindField textField = new ModelFormField.TextFindField(FieldInfo.SOURCE_AUTO_ENTITY,
+                        textSizeByFieldTypes.get(fieldType), textMaxSizeByFieldTypes.get(fieldType), null);
                 this.setFieldInfo(textField);
-            } else if ("id-long".equals(modelField.getType())) {
-                ModelFormField.TextFindField textField = new ModelFormField.TextFindField(FieldInfo.SOURCE_AUTO_ENTITY, 40,
-                        Integer.valueOf(60), null);
-                this.setFieldInfo(textField);
-            } else if ("id-vlong".equals(modelField.getType())) {
-                ModelFormField.TextFindField textField = new ModelFormField.TextFindField(FieldInfo.SOURCE_AUTO_ENTITY, 60,
-                        Integer.valueOf(250), null);
-                this.setFieldInfo(textField);
-            } else if ("very-short".equals(modelField.getType())) {
-                ModelFormField.TextField textField = new ModelFormField.TextField(FieldInfo.SOURCE_AUTO_ENTITY, 6,
-                        Integer.valueOf(10), null);
-                this.setFieldInfo(textField);
-            } else if ("name".equals(modelField.getType()) || "short-varchar".equals(modelField.getType())) {
-                ModelFormField.TextFindField textField = new ModelFormField.TextFindField(FieldInfo.SOURCE_AUTO_ENTITY, 40,
-                        Integer.valueOf(60), null);
-                this.setFieldInfo(textField);
-            } else if ("value".equals(modelField.getType()) || "comment".equals(modelField.getType())
-                    || "description".equals(modelField.getType()) || "long-varchar".equals(modelField.getType())
-                    || "url".equals(modelField.getType()) || "email".equals(modelField.getType())) {
-                ModelFormField.TextFindField textField = new ModelFormField.TextFindField(FieldInfo.SOURCE_AUTO_ENTITY, 60,
-                        Integer.valueOf(250), null);
-                this.setFieldInfo(textField);
-            } else if ("floating-point".equals(modelField.getType()) || "currency-amount".equals(modelField.getType())
-                    || "numeric".equals(modelField.getType()) || "fixed-point".equals(modelField.getType()) || "currency-precise".equals(modelField.getType())) {
+            } else if (numericFieldTypes.contains(fieldType)) {
                 ModelFormField.RangeFindField textField = new ModelFormField.RangeFindField(FieldInfo.SOURCE_AUTO_ENTITY, 6, null);
                 this.setFieldInfo(textField);
-            } else if ("date-time".equals(modelField.getType()) || "date".equals(modelField.getType())
-                    || "time".equals(modelField.getType())) {
-                String type = modelField.getType();
-                if ("date-time".equals(modelField.getType())) {
+            } else if (dateFieldTypes.contains(fieldType)) {
+                String type = fieldType;
+                if ("date-time".equals(fieldType)) {
                     type = "timestamp";
                 }
                 ModelFormField.DateFindField dateTimeField = new ModelFormField.DateFindField(FieldInfo.SOURCE_AUTO_ENTITY, type);
@@ -554,56 +570,32 @@ public class ModelFormFieldBuilder {
                 this.setFieldInfo(textField);
             }
         } else if ("display".equals(defaultFieldType)) {
-            ModelFormField.DisplayField displayField = new ModelFormField.DisplayField(FieldInfo.SOURCE_AUTO_SERVICE, null);
+            ModelFormField.DisplayField displayField = new ModelFormField.DisplayField(FieldInfo.SOURCE_AUTO_ENTITY, null);
             this.setFieldInfo(displayField);
         } else if ("hidden".equals(defaultFieldType)) {
-            ModelFormField.HiddenField hiddenField = new ModelFormField.HiddenField(FieldInfo.SOURCE_AUTO_SERVICE, null);
+            ModelFormField.HiddenField hiddenField = new ModelFormField.HiddenField(FieldInfo.SOURCE_AUTO_ENTITY, null);
             this.setFieldInfo(hiddenField);
         } else {
-            if ("id".equals(modelField.getType())) {
-                ModelFormField.TextField textField = new ModelFormField.TextField(FieldInfo.SOURCE_AUTO_ENTITY, 20,
-                        Integer.valueOf(20), null);
-                this.setFieldInfo(textField);
-            } else if ("id-long".equals(modelField.getType())) {
-                ModelFormField.TextField textField = new ModelFormField.TextField(FieldInfo.SOURCE_AUTO_ENTITY, 40,
-                        Integer.valueOf(60), null);
-                this.setFieldInfo(textField);
-            } else if ("id-vlong".equals(modelField.getType())) {
-                ModelFormField.TextField textField = new ModelFormField.TextField(FieldInfo.SOURCE_AUTO_ENTITY, 60,
-                        Integer.valueOf(250), null);
-                this.setFieldInfo(textField);
-            } else if ("indicator".equals(modelField.getType())) {
-                List<OptionSource> optionSources = new ArrayList<>();
-                optionSources.add(new ModelFormField.SingleOption("Y", null, null));
-                optionSources.add(new ModelFormField.SingleOption("N", null, null));
+            if ("indicator".equals(fieldType)) {
+                List<OptionSource> optionSources = UtilMisc.toList(
+                        new ModelFormField.SingleOption("Y", null, null),
+                        new ModelFormField.SingleOption("N", null, null));
                 ModelFormField.DropDownField dropDownField = new ModelFormField.DropDownField(FieldInfo.SOURCE_AUTO_ENTITY,
                         optionSources);
                 this.setFieldInfo(dropDownField);
-            } else if ("very-short".equals(modelField.getType())) {
-                ModelFormField.TextField textField = new ModelFormField.TextField(FieldInfo.SOURCE_AUTO_ENTITY, 6,
-                        Integer.valueOf(10), null);
-                this.setFieldInfo(textField);
-            } else if ("very-long".equals(modelField.getType())) {
+            } else if ("very-long".equals(fieldType)) {
                 ModelFormField.TextareaField textareaField = new ModelFormField.TextareaField(FieldInfo.SOURCE_AUTO_ENTITY, null);
                 this.setFieldInfo(textareaField);
-            } else if ("name".equals(modelField.getType()) || "short-varchar".equals(modelField.getType())) {
-                ModelFormField.TextField textField = new ModelFormField.TextField(FieldInfo.SOURCE_AUTO_ENTITY, 40,
-                        Integer.valueOf(60), null);
+            } else if (textFieldTypes.contains(fieldType)) {
+                ModelFormField.TextField textField = new ModelFormField.TextField(FieldInfo.SOURCE_AUTO_ENTITY,
+                        textSizeByFieldTypes.get(fieldType), textMaxSizeByFieldTypes.get(fieldType), null);
                 this.setFieldInfo(textField);
-            } else if ("value".equals(modelField.getType()) || "comment".equals(modelField.getType())
-                    || "description".equals(modelField.getType()) || "long-varchar".equals(modelField.getType())
-                    || "url".equals(modelField.getType()) || "email".equals(modelField.getType())) {
-                ModelFormField.TextField textField = new ModelFormField.TextField(FieldInfo.SOURCE_AUTO_ENTITY, 60,
-                        Integer.valueOf(250), null);
-                this.setFieldInfo(textField);
-            } else if ("floating-point".equals(modelField.getType()) || "currency-amount".equals(modelField.getType())
-                    || "numeric".equals(modelField.getType())) {
+            } else if (numericFieldTypes.contains(fieldType)) {
                 ModelFormField.TextField textField = new ModelFormField.TextField(FieldInfo.SOURCE_AUTO_ENTITY, 6, null, null);
                 this.setFieldInfo(textField);
-            } else if ("date-time".equals(modelField.getType()) || "date".equals(modelField.getType())
-                    || "time".equals(modelField.getType())) {
-                String type = modelField.getType();
-                if ("date-time".equals(modelField.getType())) {
+            } else if (dateFieldTypes.contains(fieldType)) {
+                String type = fieldType;
+                if ("date-time".equals(fieldType)) {
                     type = "timestamp";
                 }
                 ModelFormField.DateTimeField dateTimeField = new ModelFormField.DateTimeField(FieldInfo.SOURCE_AUTO_ENTITY, type);
@@ -810,6 +802,9 @@ public class ModelFormFieldBuilder {
         if (UtilValidate.isNotEmpty(builder.getTabindex())) {
             this.tabindex = builder.getTabindex();
         }
+        if (UtilValidate.isNotEmpty(builder.getConditionGroup())) {
+            this.conditionGroup = builder.getConditionGroup();
+        }
         this.encodeOutput = builder.getEncodeOutput();
         this.position = builder.getPosition();
         this.requiredField = builder.getRequiredField();
@@ -894,7 +889,7 @@ public class ModelFormFieldBuilder {
     }
 
     public ModelFormFieldBuilder setParameterName(String parameterName) {
-        this.parameterName = parameterName;
+        this.parameterName = FlexibleStringExpander.getInstance(parameterName);
         return this;
     }
 
@@ -998,6 +993,10 @@ public class ModelFormFieldBuilder {
     }
     public ModelFormFieldBuilder setTabindex(String tabindex) {
         this.tabindex = tabindex;
+        return this;
+    }
+    public ModelFormFieldBuilder setConditionGroup(String conditionGroup) {
+        this.conditionGroup = conditionGroup;
         return this;
     }
 }

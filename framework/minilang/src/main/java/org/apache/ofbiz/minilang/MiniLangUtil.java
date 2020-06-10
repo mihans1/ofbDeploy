@@ -19,7 +19,6 @@
 package org.apache.ofbiz.minilang;
 
 import java.io.FileOutputStream;
-import java.io.IOException;
 import java.io.InputStream;
 import java.lang.reflect.Method;
 import java.net.URL;
@@ -62,7 +61,7 @@ public final class MiniLangUtil {
     private static final Set<String> SCRIPT_PREFIXES;
 
     static {
-        Set<String> scriptPrefixes = new HashSet<String>();
+        Set<String> scriptPrefixes = new HashSet<>();
         for (String scriptName : ScriptUtil.SCRIPT_NAMES) {
             scriptPrefixes.add(scriptName.concat(":"));
         }
@@ -172,7 +171,7 @@ public final class MiniLangUtil {
         Converter<Object, Object> converter = (Converter<Object, Object>) Converters.getConverter(sourceClass, targetClass);
         LocalizedConverter<Object, Object> localizedConverter = null;
         if (converter instanceof LocalizedConverter) {
-            localizedConverter = (LocalizedConverter) converter;
+            localizedConverter = (LocalizedConverter<Object, Object>) converter;
             if (locale == null) {
                 locale = Locale.getDefault();
             }

@@ -25,7 +25,6 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
-import org.apache.ofbiz.base.util.Debug;
 import org.apache.ofbiz.base.util.UtilGenerics;
 import org.apache.ofbiz.entity.Delegator;
 import org.apache.ofbiz.entity.GenericModelException;
@@ -38,52 +37,56 @@ public class EntityConditionBuilder extends BuilderSupport {
     public static final String module = EntityConditionBuilder.class.getName();
 
     @SuppressWarnings("serial")
-    private static class ConditionHolder extends EntityCondition {
+    private static class ConditionHolder implements EntityCondition {
         protected EntityCondition condition;
 
         protected ConditionHolder(EntityCondition condition) {
             this.condition = condition;
         }
 
-        public Object asType(Class clz) {
-            Debug.logInfo("asType(%s): %s", module, clz, condition);
-            if (clz == EntityCondition.class) {
-                return condition;
-            }
-            return this;
-        }
-
-        public EntityCondition build() {
-            return condition;
-        }
-
+        @Override
         public boolean isEmpty() {
             return condition.isEmpty();
         }
 
+        @Override
         public String makeWhereString(ModelEntity modelEntity, List<EntityConditionParam> entityConditionParams, Datasource datasourceInfo) {
             return condition.makeWhereString(modelEntity, entityConditionParams, datasourceInfo);
         }
 
+        @Override
         public void checkCondition(ModelEntity modelEntity) throws GenericModelException {
             condition.checkCondition(modelEntity);
         }
 
+        @Override
         public boolean mapMatches(Delegator delegator, Map<String, ? extends Object> map) {
             return condition.mapMatches(delegator, map);
         }
 
+        @Override
         public EntityCondition freeze() {
             return condition.freeze();
         }
 
+        @Override
         public int hashCode() {
             return condition.hashCode();
         }
+        @Override
         public boolean equals(Object obj) {
             return condition.equals(obj);
         }
 
+        @Override
+        public void accept(EntityConditionVisitor visitor) {
+            throw new IllegalArgumentException(getClass().getName() + ".accept not implemented");
+        }
+
+        @Override
+        public String toString() {
+            return makeWhereString();
+        }
     }
 
     @Override
@@ -102,8 +105,8 @@ public class EntityConditionBuilder extends BuilderSupport {
     }
 
     @Override
-    protected Object createNode(Object methodName, Map mapArg) {
-        Map<String, Object> fieldValueMap = UtilGenerics.checkMap(mapArg);
+    protected Object createNode(Object methodName, @SuppressWarnings("rawtypes") Map mapArg) {
+        Map<String, Object> fieldValueMap = UtilGenerics.cast(mapArg);
         String operatorName = ((String)methodName).toLowerCase(Locale.getDefault());
         EntityComparisonOperator<String, Object> operator = EntityOperator.lookupComparison(operatorName);
         List<EntityCondition> conditionList = new LinkedList<>();
@@ -117,7 +120,7 @@ public class EntityConditionBuilder extends BuilderSupport {
     }
 
     @Override
-    protected Object createNode(Object methodName, Map mapArg, Object objArg) {
+    protected Object createNode(Object methodName, @SuppressWarnings("rawtypes") Map mapArg, Object objArg) {
         return null;
     }
 
@@ -135,7 +138,7 @@ public class EntityConditionBuilder extends BuilderSupport {
         } else if (child instanceof ConditionHolder) {
             tempList.add(((ConditionHolder)child).condition);
         } else {
-            tempList.addAll(UtilGenerics.<EntityCondition>checkList(child));
+            tempList.addAll(UtilGenerics.cast(child));
         }
         holder.condition = EntityCondition.makeCondition(tempList, parentConList.getOperator());
     }

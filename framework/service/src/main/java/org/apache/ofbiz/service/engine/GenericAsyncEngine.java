@@ -41,6 +41,7 @@ import org.apache.ofbiz.service.job.GenericServiceJob;
 import org.apache.ofbiz.service.job.Job;
 import org.apache.ofbiz.service.job.JobManager;
 import org.apache.ofbiz.service.job.JobManagerException;
+import org.apache.ofbiz.service.job.JobPriority;
 
 /**
  * Generic Asynchronous Engine
@@ -53,26 +54,18 @@ public abstract class GenericAsyncEngine extends AbstractEngine {
         super(dispatcher);
     }
 
-    /**
-     * @see org.apache.ofbiz.service.engine.GenericEngine#runSync(java.lang.String, org.apache.ofbiz.service.ModelService, java.util.Map)
-     */
+    @Override
     public abstract Map<String, Object> runSync(String localName, ModelService modelService, Map<String, Object> context) throws GenericServiceException;
 
-    /**
-     * @see org.apache.ofbiz.service.engine.GenericEngine#runSyncIgnore(java.lang.String, org.apache.ofbiz.service.ModelService, java.util.Map)
-     */
+    @Override
     public abstract void runSyncIgnore(String localName, ModelService modelService, Map<String, Object> context) throws GenericServiceException;
 
-    /**
-     * @see org.apache.ofbiz.service.engine.GenericEngine#runAsync(java.lang.String, org.apache.ofbiz.service.ModelService, java.util.Map, boolean)
-     */
+    @Override
     public void runAsync(String localName, ModelService modelService, Map<String, Object> context, boolean persist) throws GenericServiceException {
         runAsync(localName, modelService, context, null, persist);
     }
 
-    /**
-     * @see org.apache.ofbiz.service.engine.GenericEngine#runAsync(java.lang.String, org.apache.ofbiz.service.ModelService, java.util.Map, org.apache.ofbiz.service.GenericRequester, boolean)
-     */
+    @Override
     public void runAsync(String localName, ModelService modelService, Map<String, Object> context, GenericRequester requester, boolean persist) throws GenericServiceException {
         DispatchContext dctx = dispatcher.getLocalContext(localName);
         Job job = null;
@@ -110,8 +103,9 @@ public abstract class GenericAsyncEngine extends AbstractEngine {
                 jFields.put("statusId", "SERVICE_PENDING");
                 jFields.put("serviceName", modelService.name);
                 jFields.put("loaderName", localName);
-                jFields.put("maxRetry", Long.valueOf(modelService.maxRetry));
+                jFields.put("maxRetry", (long) modelService.maxRetry);
                 jFields.put("runtimeDataId", dataId);
+                jFields.put("priority", JobPriority.NORMAL);
                 if (UtilValidate.isNotEmpty(authUserLoginId)) {
                     jFields.put("authUserLoginId", authUserLoginId);
                 }

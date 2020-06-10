@@ -19,8 +19,6 @@
 package org.apache.ofbiz.base.util;
 
 import java.io.BufferedInputStream;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.Serializable;
@@ -142,11 +140,11 @@ public final class UtilProperties implements Serializable {
     private static Number getPropertyNumber(String resource, String name, Number defaultNumber, String type) {
         String str = getPropertyValue(resource, name);
         if (UtilValidate.isEmpty(str)) {
-            Debug.logWarning("Error converting String \"" + str + "\" to " + type + "; using defaultNumber " + defaultNumber + ".", module);
+            if (Debug.verboseOn()) Debug.logVerbose("The property " + resource + ":" + name + " is empty, using defaultNumber " + defaultNumber + ".", module);
             return defaultNumber;
         }
         try {
-            return (Number)(ObjectType.simpleTypeConvert(str, type, null, null));
+            return (Number)(ObjectType.simpleTypeOrObjectConvert(str, type, null, null));
         } catch (GeneralException e) {
             Debug.logWarning("Error converting String \"" + str + "\" to " + type + "; using defaultNumber " + defaultNumber + ".", module);
         }
@@ -370,11 +368,7 @@ public final class UtilProperties implements Serializable {
      */
     public static boolean propertyValueEquals(URL url, String name, String compareString) {
         String value = getPropertyValue(url, name);
-
-        if (value == null) {
-            return false;
-        }
-        return value.trim().equals(compareString);
+        return !(value == null) && value.trim().equals(compareString);
     }
 
     /** Compares Ignoring Case the specified property to the compareString, returns true if they are the same, false otherwise
@@ -385,11 +379,7 @@ public final class UtilProperties implements Serializable {
      */
     public static boolean propertyValueEqualsIgnoreCase(URL url, String name, String compareString) {
         String value = getPropertyValue(url, name);
-
-        if (value == null) {
-            return false;
-        }
-        return value.trim().equalsIgnoreCase(compareString);
+        return !(value == null) && value.trim().equalsIgnoreCase(compareString);
     }
 
     /** Returns the value of the specified property name from the specified resource/properties file.
@@ -494,87 +484,6 @@ public final class UtilProperties implements Serializable {
         return value == null ? "" : value.trim();
     }
 
-    /** Sets the specified value of the specified property name to the specified resource/properties file
-     * @param resource The name of the resource - must be a file
-     * @param name The name of the property in the properties file
-     * @param value The value of the property in the properties file */
-     public static void setPropertyValue(String resource, String name, String value) {
-         if (UtilValidate.isEmpty(resource)) {
-            return;
-        }
-         if (UtilValidate.isEmpty(name)) {
-            return;
-        }
-
-         Properties properties = getProperties(resource);
-         if (properties == null) {
-             return;
-         }
-
-        try (
-                FileOutputStream propFile = new FileOutputStream(resource);) {
-             properties.setProperty(name, value);
-             if ("XuiLabels".equals(name)) {
-                 properties.store(propFile,
-                     "##############################################################################\n"
-                     +"# Licensed to the Apache Software Foundation (ASF) under one                   \n"
-                     +"# or more contributor license agreements.  See the NOTICE file                 \n"
-                     +"# distributed with this work for additional information                        \n"
-                     +"# regarding copyright ownership.  The ASF licenses this file                   \n"
-                     +"# to you under the Apache License, Version 2.0 (the                            \n"
-                     +"# \"License\"); you may not use this file except in compliance                 \n"
-                     +"# with the License.  You may obtain a copy of the License at                   \n"
-                     +"#                                                                              \n"
-                     +"# http://www.apache.org/licenses/LICENSE-2.0                                   \n"
-                     +"#                                                                              \n"
-                     +"# Unless required by applicable law or agreed to in writing,                   \n"
-                     +"# software distributed under the License is distributed on an                  \n"
-                     +"# \"AS IS\" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY                     \n"
-                     +"# KIND, either express or implied.  See the License for the                    \n"
-                     +"# specific language governing permissions and limitations                      \n"
-                     +"# under the License.                                                           \n"
-                     +"###############################################################################\n"
-                     +"#                                                                              \n"
-                     +"# Dynamically modified by OFBiz Framework (org.apache.ofbiz.base.util : UtilProperties.setPropertyValue)\n"
-                     +"#                                                                              \n"
-                     +"# By default the screen is 1024x768 wide. If you want to use another screen size,\n"
-                     +"# you must create a new directory under plugins/pos/screens, like the 800x600.\n"
-                     +"# You must also set the 3 related parameters (StartClass, ClientWidth, ClientHeight) accordingly.\n"
-                     +"#");
-             } else {
-                 properties.store(propFile,
-                     "##############################################################################\n"
-                     +"# Licensed to the Apache Software Foundation (ASF) under one                   \n"
-                     +"# or more contributor license agreements.  See the NOTICE file                 \n"
-                     +"# distributed with this work for additional information                        \n"
-                     +"# regarding copyright ownership.  The ASF licenses this file                   \n"
-                     +"# to you under the Apache License, Version 2.0 (the                            \n"
-                     +"# \"License\"); you may not use this file except in compliance                 \n"
-                     +"# with the License.  You may obtain a copy of the License at                   \n"
-                     +"#                                                                              \n"
-                     +"# http://www.apache.org/licenses/LICENSE-2.0                                   \n"
-                     +"#                                                                              \n"
-                     +"# Unless required by applicable law or agreed to in writing,                   \n"
-                     +"# software distributed under the License is distributed on an                  \n"
-                     +"# \"AS IS\" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY                     \n"
-                     +"# KIND, either express or implied.  See the License for the                    \n"
-                     +"# specific language governing permissions and limitations                      \n"
-                     +"# under the License.                                                           \n"
-                     +"###############################################################################\n"
-                     +"#                                                                              \n"
-                     +"# Dynamically modified by OFBiz Framework (org.apache.ofbiz.base.util : UtilProperties.setPropertyValue)\n"
-                     +"# The comments have been removed, you may still find them on the OFBiz repository... \n"
-                     +"#");
-             }
-
-             propFile.close();
-         } catch (FileNotFoundException e) {
-             Debug.logInfo(e, "Unable to located the resource file.", module);
-         } catch (IOException e) {
-             Debug.logError(e, module);
-         }
-     }
-
      /** Sets the specified value of the specified property name to the specified resource/properties in memory, does not persist it
       * @param resource The name of the resource
       * @param name The name of the property in the resource
@@ -621,7 +530,9 @@ public final class UtilProperties implements Serializable {
         if (bundle.containsKey(name)) {
             value = bundle.getString(name);
         } else {
-            Debug.logInfo(name + " misses in " + resource + " for locale " + locale, module);
+            if (Debug.warningOn()) { 
+                Debug.logWarning(name + " is missing in " + resource + " for locale " + locale, module);
+            }
             return name;
         }
         return value.trim();
@@ -692,7 +603,7 @@ public final class UtilProperties implements Serializable {
     }
 
     public static String getMessageMap(String resource, String name, Locale locale, Object... context) {
-        return getMessage(resource, name, UtilGenerics.toMap(String.class, context), locale);
+        return getMessage(resource, name, UtilMisc.toMap(context), locale);
     }
 
     private static Set<String> resourceNotFoundMessagesShown = new HashSet<>();
@@ -1165,9 +1076,11 @@ public final class UtilProperties implements Serializable {
         public Enumeration<String> getKeys() {
             return new Enumeration<String>() {
                 Iterator<String> i = UtilGenerics.cast(properties.keySet().iterator());
+                @Override
                 public boolean hasMoreElements() {
                     return (i.hasNext());
                 }
+                @Override
                 public String nextElement() {
                     return i.next();
                 }

@@ -24,14 +24,11 @@ import java.io.Writer;
 import java.util.List;
 import java.util.Locale;
 
-import javax.servlet.RequestDispatcher;
 import javax.servlet.ServletContext;
-import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 
-import org.apache.commons.lang.StringUtils;
 import org.apache.ofbiz.base.util.Debug;
 import org.apache.ofbiz.base.util.GeneralException;
 import org.apache.ofbiz.base.util.GeneralRuntimeException;
@@ -289,9 +286,7 @@ public class CmsEvents {
                 templateMap.put("statusCode", statusCode);
 
                 // make the link prefix
-                ServletContext ctx = (ServletContext) request.getAttribute("servletContext");
-                RequestHandler rh = (RequestHandler) ctx.getAttribute("_REQUEST_HANDLER_");
-                templateMap.put("_REQUEST_HANDLER_", rh);
+                templateMap.put("_REQUEST_HANDLER_", RequestHandler.from(request));
 
                 //Cache Headers
                 UtilHttp.setResponseBrowserProxyNoCache(response);

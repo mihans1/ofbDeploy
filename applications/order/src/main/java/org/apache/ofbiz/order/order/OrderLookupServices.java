@@ -118,7 +118,7 @@ public class OrderLookupServices {
         }
 
         // the base order header fields
-        List<String> orderTypeList = UtilGenerics.checkList(context.get("orderTypeId"));
+        List<String> orderTypeList = UtilGenerics.cast(context.get("orderTypeId"));
         if (orderTypeList != null) {
             List<EntityExpr> orExprs = new LinkedList<>();
             for (String orderTypeId : orderTypeList) {
@@ -137,7 +137,7 @@ public class OrderLookupServices {
             conditions.add(makeExpr("orderName", orderName, true));
         }
 
-        List<String> orderStatusList = UtilGenerics.checkList(context.get("orderStatusId"));
+        List<String> orderStatusList = UtilGenerics.cast(context.get("orderStatusId"));
         if (orderStatusList != null) {
             List<EntityCondition> orExprs = new LinkedList<>();
             for (String orderStatusId : orderStatusList) {
@@ -155,7 +155,7 @@ public class OrderLookupServices {
             conditions.add(EntityCondition.makeCondition(orExprs, EntityOperator.OR));
         }
 
-        List<String> productStoreList = UtilGenerics.checkList(context.get("productStoreId"));
+        List<String> productStoreList = UtilGenerics.cast(context.get("productStoreId"));
         if (productStoreList != null) {
             List<EntityExpr> orExprs = new LinkedList<>();
             for (String productStoreId : productStoreList) {
@@ -165,7 +165,7 @@ public class OrderLookupServices {
             conditions.add(EntityCondition.makeCondition(orExprs, EntityOperator.OR));
         }
 
-        List<String> webSiteList = UtilGenerics.checkList(context.get("orderWebSiteId"));
+        List<String> webSiteList = UtilGenerics.cast(context.get("orderWebSiteId"));
         if (webSiteList != null) {
             List<EntityExpr> orExprs = new LinkedList<>();
             for (String webSiteId : webSiteList) {
@@ -175,7 +175,7 @@ public class OrderLookupServices {
             conditions.add(EntityCondition.makeCondition(orExprs, EntityOperator.OR));
         }
 
-        List<String> saleChannelList = UtilGenerics.checkList(context.get("salesChannelEnumId"));
+        List<String> saleChannelList = UtilGenerics.cast(context.get("salesChannelEnumId"));
         if (saleChannelList != null) {
             List<EntityExpr> orExprs = new LinkedList<>();
             for (String salesChannelEnumId : saleChannelList) {
@@ -225,7 +225,7 @@ public class OrderLookupServices {
             paramList.add("minDate=" + minDate);
 
             try {
-                Object converted = ObjectType.simpleTypeConvert(minDate, "Timestamp", null, null);
+                Object converted = ObjectType.simpleTypeOrObjectConvert(minDate, "Timestamp", null, null);
                 if (converted != null) {
                     conditions.add(EntityCondition.makeCondition(dateField, EntityOperator.GREATER_THAN_EQUAL_TO, converted));
                 }
@@ -243,7 +243,7 @@ public class OrderLookupServices {
             paramList.add("maxDate=" + maxDate);
 
             try {
-                Object converted = ObjectType.simpleTypeConvert(maxDate, "Timestamp", null, null);
+                Object converted = ObjectType.simpleTypeOrObjectConvert(maxDate, "Timestamp", null, null);
                 if (converted != null) {
                     conditions.add(EntityCondition.makeCondition("orderDate", EntityOperator.LESS_THAN_EQUAL_TO, converted));
                 }
@@ -255,7 +255,7 @@ public class OrderLookupServices {
         // party (role) fields
         String userLoginId = (String) context.get("userLoginId");
         String partyId = (String) context.get("partyId");
-        List<String> roleTypeList = UtilGenerics.checkList(context.get("roleTypeId"));
+        List<String> roleTypeList = UtilGenerics.cast(context.get("roleTypeId"));
 
         if (UtilValidate.isNotEmpty(userLoginId) && UtilValidate.isEmpty(partyId)) {
             GenericValue ul = null;
@@ -405,7 +405,10 @@ public class OrderLookupServices {
                         List<GenericValue> variants = null;
                         try {
                             varLookup = dispatcher.runSync("getAllProductVariants", UtilMisc.toMap("productId", productId));
-                            variants = UtilGenerics.checkList(varLookup.get("assocProducts"));
+                            if (ServiceUtil.isError(varLookup)) {
+                                return ServiceUtil.returnError(ServiceUtil.getErrorMessage(varLookup));
+                            }
+                            variants = UtilGenerics.cast(varLookup.get("assocProducts"));
 
                         } catch (GenericServiceException e) {
                             Debug.logWarning(e.getMessage(), module);
@@ -623,15 +626,15 @@ public class OrderLookupServices {
         // format the param list
         String paramString = StringUtil.join(paramList, "&amp;");
 
-        result.put("highIndex", Integer.valueOf(highIndex));
-        result.put("lowIndex", Integer.valueOf(lowIndex));
+        result.put("highIndex", highIndex);
+        result.put("lowIndex", lowIndex);
         result.put("viewIndex", viewIndex);
         result.put("viewSize", viewSize);
         result.put("showAll", showAll);
 
         result.put("paramList", (paramString != null? paramString: ""));
         result.put("orderList", orderList);
-        result.put("orderListSize", Integer.valueOf(orderCount));
+        result.put("orderListSize", orderCount);
 
         return result;
     }

@@ -61,13 +61,13 @@ under the License.
         </table>
         <input type="hidden" name="JavaScriptEnabled" value="N"/>
         <br />
-        <a href="<@ofbizUrl>forgotPassword_step1</@ofbizUrl>">${uiLabelMap.CommonForgotYourPassword}?</a>
+        <a href="<@ofbizUrl>forgotPassword</@ofbizUrl>">${uiLabelMap.CommonForgotYourPassword}?</a>
       </form>
     </div>
   </div>
 </center>
 
-<script language="JavaScript" type="text/javascript">
+<script type="application/javascript">
   document.loginform.JavaScriptEnabled.value = "Y";
   <#if focusName>
     document.loginform.USERNAME.focus();

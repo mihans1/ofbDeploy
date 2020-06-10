@@ -58,7 +58,7 @@ public class QuoteServices {
         String note = (String) context.get("note");
 
         // prepare the order information
-        Map<String, Object> sendMap = new HashMap<String, Object>();
+        Map<String, Object> sendMap = new HashMap<>();
 
         // get the quote and store
         GenericValue quote = null;
@@ -126,6 +126,9 @@ public class QuoteServices {
         Map<String, Object> sendResp = null;
         try {
             sendResp = dispatcher.runSync("sendMailFromScreen", sendMap);
+            if (ServiceUtil.isError(sendResp)) {
+                return ServiceUtil.returnError(ServiceUtil.getErrorMessage(sendResp));
+            }
         } catch (GenericServiceException e) {
             Debug.logError(e, module);
             return ServiceUtil.returnError(UtilProperties.getMessage(resource_error, "OrderServiceExceptionSeeLogs",locale));
@@ -155,17 +158,18 @@ public class QuoteServices {
         Timestamp validThruDate = (Timestamp) context.get("validThruDate");
         String quoteName = (String) context.get("quoteName");
         String description = (String) context.get("description");
-        List<GenericValue> quoteItems = UtilGenerics.checkList(context.get("quoteItems"));
-        List<GenericValue> quoteAttributes = UtilGenerics.checkList(context.get("quoteAttributes"));
-        List<GenericValue> quoteCoefficients = UtilGenerics.checkList(context.get("quoteCoefficients"));
-        List<GenericValue> quoteRoles = UtilGenerics.checkList(context.get("quoteRoles"));
-        List<GenericValue> quoteWorkEfforts = UtilGenerics.checkList(context.get("quoteWorkEfforts"));
-        List<GenericValue> quoteAdjustments = UtilGenerics.checkList(context.get("quoteAdjustments"));
+        List<GenericValue> quoteItems = UtilGenerics.cast(context.get("quoteItems"));
+        List<GenericValue> quoteAttributes = UtilGenerics.cast(context.get("quoteAttributes"));
+        List<GenericValue> quoteCoefficients = UtilGenerics.cast(context.get("quoteCoefficients"));
+        List<GenericValue> quoteRoles = UtilGenerics.cast(context.get("quoteRoles"));
+        List<GenericValue> quoteWorkEfforts = UtilGenerics.cast(context.get("quoteWorkEfforts"));
+        List<GenericValue> quoteAdjustments = UtilGenerics.cast(context.get("quoteAdjustments"));
         Locale locale = (Locale) context.get("locale");
+        Map<String, Object> serviceResult = new HashMap<>();
         
         //TODO create Quote Terms still to be implemented
         //TODO create Quote Term Attributes still to be implemented
-        Map<String, Object> result = new HashMap<String, Object>();
+        Map<String, Object> result = new HashMap<>();
 
         try {
             Map<String, Object> quoteIn = UtilMisc.toMap("quoteTypeId", quoteTypeId, "partyId", partyId, "issueDate", issueDate, "statusId", statusId, "currencyUomId", currencyUomId);
@@ -183,7 +187,9 @@ public class QuoteServices {
 
             // create Quote
             Map<String, Object> quoteOut = dispatcher.runSync("createQuote", quoteIn);
-
+            if (ServiceUtil.isError(quoteOut)) {
+                return ServiceUtil.returnError(ServiceUtil.getErrorMessage(quoteOut));
+            }
             if (UtilValidate.isNotEmpty(quoteOut) && UtilValidate.isNotEmpty(quoteOut.get("quoteId"))) {
                 String quoteId = (String)quoteOut.get("quoteId");
                 result.put("quoteId", quoteId);
@@ -195,7 +201,10 @@ public class QuoteServices {
                         Map<String, Object> quoteItemIn = quoteItem.getAllFields();
                         quoteItemIn.put("userLogin", userLogin);
 
-                        dispatcher.runSync("createQuoteItem", quoteItemIn);
+                        serviceResult = dispatcher.runSync("createQuoteItem", quoteItemIn);
+                        if (ServiceUtil.isError(serviceResult)) {
+                            return ServiceUtil.returnError(ServiceUtil.getErrorMessage(serviceResult));
+                        }
                     }
                 }
 
@@ -206,7 +215,10 @@ public class QuoteServices {
                         Map<String, Object> quoteAttrIn = quoteAttr.getAllFields();
                         quoteAttrIn.put("userLogin", userLogin);
 
-                        dispatcher.runSync("createQuoteAttribute", quoteAttrIn);
+                        serviceResult = dispatcher.runSync("createQuoteAttribute", quoteAttrIn);
+                        if (ServiceUtil.isError(serviceResult)) {
+                            return ServiceUtil.returnError(ServiceUtil.getErrorMessage(serviceResult));
+                        }
                     }
                 }
 
@@ -217,7 +229,10 @@ public class QuoteServices {
                         Map<String, Object> quoteCoefficientIn = quoteCoefficient.getAllFields();
                         quoteCoefficientIn.put("userLogin", userLogin);
 
-                        dispatcher.runSync("createQuoteCoefficient", quoteCoefficientIn);
+                        serviceResult = dispatcher.runSync("createQuoteCoefficient", quoteCoefficientIn);
+                        if (ServiceUtil.isError(serviceResult)) {
+                            return ServiceUtil.returnError(ServiceUtil.getErrorMessage(serviceResult));
+                        }
                     }
                 }
 
@@ -227,8 +242,10 @@ public class QuoteServices {
                         quoteRole.set("quoteId", quoteId);
                         Map<String, Object> quoteRoleIn = quoteRole.getAllFields();
                         quoteRoleIn.put("userLogin", userLogin);
-
-                        dispatcher.runSync("createQuoteRole", quoteRoleIn);
+                        serviceResult = dispatcher.runSync("createQuoteRole", quoteRoleIn);
+                        if (ServiceUtil.isError(serviceResult)) {
+                            return ServiceUtil.returnError(ServiceUtil.getErrorMessage(serviceResult));
+                        }
                     }
                 }
 
@@ -238,8 +255,10 @@ public class QuoteServices {
                         quoteWorkEffort.set("quoteId", quoteId);
                         Map<String, Object> quoteWorkEffortIn = quoteWorkEffort.getAllFields();
                         quoteWorkEffortIn.put("userLogin", userLogin);
-
-                        dispatcher.runSync("createQuoteWorkEffort", quoteWorkEffortIn);
+                        serviceResult = dispatcher.runSync("createQuoteWorkEffort", quoteWorkEffortIn);
+                        if (ServiceUtil.isError(serviceResult)) {
+                            return ServiceUtil.returnError(ServiceUtil.getErrorMessage(serviceResult));
+                        }
                     }
                 }
 
@@ -249,8 +268,10 @@ public class QuoteServices {
                         quoteAdjustment.set("quoteId", quoteId);
                         Map<String, Object> quoteAdjustmentIn = quoteAdjustment.getAllFields();
                         quoteAdjustmentIn.put("userLogin", userLogin);
-
-                        dispatcher.runSync("createQuoteAdjustment", quoteAdjustmentIn);
+                        serviceResult = dispatcher.runSync("createQuoteAdjustment", quoteAdjustmentIn);
+                        if (ServiceUtil.isError(serviceResult)) {
+                            return ServiceUtil.returnError(ServiceUtil.getErrorMessage(serviceResult));
+                        }
                     }
                 }
 

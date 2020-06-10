@@ -47,7 +47,6 @@ import javax.transaction.xa.Xid;
 import org.apache.commons.collections4.map.ListOrderedMap;
 import org.apache.ofbiz.base.util.Debug;
 import org.apache.ofbiz.base.util.UtilDateTime;
-import org.apache.ofbiz.base.util.UtilGenerics;
 import org.apache.ofbiz.base.util.UtilValidate;
 import org.apache.ofbiz.entity.GenericEntityConfException;
 import org.apache.ofbiz.entity.GenericEntityException;
@@ -780,10 +779,6 @@ public final class TransactionUtil implements Status {
         public void logError(String message) {
             Debug.logError(this.getCauseThrowable(), (message == null ? "" : message) + this.getCauseMessage(), module);
         }
-
-        public boolean isEmpty() {
-            return (UtilValidate.isEmpty(this.getCauseMessage()) && this.getCauseThrowable() == null);
-        }
     }
 
     private static void pushSetRollbackOnlyCauseSave(RollbackOnlyCause e) {
@@ -841,12 +836,8 @@ public final class TransactionUtil implements Status {
     /**
      * Maintain the suspended transactions together with their timestamps
      */
-    private static ThreadLocal<Map<Transaction, Timestamp>> suspendedTxStartStamps = new ThreadLocal<Map<Transaction, Timestamp>>() {
-        @Override
-        public Map<Transaction, Timestamp> initialValue() {
-            return UtilGenerics.checkMap(new ListOrderedMap<>());
-        }
-    };
+    private static ThreadLocal<ListOrderedMap<Transaction, Timestamp>> suspendedTxStartStamps =
+            ThreadLocal.withInitial(ListOrderedMap::new);
 
     /**
     * Put the stamp to remember later
@@ -891,9 +882,9 @@ public final class TransactionUtil implements Status {
     * Remove the stamp from stack (when resuming)
     */
     private static void popTransactionStartStamp() {
-        ListOrderedMap map = (ListOrderedMap) suspendedTxStartStamps.get();
+        ListOrderedMap<Transaction, Timestamp> map = suspendedTxStartStamps.get();
         if (map.size() > 0) {
-            transactionStartStamp.set((Timestamp) map.remove(map.lastKey()));
+            transactionStartStamp.set(map.remove(map.lastKey()));
         } else {
             Debug.logError("Error in transaction handling - no saved start stamp found - using NOW.", module);
             transactionStartStamp.set(UtilDateTime.nowTimestamp());
@@ -935,10 +926,12 @@ public final class TransactionUtil implements Status {
     }
 
     public static class StampClearSync implements Synchronization {
+        @Override
         public void afterCompletion(int status) {
             TransactionUtil.clearTransactionStamps();
         }
 
+        @Override
         public void beforeCompletion() {
         }
     }
@@ -950,6 +943,7 @@ public final class TransactionUtil implements Status {
             this.callable = callable;
         }
 
+        @Override
         public V call() throws GenericEntityException {
             Transaction suspended = TransactionUtil.suspend();
             try {
@@ -984,6 +978,7 @@ public final class TransactionUtil implements Status {
             this.printException = printException;
         }
 
+        @Override
         public V call() throws GenericEntityException {
             boolean tx = TransactionUtil.begin(timeout);
             Throwable transactionAbortCause = null;

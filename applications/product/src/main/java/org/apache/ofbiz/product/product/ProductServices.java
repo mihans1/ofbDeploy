@@ -87,18 +87,18 @@ public class ProductServices {
     public static Map<String, Object> prodFindSelectedVariant(DispatchContext dctx, Map<String, ? extends Object> context) {
         Delegator delegator = dctx.getDelegator();
         Locale locale = (Locale) context.get("locale");
-        Map<String, String> selectedFeatures = UtilGenerics.checkMap(context.get("selectedFeatures"));
+        Map<String, String> selectedFeatures = UtilGenerics.cast(context.get("selectedFeatures"));
         List<GenericValue> products = new LinkedList<>();
         // All the variants for this products are retrieved
         Map<String, Object> resVariants = prodFindAllVariants(dctx, context);
-        List<GenericValue> variants = UtilGenerics.checkList(resVariants.get("assocProducts"));
+        List<GenericValue> variants = UtilGenerics.cast(resVariants.get("assocProducts"));
         for (GenericValue oneVariant: variants) {
             // For every variant, all the standard features are retrieved
             Map<String, String> feaContext = new HashMap<>();
             feaContext.put("productId", oneVariant.getString("productIdTo"));
             feaContext.put("type", "STANDARD_FEATURE");
             Map<String, Object> resFeatures = prodGetFeatures(dctx, feaContext);
-            List<GenericValue> features = UtilGenerics.checkList(resFeatures.get("productFeatures"));
+            List<GenericValue> features = UtilGenerics.cast(resFeatures.get("productFeatures"));
             boolean variantFound = true;
             // The variant is discarded if at least one of its standard features
             // has the same type of one of the selected features but a different feature id.
@@ -179,14 +179,14 @@ public class ProductServices {
         Delegator delegator = dctx.getDelegator();
         LocalDispatcher dispatcher = dctx.getDispatcher();
         Map<String, Object> result = new HashMap<>();
-        List<String> featureOrder = UtilMisc.makeListWritable(UtilGenerics.<String>checkCollection(context.get("featureOrder")));
+        List<String> featureOrder = UtilMisc.makeListWritable(UtilGenerics.cast(context.get("featureOrder")));
 
         if (UtilValidate.isEmpty(featureOrder)) {
             return ServiceUtil.returnError(UtilProperties.getMessage(resource,
                     "ProductFeatureTreeCannotFindFeaturesList", locale));
         }
 
-        List<GenericValue> variants = UtilGenerics.checkList(prodFindAllVariants(dctx, context).get("assocProducts"));
+        List<GenericValue> variants = UtilGenerics.cast(prodFindAllVariants(dctx, context).get("assocProducts"));
         List<String> virtualVariant = new LinkedList<>();
 
         if (UtilValidate.isEmpty(variants)) {
@@ -614,7 +614,7 @@ public class ProductServices {
         // loop through the keysets and get the sub-groups
         for (Entry<String, Object> entry : group.entrySet()) {
             String key = entry.getKey();
-            List<String> itemList = UtilGenerics.checkList(group.get(key));
+            List<String> itemList = UtilGenerics.cast(group.get(key));
 
             if (UtilValidate.isNotEmpty(itemList)) {
                 Map<String, Object> subGroup = makeGroup(delegator, featureList, itemList, order, index + 1);
@@ -911,6 +911,9 @@ public class ProductServices {
                         Map<String, Object> invRes = null;
                         try {
                             invRes = dispatcher.runSync("getProductInventoryAvailable", UtilMisc.<String, Object>toMap("productId", productId, "userLogin", userLogin));
+                            if (ServiceUtil.isError(invRes)) {
+                                return ServiceUtil.returnError(ServiceUtil.getErrorMessage(invRes));
+                            }
                         } catch (GenericServiceException e) {
                             Debug.logError(e, module);
                             return ServiceUtil.returnError(e.getMessage());
@@ -983,7 +986,10 @@ public class ProductServices {
 
             List<GenericValue> fileExtension;
             try {
-                fileExtension = EntityQuery.use(delegator).from("FileExtension").where("mimeTypeId", (String) context.get("_uploadedFile_contentType")).queryList();
+                fileExtension = EntityQuery.use(delegator)
+                        .from("FileExtension")
+                        .where("mimeTypeId", context.get("_uploadedFile_contentType"))
+                        .queryList();
             } catch (GenericEntityException e) {
                 Debug.logError(e, module);
                 return ServiceUtil.returnError(e.getMessage());
@@ -1084,7 +1090,7 @@ public class ProductServices {
 
             /* now store the image versions created by ScaleImage.scaleImageInAllSize */
             /* have to shrink length of productContentTypeId, as otherwise value is too long for database field */
-            Map<String,String> imageUrlMap = UtilGenerics.checkMap(resultResize.get("imageUrlMap"));
+            Map<String,String> imageUrlMap = UtilGenerics.cast(resultResize.get("imageUrlMap"));
             for ( String sizeType : ScaleImage.sizeTypeList ) {
                 imageUrl = imageUrlMap.get(sizeType);
                 if( UtilValidate.isNotEmpty(imageUrl)) {
@@ -1152,7 +1158,10 @@ public class ProductServices {
                     if (dataResource != null) {
                         dataResourceCtx.put("dataResourceId", dataResource.getString("dataResourceId"));
                         try {
-                            dispatcher.runSync("updateDataResource", dataResourceCtx);
+                            Map<String, Object> serviceResult = dispatcher.runSync("updateDataResource", dataResourceCtx);
+                            if (ServiceUtil.isError(serviceResult)) {
+                                return ServiceUtil.returnError(ServiceUtil.getErrorMessage(serviceResult));
+                            }
                         } catch (GenericServiceException e) {
                             Debug.logError(e, module);
                             return ServiceUtil.returnError(e.getMessage());
@@ -1163,6 +1172,9 @@ public class ProductServices {
                         Map<String, Object> dataResourceResult;
                         try {
                             dataResourceResult = dispatcher.runSync("createDataResource", dataResourceCtx);
+                            if (ServiceUtil.isError(dataResourceResult)) {
+                                return ServiceUtil.returnError(ServiceUtil.getErrorMessage(dataResourceResult));
+                            }
                         } catch (GenericServiceException e) {
                             Debug.logError(e, module);
                             return ServiceUtil.returnError(e.getMessage());
@@ -1173,7 +1185,10 @@ public class ProductServices {
                         contentCtx.put("dataResourceId", dataResourceResult.get("dataResourceId"));
                         contentCtx.put("userLogin", userLogin);
                         try {
-                            dispatcher.runSync("updateContent", contentCtx);
+                            Map<String, Object> serviceResult = dispatcher.runSync("updateContent", contentCtx);
+                            if (ServiceUtil.isError(serviceResult)) {
+                                return ServiceUtil.returnError(ServiceUtil.getErrorMessage(serviceResult));
+                            }
                         } catch (GenericServiceException e) {
                             Debug.logError(e, module);
                             return ServiceUtil.returnError(e.getMessage());
@@ -1182,7 +1197,10 @@ public class ProductServices {
 
                     productContentCtx.put("contentId", contentId);
                     try {
-                        dispatcher.runSync("updateProductContent", productContentCtx);
+                        Map<String, Object> serviceResult = dispatcher.runSync("updateProductContent", productContentCtx);
+                        if (ServiceUtil.isError(serviceResult)) {
+                            return ServiceUtil.returnError(ServiceUtil.getErrorMessage(serviceResult));
+                        }
                     } catch (GenericServiceException e) {
                         Debug.logError(e, module);
                         return ServiceUtil.returnError(e.getMessage());
@@ -1194,6 +1212,9 @@ public class ProductServices {
                 Map<String, Object> dataResourceResult;
                 try {
                     dataResourceResult = dispatcher.runSync("createDataResource", dataResourceCtx);
+                    if (ServiceUtil.isError(dataResourceResult)) {
+                        return ServiceUtil.returnError(ServiceUtil.getErrorMessage(dataResourceResult));
+                    }
                 } catch (GenericServiceException e) {
                     Debug.logError(e, module);
                     return ServiceUtil.returnError(e.getMessage());
@@ -1206,6 +1227,9 @@ public class ProductServices {
                 Map<String, Object> contentResult;
                 try {
                     contentResult = dispatcher.runSync("createContent", contentCtx);
+                    if (ServiceUtil.isError(contentResult)) {
+                        return ServiceUtil.returnError(ServiceUtil.getErrorMessage(contentResult));
+                    }
                 } catch (GenericServiceException e) {
                     Debug.logError(e, module);
                     return ServiceUtil.returnError(e.getMessage());
@@ -1213,7 +1237,10 @@ public class ProductServices {
 
                 productContentCtx.put("contentId", contentResult.get("contentId"));
                 try {
-                    dispatcher.runSync("createProductContent", productContentCtx);
+                    Map<String, Object> serviceResult = dispatcher.runSync("createProductContent", productContentCtx);
+                    if (ServiceUtil.isError(serviceResult)) {
+                        return ServiceUtil.returnError(ServiceUtil.getErrorMessage(serviceResult));
+                    }
                 } catch (GenericServiceException e) {
                     Debug.logError(e, module);
                     return ServiceUtil.returnError(e.getMessage());
@@ -1296,7 +1323,10 @@ public class ProductServices {
 
             List<GenericValue> fileExtension;
             try {
-                fileExtension = EntityQuery.use(delegator).from("FileExtension").where("mimeTypeId", EntityOperator.EQUALS, (String) context.get("_uploadedFile_contentType")).queryList();
+                fileExtension = EntityQuery.use(delegator)
+                        .from("FileExtension")
+                        .where("mimeTypeId", EntityOperator.EQUALS, context.get("_uploadedFile_contentType"))
+                        .queryList();
             } catch (GenericEntityException e) {
                 Debug.logError(e, module);
                 return ServiceUtil.returnError(e.getMessage());
@@ -1366,7 +1396,10 @@ public class ProductServices {
                         if (dataResource != null) {
                             dataResourceCtx.put("dataResourceId", dataResource.getString("dataResourceId"));
                             try {
-                                dispatcher.runSync("updateDataResource", dataResourceCtx);
+                                Map<String, Object> serviceResult = dispatcher.runSync("updateDataResource", dataResourceCtx);
+                                if (ServiceUtil.isError(serviceResult)) {
+                                    return ServiceUtil.returnError(ServiceUtil.getErrorMessage(serviceResult));
+                                }
                             } catch (GenericServiceException e) {
                                 Debug.logError(e, module);
                                 return ServiceUtil.returnError(e.getMessage());
@@ -1377,6 +1410,9 @@ public class ProductServices {
                             Map<String, Object> dataResourceResult;
                             try {
                                 dataResourceResult = dispatcher.runSync("createDataResource", dataResourceCtx);
+                                if (ServiceUtil.isError(dataResourceResult)) {
+                                    return ServiceUtil.returnError(ServiceUtil.getErrorMessage(dataResourceResult));
+                                }
                             } catch (GenericServiceException e) {
                                 Debug.logError(e, module);
                                 return ServiceUtil.returnError(e.getMessage());
@@ -1387,7 +1423,10 @@ public class ProductServices {
                             contentCtx.put("dataResourceId", dataResourceResult.get("dataResourceId"));
                             contentCtx.put("userLogin", userLogin);
                             try {
-                                dispatcher.runSync("updateContent", contentCtx);
+                                Map<String, Object> serviceResult = dispatcher.runSync("updateContent", contentCtx);
+                                if (ServiceUtil.isError(serviceResult)) {
+                                    return ServiceUtil.returnError(ServiceUtil.getErrorMessage(serviceResult));
+                                }
                             } catch (GenericServiceException e) {
                                 Debug.logError(e, module);
                                 return ServiceUtil.returnError(e.getMessage());
@@ -1396,7 +1435,10 @@ public class ProductServices {
 
                         productPromoContentCtx.put("contentId", contentId);
                         try {
-                            dispatcher.runSync("updateProductPromoContent", productPromoContentCtx);
+                            Map<String, Object> serviceResult = dispatcher.runSync("updateProductPromoContent", productPromoContentCtx);
+                            if (ServiceUtil.isError(serviceResult)) {
+                                return ServiceUtil.returnError(ServiceUtil.getErrorMessage(serviceResult));
+                            }
                         } catch (GenericServiceException e) {
                             Debug.logError(e, module);
                             return ServiceUtil.returnError(e.getMessage());
@@ -1408,6 +1450,9 @@ public class ProductServices {
                     Map<String, Object> dataResourceResult;
                     try {
                         dataResourceResult = dispatcher.runSync("createDataResource", dataResourceCtx);
+                        if (ServiceUtil.isError(dataResourceResult)) {
+                            return ServiceUtil.returnError(ServiceUtil.getErrorMessage(dataResourceResult));
+                        }
                     } catch (GenericServiceException e) {
                         Debug.logError(e, module);
                         return ServiceUtil.returnError(e.getMessage());
@@ -1420,6 +1465,9 @@ public class ProductServices {
                     Map<String, Object> contentResult;
                     try {
                         contentResult = dispatcher.runSync("createContent", contentCtx);
+                        if (ServiceUtil.isError(contentResult)) {
+                            return ServiceUtil.returnError(ServiceUtil.getErrorMessage(contentResult));
+                        }
                     } catch (GenericServiceException e) {
                         Debug.logError(e, module);
                         return ServiceUtil.returnError(e.getMessage());
@@ -1427,7 +1475,10 @@ public class ProductServices {
 
                     productPromoContentCtx.put("contentId", contentResult.get("contentId"));
                     try {
-                        dispatcher.runSync("createProductPromoContent", productPromoContentCtx);
+                        Map<String, Object> serviceResult = dispatcher.runSync("createProductPromoContent", productPromoContentCtx);
+                        if (ServiceUtil.isError(serviceResult)) {
+                            return ServiceUtil.returnError(ServiceUtil.getErrorMessage(serviceResult));
+                        }
                     } catch (GenericServiceException e) {
                         Debug.logError(e, module);
                         return ServiceUtil.returnError(e.getMessage());
@@ -1443,7 +1494,10 @@ public class ProductServices {
             productPromoContentCtx.put("thruDate", context.get("thruDate"));
             productPromoContentCtx.put("userLogin", userLogin);
             try {
-                dispatcher.runSync("updateProductPromoContent", productPromoContentCtx);
+                Map<String, Object> serviceResult = dispatcher.runSync("updateProductPromoContent", productPromoContentCtx);
+                if (ServiceUtil.isError(serviceResult)) {
+                    return ServiceUtil.returnError(ServiceUtil.getErrorMessage(serviceResult));
+                }
             } catch (GenericServiceException e) {
                 Debug.logError(e, module);
                 return ServiceUtil.returnError(e.getMessage());

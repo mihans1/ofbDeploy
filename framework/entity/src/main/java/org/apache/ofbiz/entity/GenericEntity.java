@@ -22,8 +22,10 @@ import java.io.PrintWriter;
 import java.io.Serializable;
 import java.math.BigDecimal;
 import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 import java.sql.Blob;
 import java.sql.SQLException;
+import java.util.Base64;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
@@ -33,11 +35,11 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.MissingResourceException;
+import java.util.Objects;
 import java.util.ResourceBundle;
 import java.util.TreeSet;
 
 import org.apache.ofbiz.base.crypto.HashCrypt;
-import org.apache.ofbiz.base.util.Base64;
 import org.apache.ofbiz.base.util.Debug;
 import org.apache.ofbiz.base.util.GeneralException;
 import org.apache.ofbiz.base.util.ObjectType;
@@ -46,7 +48,6 @@ import org.apache.ofbiz.base.util.Observer;
 import org.apache.ofbiz.base.util.TimeDuration;
 import org.apache.ofbiz.base.util.UtilDateTime;
 import org.apache.ofbiz.base.util.UtilGenerics;
-import org.apache.ofbiz.base.util.UtilIO;
 import org.apache.ofbiz.base.util.UtilProperties;
 import org.apache.ofbiz.base.util.UtilValidate;
 import org.apache.ofbiz.base.util.UtilXml;
@@ -281,6 +282,7 @@ public class GenericEntity implements Map<String, Object>, LocalizedMap<Object>,
      *
      * @deprecated Use hasChanged()
      */
+    @Deprecated
     public boolean isModified() {
         return this.hasChanged();
     }
@@ -402,10 +404,7 @@ public class GenericEntity implements Map<String, Object>, LocalizedMap<Object>,
             }
             fieldKeys.remove(fieldName);
         }
-        if (!fieldKeys.isEmpty()) {
-            return false;
-        }
-        return true;
+        return fieldKeys.isEmpty();
     }
 
     /** Returns true if the entity contains all of the primary key fields. */
@@ -478,24 +477,19 @@ public class GenericEntity implements Map<String, Object>, LocalizedMap<Object>,
                 try {
                     int fieldType = SqlJdbcUtil.getType(type.getJavaType());
                     if (fieldType != 10) {
-                        value = ((Boolean) value).booleanValue() ? "Y" : "N";
+                        value = (Boolean) value ? "Y" : "N";
                     }
                 } catch (GenericNotImplementedException e) {
                     throw new IllegalArgumentException(e.getMessage());
                 }
             } else if (value != null && !(value instanceof NULL)) {
                 // make sure the type matches the field Java type
-                if (value instanceof TimeDuration) {
+                if (value instanceof String && "byte[]".equals(type.getJavaType())) {
+                    value = ((String) value).getBytes(StandardCharsets.UTF_8);
+                } else if (!ObjectType.instanceOf(value, type.getJavaType())) {
                     try {
-                        value = ObjectType.simpleTypeConvert(value, type.getJavaType(), null, null);
+                        value = ObjectType.simpleTypeOrObjectConvert(value, type.getJavaType(), null, null);
                     } catch (GeneralException e) {
-                        Debug.logError(e, module);
-                    }
-                } else if ((value instanceof String) && "byte[]".equals(type.getJavaType())) {
-                    value = ((String) value).getBytes(UtilIO.getUtf8());
-                }
-                if (!ObjectType.instanceOf(value, type.getJavaType())) {
-                    if (!("java.sql.Blob".equals(type.getJavaType()) && (value instanceof byte[] || ObjectType.instanceOf(value, ByteBuffer.class)))) {
                         String errMsg = "In entity field [" + this.getEntityName() + "." + name + "] set the value passed in [" + value.getClass().getName() + "] is not compatible with the Java type of the field [" + type.getJavaType() + "]";
                         // eventually we should do this, but for now we'll do a "soft" failure: throw new IllegalArgumentException(errMsg);
                         Debug.logWarning(new Exception("Location of database type warning"), "=-=-=-=-=-=-=-=-= Database type warning GenericEntity.set =-=-=-=-=-=-=-=-= " + errMsg, module);
@@ -697,11 +691,17 @@ public class GenericEntity implements Map<String, Object>, LocalizedMap<Object>,
         try {
             Number number = (Number) obj;
             return TimeDuration.fromNumber(number);
-        } catch (Exception e) {}
+        } catch (Exception e) {
+            Debug.logError(e, module);
+        }
+
         try {
             String duration = (String) obj;
             return TimeDuration.parseDuration(duration);
-        } catch (Exception e) {}
+        } catch (Exception e) {
+            Debug.logError(e, module);
+        }
+
         throw new IllegalArgumentException("getDuration could not map the object '" + obj.toString() + "' to TimeDuration type, incompatible object type: " + obj.getClass().getName());
     }
 
@@ -738,7 +738,7 @@ public class GenericEntity implements Map<String, Object>, LocalizedMap<Object>,
         // this "hack" is needed for now until the Double/BigDecimal issues are all resolved
         Object value = get(name);
         if (value instanceof BigDecimal) {
-            return Double.valueOf(((BigDecimal) value).doubleValue());
+            return ((BigDecimal) value).doubleValue();
         }
         return (Double) value;
     }
@@ -748,7 +748,7 @@ public class GenericEntity implements Map<String, Object>, LocalizedMap<Object>,
         // NOTE: for things to generally work properly BigDecimal should really be used as the java-type in the field type def XML files
         Object value = get(name);
         if (value instanceof Double) {
-            return new BigDecimal(((Double) value).doubleValue());
+            return new BigDecimal((Double) value);
         }
         return (BigDecimal) value;
     }
@@ -798,6 +798,7 @@ public class GenericEntity implements Map<String, Object>, LocalizedMap<Object>,
      * @return If the corresponding resource is found and contains a key as described above, then that
      *    property value is returned; otherwise returns the field value
      */
+    @Override
     public Object get(String name, Locale locale) {
         return get(name, null, locale);
     }
@@ -967,7 +968,7 @@ public class GenericEntity implements Map<String, Object>, LocalizedMap<Object>,
         }
         Iterator<ModelField> iter = null;
         if (pks != null) {
-            if (pks.booleanValue()) {
+            if (pks) {
                 iter = this.getModelEntity().getPksIterator();
             } else {
                 iter = this.getModelEntity().getNopksIterator();
@@ -1066,7 +1067,7 @@ public class GenericEntity implements Map<String, Object>, LocalizedMap<Object>,
             return true;
         }
         for (Map.Entry<String, ? extends Object> anEntry: keyValuePairs.entrySet()) {
-            if (!UtilValidate.areEqual(anEntry.getValue(), this.fields.get(anEntry.getKey()))) {
+            if (!Objects.equals(anEntry.getValue(), this.fields.get(anEntry.getKey()))) {
                 return false;
             }
         }
@@ -1194,7 +1195,7 @@ public class GenericEntity implements Map<String, Object>, LocalizedMap<Object>,
                 boolean b1 = obj instanceof byte [];
                 if (b1) {
                     byte [] binData = (byte [])obj;
-                    String strData = new String(Base64.base64Encode(binData), UtilIO.getUtf8());
+                    String strData = new String(Base64.getMimeEncoder().encode(binData), StandardCharsets.UTF_8);
                     cdataMap.put(name, strData);
                 } else {
                     Debug.logWarning("Field:" + name + " is not of type 'byte[]'. obj: " + obj, module);
@@ -1371,7 +1372,7 @@ public class GenericEntity implements Map<String, Object>, LocalizedMap<Object>,
                 // random encoding; just treat it as a series of raw bytes.
                 // This won't give the same output as the value stored in the
                 // database, but should be good enough for printing
-                curValue = HashCrypt.cryptBytes(null, null, encryptField.getBytes(UtilIO.getUtf8()));
+                curValue = HashCrypt.cryptBytes(null, null, encryptField.getBytes(StandardCharsets.UTF_8));
             }
             theString.append('[');
             theString.append(curKey);
@@ -1433,6 +1434,7 @@ public class GenericEntity implements Map<String, Object>, LocalizedMap<Object>,
      *@param that Object to compare this to
      *@return int representing the result of the comparison (-1,0, or 1)
      */
+    @Override
     public int compareTo(GenericEntity that) {
         // if null, it will push to the beginning
         if (that == null) {
@@ -1484,52 +1486,62 @@ public class GenericEntity implements Map<String, Object>, LocalizedMap<Object>,
         return newEntity;
     }
 
-    // ---- Methods added to implement the Map interface: ----
-
+    @Override
     public Object remove(Object key) {
         return this.fields.remove(key);
     }
 
+    @Override
     public boolean containsKey(Object key) {
         return this.fields.containsKey(key);
     }
 
+    @Override
     public java.util.Set<Map.Entry<String, Object>> entrySet() {
         return Collections.unmodifiableMap(this.fields).entrySet();
     }
 
+    @Override
     public Object put(String key, Object value) {
         return this.set(key, value, true);
     }
 
+    @Override
     public void putAll(java.util.Map<? extends String, ? extends Object> map) {
         this.setFields(map);
     }
 
+    @Override
     public void clear() {
         this.fields.clear();
     }
 
+    @Override
     public Object get(Object key) {
         return this.get((String) key);
     }
 
+    @Override
     public java.util.Set<String> keySet() {
         return Collections.unmodifiableSet(this.fields.keySet());
     }
 
+    @Override
     public boolean isEmpty() {
         return this.fields.isEmpty();
     }
 
+    @Override
     public java.util.Collection<Object> values() {
         return Collections.unmodifiableMap(this.fields).values();
     }
 
+    @Override
     public boolean containsValue(Object value) {
         return this.fields.containsValue(value);
     }
 
+    @Override
     public int size() {
         return this.fields.size();
     }
@@ -1681,6 +1693,7 @@ public class GenericEntity implements Map<String, Object>, LocalizedMap<Object>,
             return this == o;
         }
 
+        @Override
         public int compareTo(NullField other) {
             return equals(other) ? 0 : -1;
         }

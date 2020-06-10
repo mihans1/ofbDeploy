@@ -27,6 +27,8 @@ under the License.
                 <xs:element minOccurs="0" maxOccurs="1" ref="theme-properties"/>
                 <xs:element minOccurs="0" maxOccurs="1" ref="templates"/>
                 <xs:element minOccurs="0" maxOccurs="1" ref="common-screens"/>
+                <xs:element minOccurs="0" maxOccurs="1" ref="common-forms"/>
+                <xs:element minOccurs="0" maxOccurs="1" ref="common-menus"/>
             </xs:sequence>
             <xs:attribute type="xs:string" name="name" use="required" />
         </xs:complexType>
@@ -79,14 +81,8 @@ under the License.
                         <xs:attribute type="xs:integer" name="default-view-size" />
                         <xs:attribute type="xs:integer" name="default-min-lenght" />
                         <xs:attribute type="xs:integer" name="default-delay" />
-                        <xs:attribute name="display-return-field">
-                            <xs:simpleType>
-                                <xs:restriction base="xs:token">
-                                    <xs:enumeration value="true" />
-                                    <xs:enumeration value="false" />
-                                </xs:restriction>
-                            </xs:simpleType>
-                        </xs:attribute>
+                        <xs:attribute name="display-return-field"
+                                      type="xs:boolean"/>
                     </xs:complexType>
                 </xs:element>
                 <xs:element name="lookup">
@@ -130,9 +126,9 @@ under the License.
             </xs:sequence>
         </xs:complexType>
     </xs:element>
-        <xs:annotation><xs:documentation>
-            This element contains all properties dedicate with the theme technology
-        </xs:documentation></xs:annotation>
+    <xs:annotation><xs:documentation>
+        This element contains all properties dedicate with the theme technology
+    </xs:documentation></xs:annotation>
     <xs:element name="property">
         <xs:complexType>
             <xs:attribute type="xs:string" name="name" use="required">
@@ -151,9 +147,9 @@ under the License.
             </xs:sequence>
         </xs:complexType>
     </xs:element>
-        <xs:annotation><xs:documentation>
-            This element contains all ftl macro template supported by this theme
-        </xs:documentation></xs:annotation>
+    <xs:annotation><xs:documentation>
+        This element contains all ftl macro template supported by this theme
+    </xs:documentation></xs:annotation>
     <xs:element name="template">
         <xs:complexType>
             <xs:sequence>
@@ -164,31 +160,24 @@ under the License.
             <xs:attribute type="xs:string" name="encoding" />
             <xs:attribute type="xs:string" name="content-type" />
             <xs:attribute type="xs:string" name="encoder" />
-            <xs:attribute name="compress">
-                <xs:simpleType>
-                    <xs:restriction base="xs:token">
-                        <xs:enumeration value="true" />
-                        <xs:enumeration value="false" />
-                    </xs:restriction>
-                </xs:simpleType>
-            </xs:attribute>
+            <xs:attribute name="compress" type="xs:boolean"/>
         </xs:complexType>
     </xs:element>
     <xs:element name="template-file">
-    <xs:complexType>
-        <xs:attribute name="widget" use="required" >
-            <xs:simpleType>
-                <xs:restriction base="xs:token">
-                    <xs:enumeration value="screen" />
-                    <xs:enumeration value="form" />
-                    <xs:enumeration value="tree" />
-                    <xs:enumeration value="menu" />
-                    <xs:enumeration value="error" />
-                </xs:restriction>
-            </xs:simpleType>
-        </xs:attribute>
-        <xs:attribute type="xs:string" name="location" use="required"/>
-    </xs:complexType>
+        <xs:complexType>
+            <xs:attribute name="widget" use="required" >
+                <xs:simpleType>
+                    <xs:restriction base="xs:token">
+                        <xs:enumeration value="screen" />
+                        <xs:enumeration value="form" />
+                        <xs:enumeration value="tree" />
+                        <xs:enumeration value="menu" />
+                        <xs:enumeration value="error" />
+                    </xs:restriction>
+                </xs:simpleType>
+            </xs:attribute>
+            <xs:attribute type="xs:string" name="location" use="required"/>
+        </xs:complexType>
     </xs:element>
     <xs:element name="common-screens">
         <xs:annotation><xs:documentation>
@@ -202,11 +191,33 @@ under the License.
             </xs:sequence>
         </xs:complexType>
     </xs:element>
-    <xs:element name="root-decorator">
+    <xs:element name="common-forms">
+        <xs:annotation><xs:documentation>
+            List the location of each common forms that the theme implement
+        </xs:documentation></xs:annotation>
         <xs:complexType>
             <xs:sequence>
-                <xs:element minOccurs="1" maxOccurs="unbounded" ref="screen" />
+                <xs:element ref="root-decorator" />
             </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+    <xs:element name="common-menus">
+        <xs:annotation><xs:documentation>
+            List the location of each common menus that the theme implement
+        </xs:documentation></xs:annotation>
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element ref="root-decorator" />
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+    <xs:element name="root-decorator">
+        <xs:complexType>
+            <xs:choice>
+                <xs:element maxOccurs="unbounded" ref="screen"/>
+                <xs:element maxOccurs="unbounded" ref="form"/>
+                <xs:element maxOccurs="unbounded" ref="menu"/>
+            </xs:choice>
             <xs:attribute type="xs:string" name="default-location" use="optional" />
         </xs:complexType>
     </xs:element>
@@ -227,6 +238,18 @@ under the License.
         </xs:complexType>
     </xs:element>
     <xs:element name="screen">
+        <xs:complexType>
+            <xs:attribute type="xs:string" name="name" use="required"/>
+            <xs:attribute type="xs:string" name="location" use="optional"/>
+        </xs:complexType>
+    </xs:element>
+    <xs:element name="form">
+        <xs:complexType>
+            <xs:attribute type="xs:string" name="name" use="required"/>
+            <xs:attribute type="xs:string" name="location" use="optional"/>
+        </xs:complexType>
+    </xs:element>
+    <xs:element name="menu">
         <xs:complexType>
             <xs:attribute type="xs:string" name="name" use="required"/>
             <xs:attribute type="xs:string" name="location" use="optional"/>

@@ -20,7 +20,11 @@ package org.apache.ofbiz.base.start;
 
 import java.util.List;
 import java.util.Locale;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Collectors;
+
+import org.apache.ofbiz.base.container.ContainerLoader;
 
 /**
  * OFBiz startup class.
@@ -42,6 +46,7 @@ import java.util.concurrent.atomic.AtomicReference;
 public final class Start {
 
     private Config config = null;
+    private ContainerLoader loader = new ContainerLoader();
     private final AtomicReference<ServerState> serverState = new AtomicReference<>(ServerState.STARTING);
 
     // Singleton, do not change
@@ -66,7 +71,7 @@ public final class Start {
             System.exit(1);
         }
 
-        CommandType commandType = determineCommandType(ofbizCommands);
+        CommandType commandType = CommandType.valueOf(ofbizCommands);
         if(!commandType.equals(CommandType.HELP)) {
             instance.config = StartupControlPanel.init(ofbizCommands);
         }
@@ -82,7 +87,7 @@ public final class Start {
             break;
         case START:
             try {
-                StartupControlPanel.start(instance.config, instance.serverState, ofbizCommands);
+                StartupControlPanel.start(instance.config, instance.serverState, ofbizCommands, instance.loader);
             } catch (StartupException e) {
                 StartupControlPanel.fullyTerminateSystem(e);
             }
@@ -105,10 +110,24 @@ public final class Start {
     }
 
     /**
+     * Updates the server's main configuration.
+     *
+     * @param c  the new configuration
+     */
+    public void setConfig(Config c) {
+        this.config = c;
+    }
+
+    /**
      * Returns the server's current state.
      */
     public ServerState getCurrentState() {
         return serverState.get();
+    }
+
+    public void stop() {
+        StartupControlPanel.shutdownServer(loader, serverState);
+        System.exit(0);
     }
 
     /**
@@ -123,22 +142,29 @@ public final class Start {
         }
     }
 
-    private static CommandType determineCommandType(List<StartupCommand> ofbizCommands) {
-        if (ofbizCommands.stream().anyMatch(
-                command -> command.getName().equals(StartupCommandUtil.StartupOption.HELP.getName()))) {
-            return CommandType.HELP;
-        } else if (ofbizCommands.stream().anyMatch(
-                command -> command.getName().equals(StartupCommandUtil.StartupOption.STATUS.getName()))) {
-            return CommandType.STATUS;
-        } else if (ofbizCommands.stream().anyMatch(
-                command -> command.getName().equals(StartupCommandUtil.StartupOption.SHUTDOWN.getName()))) {
-            return CommandType.SHUTDOWN;
-        } else {
-            return CommandType.START;
-        }
-    }
-
+    /**
+     * The type of command that allow dispatching to various startup behavior.
+     */
     private enum CommandType {
-        HELP, STATUS, SHUTDOWN, START
+        HELP, STATUS, SHUTDOWN, START;
+
+        /**
+         * Determines the type of command from a list of command-line commands
+         *
+         * @param ofbizCommands  the list of parsed command-line arguments which cannot be {@code null} 
+         * @return the corresponding command type.
+         */
+        static CommandType valueOf(List<StartupCommand> ofbizCommands) {
+            Set<String> commandNames = ofbizCommands.stream().map(StartupCommand::getName).collect(Collectors.toSet());
+            if (commandNames.contains(StartupCommandUtil.StartupOption.HELP.getName())) {
+                return CommandType.HELP;
+            } else if (commandNames.contains(StartupCommandUtil.StartupOption.STATUS.getName())) {
+                return CommandType.STATUS;
+            } else if (commandNames.contains(StartupCommandUtil.StartupOption.SHUTDOWN.getName())) {
+                return CommandType.SHUTDOWN;
+            } else {
+                return CommandType.START;
+            }
+        }
     }
 }

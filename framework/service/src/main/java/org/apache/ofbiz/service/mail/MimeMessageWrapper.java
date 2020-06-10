@@ -521,18 +521,19 @@ public class MimeMessageWrapper implements java.io.Serializable {
     }
 
     static {
-        Converters.registerConverter(new MimeMessageToString<>());
+        Converters.registerConverter(new MimeMessageToString());
     }
 
     /**
      * Convert MimeMessageWrapper to String. This is used when sending emails.
      *
      */
-    private static class MimeMessageToString<E> extends AbstractConverter<MimeMessageWrapper, String> {
+    private static class MimeMessageToString extends AbstractConverter<MimeMessageWrapper, String> {
         public MimeMessageToString() {
             super(MimeMessageWrapper.class, String.class);
         }
 
+        @Override
         public String convert(MimeMessageWrapper obj) throws ConversionException {
             return obj.toString();
         }

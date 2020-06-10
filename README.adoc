@@ -1,3 +1,60 @@
+Project frontend: https://github.com/tutinformatics/ofbiz-ui && https://github.com/MartenJurg/accounting_frontend
+
+== More docs
+
+link:docs/authentication.md[Authentication]
+
+link:docs/deploy-to-heroku.md[Deploy]
+
+link:docs/generic-rest-endpoint.md[REST]
+
+link:docs/graphQL-endpoint.md[GraphQL]
+
+link:docs/how-to-develop-docker.md[Docker]
+
+link:docs/small-rest-example.md[REST example]
+
+"Big data" docs: https://docs.google.com/document/d/1CkJA3Ad8scLUhbjYIMh656hjW-IeRNdmd1FUV7l1_Yc/edit?usp=sharing (Palju kasulikku infot)
+
+== Lokaalne jooksutamine
+
+[source,bash]
+----
+./deploy.sh
+----
+
+=== Masinas
+
+Minge kausta: framework/entity/config/entityengine.xml
+Ning seejärel muutke järgnevad stringid (ärge seda muudatus üles pushige)
+
+image::replace.png[]
+
+Jooksutage järgnevaid käske
+
+[source,bash]
+----
+./deploy-dev.sh
+# Or
+docker-compose -f docker-compose-databases-dev.yml up -d
+./gradlew cleanAll loadAll ofbiz
+----
+
+Windowsi puhul kasutada gradlew.bat
+
+_Note that loadAll requires databases to be running!_
+
+Kui muudate midagi ning soovite uuesti jooksutada ofbiz’i, siis tehke:
+Ctrl + C terminalis + Y
+
+See hot reload’ib ~10 sekundiga uue koodi
+
+[source,bash]
+----
+docker-compose -f docker-compose-databases-dev.yml up -d
+./gradlew ofbiz
+----
+
 ////
 Licensed to the Apache Software Foundation (ASF) under one
 or more contributor license agreements.  See the NOTICE file
@@ -69,16 +126,10 @@ https://medium.com/@javachampions/java-is-still-free-2-0-0-6b9aa8d6d244[To know 
 To quickly install and fire-up OFBiz, please follow the below instructions from
 the command line at the OFBiz top level directory (folder).
 
-[[download-the-gradle-wrapper]]
-=== Download the Gradle wrapper:
-
-MS Windows: `init-gradle-wrapper`
-
-Unix-like OS: `./gradle/init-gradle-wrapper`
-
 [[prepare-ofbiz]]
 === Prepare OFBiz:
 
+==== Clean system and load the complete OFBiz data
 _________________________________________________________________________________________________________________________________________________________________________________________________________________
 _Note_: Depending on your Internet connection speed it might take a long time
 for this step to complete if you are using OFBiz for the first time as it needs
@@ -155,7 +206,6 @@ There are two types of tasks designed for OFBiz in Gradle:
 * *OFBiz server tasks*: To execute OFBiz startup commands. These tasks start
 with one of the following words:
 * *ofbiz* : standard server commands
-* *ofbizDebug* : server commands running in remote debug mode
 * *ofbizBackground* ; server commands running in a background forked process
 
 Tips:
@@ -181,7 +231,7 @@ tasks. Example: `gradlew loadAdminUserLogin -PuserLoginId=myadmin` =
 
 `gradlew "ofbiz --help"`
 
-`gradlew "ofbizDebug --test"`
+`gradlew "ofbiz --test" --debug-jvm`
 
 `gradlew "ofbizBackground --start --portoffset 10000"`
 
@@ -279,11 +329,7 @@ inconsistent state / data
 Starts OFBiz in remote debug mode and waits for debugger or IDEs to connect on
 port *5005*
 
-`gradlew "ofbizDebug --start"`
-
-OR
-
-`gradlew ofbizDebug`
+`gradlew ofbiz --debug-jvm`
 
 [[start-ofbiz-on-a-different-port]]
 ==== Start OFBiz on a different port
@@ -520,7 +566,7 @@ run a test case, in this example the component is "entity" and the case name is
 
 listens on port *5005*
 
-`gradlew "ofbizDebug --test component=entity --test loglevel=verbose"`
+`gradlew "ofbiz --test component=entity --test loglevel=verbose" --debug-jvm`
 
 [[execute-an-integration-test-suite]]
 ==== Execute an integration test suite
@@ -532,7 +578,7 @@ listens on port *5005*
 
 listens on port *5005*
 
-`gradlew "ofbizDebug --test component=entity --test suitename=entitytests"`
+`gradlew "ofbiz --test component=entity --test suitename=entitytests" --debug-jvm`
 
 
 
@@ -562,12 +608,13 @@ Create an admin user with login name MyUserName and default password with value
 
 `gradlew loadAdminUserLogin -PuserLoginId=MyUserName`
 
-[[compile-java-using-xlint-output]]
-==== Compile Java using Xlint output
+[[compile-java-without-using-xlint-output]]
+==== Compile Java without using Xlint output
 
-Xlint prints output of all warnings detected by the compiler
+By default Xlint prints output of all warnings detected by the compiler, if you
+want to silence them
 
-`gradlew -PXlint build`
+`gradlew -PXlint:none build`
 
 [[run-owasp-tool-to-identify-dependency-vulnerabilities-cves]]
 ==== Run OWASP tool to identify dependency vulnerabilities (CVEs)
@@ -593,7 +640,24 @@ it will download source packages available for project dependencies.
 
 `gradlew eclipse`
 
+[[package-and-distribute-ofbiz]]
+==== Package and distribute OFBiz
 
+In order to deploy OFBiz on a target system and in particular in a production
+environment without requiring the target system to download Gradle and OFBiz
+dependencies from the internet, it is possible to generate an archive bundling
+OFBiz with all the Jars it depends on as a `tar` archive
+
+`gradlew distTar`
+
+or as a `zip` archive.
+
+`gradlew distZip`
+
+Those archives are available in the `build/distributions` directory.  To run
+OFBiz from those archive you must first unarchive them with `tar xf` or `unzip`
+and then from that directory you can run either `bin/ofbiz` shell script or
+`bin/ofbiz.bat` batch script with the appropriate ofbiz options.
 
 [[ofbiz-plugin-system]]
 == OFBiz plugin system
@@ -736,7 +800,7 @@ $\{pluginId}"
 [[further-reading]]
 === Further reading
 
-* https://cwiki.apache.org/confluence/display/OFBIZ/FAQ+-+Tips+-+Tricks+-+Cookbook+-+HowTo#FAQ-Tips-Tricks-Cookbook-HowTo-Knownissues[Known
+* https://cwiki.apache.org/confluence/display/OFBIZ/FAQ%2B-%2BTips%2B-%2BTricks%2B-%2BCookbook%2B-%2BHowTo#FAQ-Tips-Tricks-Cookbook-HowTo-Knownissues[Known
 issues]
 
 [[repository-and-directory-structure]]
@@ -808,7 +872,6 @@ https://edub.me/gradle-completion-bash[Gradle tab completion]
 For example, on debian based systems, you can use the following command:
 
 `sudo curl -L -s https://edub.me/gradle-completion-bash -o /etc/bash_completion.d/gradle-tab-completion.bash`
-
 
 [[crypto-notice]]
 == Crypto notice

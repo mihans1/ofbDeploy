@@ -19,48 +19,29 @@
 
 package org.apache.ofbiz.party.party;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.StringReader;
-import java.nio.ByteBuffer;
-import java.nio.charset.Charset;
-import java.sql.Timestamp;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVRecord;
-import org.apache.ofbiz.base.util.Debug;
-import org.apache.ofbiz.base.util.UtilDateTime;
-import org.apache.ofbiz.base.util.UtilGenerics;
-import org.apache.ofbiz.base.util.UtilMisc;
-import org.apache.ofbiz.base.util.UtilProperties;
-import org.apache.ofbiz.base.util.UtilValidate;
+import org.apache.ofbiz.base.util.*;
 import org.apache.ofbiz.entity.Delegator;
 import org.apache.ofbiz.entity.GenericEntity;
 import org.apache.ofbiz.entity.GenericEntityException;
 import org.apache.ofbiz.entity.GenericValue;
-import org.apache.ofbiz.entity.condition.EntityCondition;
-import org.apache.ofbiz.entity.condition.EntityConditionList;
-import org.apache.ofbiz.entity.condition.EntityExpr;
-import org.apache.ofbiz.entity.condition.EntityFunction;
-import org.apache.ofbiz.entity.condition.EntityOperator;
+import org.apache.ofbiz.entity.condition.*;
 import org.apache.ofbiz.entity.model.DynamicViewEntity;
 import org.apache.ofbiz.entity.model.ModelKeyMap;
 import org.apache.ofbiz.entity.util.EntityListIterator;
 import org.apache.ofbiz.entity.util.EntityQuery;
 import org.apache.ofbiz.entity.util.EntityTypeUtil;
 import org.apache.ofbiz.entity.util.EntityUtil;
-import org.apache.ofbiz.service.DispatchContext;
-import org.apache.ofbiz.service.GenericServiceException;
-import org.apache.ofbiz.service.LocalDispatcher;
-import org.apache.ofbiz.service.ModelService;
-import org.apache.ofbiz.service.ServiceUtil;
+import org.apache.ofbiz.service.*;
+
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.StringReader;
+import java.nio.ByteBuffer;
+import java.nio.charset.Charset;
+import java.sql.Timestamp;
+import java.util.*;
 
 /**
  * Services for Party/Person/Group maintenance
@@ -80,6 +61,7 @@ public class PartyServices {
      */
     public static Map<String, Object> createPerson(DispatchContext ctx, Map<String, ? extends Object> context) {
         Map<String, Object> result = new HashMap<>();
+
         Delegator delegator = ctx.getDelegator();
         Timestamp now = UtilDateTime.nowTimestamp();
         List<GenericValue> toBeStored = new LinkedList<>();
@@ -312,7 +294,10 @@ public class PartyServices {
 
         if (UtilValidate.isNotEmpty(context.get("statusId")) && !context.get("statusId").equals(oldStatusId)) {
             try {
-                dispatcher.runSync("setPartyStatus", UtilMisc.toMap("partyId", partyId, "statusId", context.get("statusId"), "userLogin", context.get("userLogin")));
+                Map<String, Object> serviceResult = dispatcher.runSync("setPartyStatus", UtilMisc.toMap("partyId", partyId, "statusId", context.get("statusId"), "userLogin", context.get("userLogin")));
+                if (ServiceUtil.isError(serviceResult)) {
+                    return ServiceUtil.returnError(ServiceUtil.getErrorMessage(serviceResult));
+                }
             } catch (GenericServiceException e) {
                 Debug.logWarning(e.getMessage(), module);
                 return ServiceUtil.returnError(UtilProperties.getMessage(resourceError,
@@ -491,7 +476,10 @@ public class PartyServices {
 
         if (UtilValidate.isNotEmpty(context.get("statusId")) && !context.get("statusId").equals(oldStatusId)) {
             try {
-                dispatcher.runSync("setPartyStatus", UtilMisc.toMap("partyId", partyId, "statusId", context.get("statusId"), "userLogin", context.get("userLogin")));
+                Map<String, Object> serviceResult = dispatcher.runSync("setPartyStatus", UtilMisc.toMap("partyId", partyId, "statusId", context.get("statusId"), "userLogin", context.get("userLogin")));
+                if (ServiceUtil.isError(serviceResult)) {
+                    return ServiceUtil.returnError(ServiceUtil.getErrorMessage(serviceResult));
+                }
             } catch (GenericServiceException e) {
                 Debug.logWarning(e.getMessage(), module);
                 return ServiceUtil.returnError(UtilProperties.getMessage(resourceError,
@@ -517,11 +505,11 @@ public class PartyServices {
 
         String partyId = getPartyId(context);
 
-        // if specified partyId starts with a number, return an error
-        if (UtilValidate.isNotEmpty(partyId) && partyId.matches("\\d+")) {
-            return ServiceUtil.returnError(UtilProperties.getMessage(resourceError,
-                    "partyservices.cannot_create_affiliate_digit", locale));
-        }
+//         if specified partyId starts with a number, return an error
+//        if (UtilValidate.isNotEmpty(partyId) && partyId.matches("\\d+")) {
+//            return ServiceUtil.returnError(UtilProperties.getMessage(resourceError,
+//                    "partyservices.cannot_create_affiliate_digit", locale));
+//        }
 
         // partyId might be empty, so check it and get next seq party id if empty
         if (UtilValidate.isEmpty(partyId)) {
@@ -659,6 +647,9 @@ public class PartyServices {
             try {
                 noteRes = dispatcher.runSync("createNote", UtilMisc.toMap("partyId", userLogin.getString("partyId"),
                          "note", noteString, "userLogin", userLogin, "locale", locale, "noteName", noteName));
+                if (ServiceUtil.isError(noteRes)) {
+                    return ServiceUtil.returnError(ServiceUtil.getErrorMessage(noteRes));
+                }
             } catch (GenericServiceException e) {
                 Debug.logError(e, e.getMessage(), module);
                 return ServiceUtil.returnError(UtilProperties.getMessage(resource,
@@ -918,6 +909,7 @@ public class PartyServices {
             if (Debug.infoOn()) {
                 Debug.logInfo("PartyFromGroup number found: " + pc.size(), module);
             }
+
             if (pc != null) {
                 for (GenericValue group: pc) {
                     GenericValue party = delegator.makeValue("Party", UtilMisc.toMap("partyId", group.get("partyId"), "partyTypeId", "PARTY_GROUP"));
@@ -1094,7 +1086,7 @@ public class PartyServices {
         } catch (Exception e) {
             viewIndex = 0;
         }
-        result.put("viewIndex", Integer.valueOf(viewIndex));
+        result.put("viewIndex", viewIndex);
 
         int viewSize = 20;
         try {
@@ -1102,7 +1094,7 @@ public class PartyServices {
         } catch (Exception e) {
             viewSize = 20;
         }
-        result.put("viewSize", Integer.valueOf(viewSize));
+        result.put("viewSize", viewSize);
 
         // get the lookup flag
         String lookupFlag = (String) context.get("lookupFlag");
@@ -1499,10 +1491,10 @@ public class PartyServices {
             partyList = new LinkedList<>();
         }
         result.put("partyList", partyList);
-        result.put("partyListSize", Integer.valueOf(partyListSize));
+        result.put("partyListSize", partyListSize);
         result.put("paramList", paramList);
-        result.put("highIndex", Integer.valueOf(highIndex));
-        result.put("lowIndex", Integer.valueOf(lowIndex));
+        result.put("highIndex", highIndex);
+        result.put("lowIndex", lowIndex);
 
         return result;
     }
@@ -2205,7 +2197,7 @@ public class PartyServices {
                     }
                 }
 
-                addrMap.put("sequenceNum", Long.valueOf(seq));
+                addrMap.put("sequenceNum", (long) seq);
                 Debug.logInfo("Creating map entry: " + addrMap, module);
                 try {
                     delegator.create(addrMap);
@@ -2281,7 +2273,6 @@ public class PartyServices {
         ByteBuffer fileBytes = (ByteBuffer) context.get("uploadedFile");
         String encoding = System.getProperty("file.encoding");
         String csvString = Charset.forName(encoding).decode(fileBytes).toString();
-        final BufferedReader csvReader = new BufferedReader(new StringReader(csvString));
         CSVFormat fmt = CSVFormat.DEFAULT.withHeader();
         List<String> errMsgs = new LinkedList<>();
         List<String> newErrMsgs = new LinkedList<>();
@@ -2311,7 +2302,7 @@ public class PartyServices {
         Boolean addParty = false; // when modify party, contact mech not added again
 
 
-        try {
+        try (BufferedReader csvReader = new BufferedReader(new StringReader(csvString))) {
             for (final CSVRecord rec : fmt.parse(csvReader)) {
                 if (UtilValidate.isNotEmpty(rec.get("partyId"))) {
                     currentPartyId =  rec.get("partyId");
@@ -2408,6 +2399,9 @@ public class PartyServices {
                                         "userLogin", userLogin
                                         );
                                 result = dispatcher.runSync("updatePartyGroup", partyGroup);
+                                if (ServiceUtil.isError(result)) {
+                                    return ServiceUtil.returnError(ServiceUtil.getErrorMessage(result));
+                                }
                             } else { // person
                                 Map<String, Object> person = UtilMisc.toMap(
                                         "partyId", newPartyId,
@@ -2418,6 +2412,9 @@ public class PartyServices {
                                         "userLogin", userLogin
                                         );
                                 result = dispatcher.runSync("updatePerson", person);
+                                if (ServiceUtil.isError(result)) {
+                                    return ServiceUtil.returnError(ServiceUtil.getErrorMessage(result));
+                                }
                             }
 
                         } else { // create new party
@@ -2429,6 +2426,9 @@ public class PartyServices {
                                         "statusId", "PARTY_ENABLED"
                                         );
                                 result = dispatcher.runSync("createPartyGroup", partyGroup);
+                                if (ServiceUtil.isError(result)) {
+                                    return ServiceUtil.returnError(ServiceUtil.getErrorMessage(result));
+                                }
                             } else { // person
                                 Map<String, Object> person = UtilMisc.toMap(
                                         "firstName", rec.get("firstName"),
@@ -2439,6 +2439,9 @@ public class PartyServices {
                                         "userLogin", userLogin
                                         );
                                 result = dispatcher.runSync("createPerson", person);
+                                if (ServiceUtil.isError(result)) {
+                                    return ServiceUtil.returnError(ServiceUtil.getErrorMessage(result));
+                                }
                             }
                             newPartyId = (String) result.get("partyId");
 
@@ -2450,6 +2453,9 @@ public class PartyServices {
                                 );
 
                             result = dispatcher.runSync("createPartyIdentification", partyIdentification);
+                            if (ServiceUtil.isError(result)) {
+                                return ServiceUtil.returnError(ServiceUtil.getErrorMessage(result));
+                            }
 
                             Map<String, Object> partyRole = UtilMisc.toMap(
                                     "partyId", newPartyId,
@@ -2457,6 +2463,9 @@ public class PartyServices {
                                     "userLogin", userLogin
                                     );
                             dispatcher.runSync("createPartyRole", partyRole);
+                            if (ServiceUtil.isError(result)) {
+                                return ServiceUtil.returnError(ServiceUtil.getErrorMessage(result));
+                            }
 
                             if (UtilValidate.isNotEmpty(rec.get("companyPartyId"))) {
                                 List <GenericValue> companyCheck = EntityQuery.use(delegator).from("PartyIdentification")
@@ -2470,6 +2479,9 @@ public class PartyServices {
                                         "userLogin", userLogin
                                         );
                                     result = dispatcher.runSync("createPartyGroup", companyPartyGroup);
+                                    if (ServiceUtil.isError(result)) {
+                                        return ServiceUtil.returnError(ServiceUtil.getErrorMessage(result));
+                                    }
                                     newCompanyPartyId = (String) result.get("partyId");
                                 } else {
                                     newCompanyPartyId = EntityUtil.getFirst(companyCheck).getString("partyId");
@@ -2480,7 +2492,10 @@ public class PartyServices {
                                         "roleTypeId", "ACCOUNT",
                                         "userLogin", userLogin
                                         );
-                                dispatcher.runSync("createPartyRole", companyRole);
+                                Map<String, Object> serviceResult = dispatcher.runSync("createPartyRole", companyRole);
+                                if (ServiceUtil.isError(serviceResult)) {
+                                    return ServiceUtil.returnError(ServiceUtil.getErrorMessage(serviceResult));
+                                }
 
                                 // company exist, so create link
                                 Map<String, Object> partyRelationship = UtilMisc.toMap(
@@ -2491,6 +2506,9 @@ public class PartyServices {
                                     "userLogin", userLogin
                                     );
                                 result = dispatcher.runSync("createPartyRelationship", partyRelationship);
+                                if (ServiceUtil.isError(result)) {
+                                    return ServiceUtil.returnError(ServiceUtil.getErrorMessage(result));
+                                }
                             }
                         }
                         Debug.logInfo(" =========================================================party created id: " + newPartyId, module);
@@ -2570,34 +2588,55 @@ public class PartyServices {
 
                         if (postalAddressChanged) {
                             result = dispatcher.runSync("createPostalAddress", postalAddress);
+                            if (ServiceUtil.isError(result)) {
+                                return ServiceUtil.returnError(ServiceUtil.getErrorMessage(result));
+                            }
                                newContactMechId = (String) result.get("contactMechId");
                             if (currentContactMechPurposeTypeId == null) {
                                 currentContactMechPurposeTypeId = "GENERAL_LOCATION";
                             }
-                            dispatcher.runSync("createPartyContactMech", UtilMisc.toMap("partyId", newPartyId, "contactMechId", newContactMechId, "contactMechPurposeTypeId", currentContactMechPurposeTypeId, "userLogin", userLogin));
+                            Map<String, Object> serviceResult = dispatcher.runSync("createPartyContactMech", UtilMisc.toMap("partyId", newPartyId, "contactMechId", newContactMechId, "contactMechPurposeTypeId", currentContactMechPurposeTypeId, "userLogin", userLogin));
+                            if (ServiceUtil.isError(serviceResult)) {
+                                return ServiceUtil.returnError(ServiceUtil.getErrorMessage(serviceResult));
+                            }
                         }
 
                         if (telecomNumberChanged) {
                             result = dispatcher.runSync("createTelecomNumber", telecomNumber);
+                            if (ServiceUtil.isError(result)) {
+                                return ServiceUtil.returnError(ServiceUtil.getErrorMessage(result));
+                            }
                                newContactMechId = (String) result.get("contactMechId");
                             if (currentContactMechPurposeTypeId == null) {
                                 currentContactMechPurposeTypeId= "PHONE_WORK";
                             }
-                            dispatcher.runSync("createPartyContactMech", UtilMisc.toMap("partyId", newPartyId, "contactMechId", newContactMechId, "contactMechPurposeTypeId", currentContactMechPurposeTypeId, "userLogin", userLogin));
+                            Map<String, Object> resultMap = dispatcher.runSync("createPartyContactMech", UtilMisc.toMap("partyId", newPartyId, "contactMechId", newContactMechId, "contactMechPurposeTypeId", currentContactMechPurposeTypeId, "userLogin", userLogin));
+                            if (ServiceUtil.isError(resultMap)) {
+                                return ServiceUtil.returnError(ServiceUtil.getErrorMessage(result));
+                            }
                         }
 
                         if (emailAddressChanged) {
                             result = dispatcher.runSync("createContactMech", emailAddress);
+                            if (ServiceUtil.isError(result)) {
+                                return ServiceUtil.returnError(ServiceUtil.getErrorMessage(result));
+                            }
                                newContactMechId = (String) result.get("contactMechId");
                             if (currentContactMechPurposeTypeId == null) {
                                 currentContactMechPurposeTypeId = "PRIMARY_EMAIL";
                             }
-                            dispatcher.runSync("createPartyContactMech", UtilMisc.toMap("partyId", newPartyId, "contactMechId", newContactMechId, "contactMechPurposeTypeId", currentContactMechPurposeTypeId, "userLogin", userLogin));
+                            Map<String, Object> resultMap = dispatcher.runSync("createPartyContactMech", UtilMisc.toMap("partyId", newPartyId, "contactMechId", newContactMechId, "contactMechPurposeTypeId", currentContactMechPurposeTypeId, "userLogin", userLogin));
+                            if (ServiceUtil.isError(resultMap)) {
+                                return ServiceUtil.returnError(ServiceUtil.getErrorMessage(result));
+                            }
                         }
 
                         if (partyContactMechPurposeChanged) {
                             partyContactMechPurpose.put("contactMechId", newContactMechId);
                             result = dispatcher.runSync("createPartyContactMechPurpose", partyContactMechPurpose);
+                            if (ServiceUtil.isError(result)) {
+                                return ServiceUtil.returnError(ServiceUtil.getErrorMessage(result));
+                            }
                         }
                         lastPartyId = currentPartyId;
                         errMsgs.addAll(newErrMsgs);

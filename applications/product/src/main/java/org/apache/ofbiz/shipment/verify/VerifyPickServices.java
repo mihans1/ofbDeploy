@@ -32,8 +32,6 @@ import org.apache.ofbiz.service.ServiceUtil;
 
 public class VerifyPickServices {
 
-    private static BigDecimal ZERO = BigDecimal.ZERO;
-
     public static Map<String, Object> verifySingleItem(DispatchContext dctx, Map<String, ? extends Object> context) {
         Locale locale = (Locale) context.get("locale");
         VerifyPickSession pickSession = (VerifyPickSession) context.get("verifyPickSession");
@@ -57,11 +55,11 @@ public class VerifyPickServices {
         VerifyPickSession pickSession = (VerifyPickSession) context.get("verifyPickSession");
         String orderId = (String) context.get("orderId");
         String shipGroupSeqId = (String) context.get("shipGroupSeqId");
-        Map<String, ?> selectedMap = UtilGenerics.checkMap(context.get("selectedMap"));
-        Map<String, String> itemMap = UtilGenerics.checkMap(context.get("itemMap"));
-        Map<String, String> productMap = UtilGenerics.checkMap(context.get("productMap"));
-        Map<String, String> originGeoIdMap = UtilGenerics.checkMap(context.get("originGeoIdMap"));
-        Map<String, String> quantityMap = UtilGenerics.checkMap(context.get("quantityMap"));
+        Map<String, ?> selectedMap = UtilGenerics.cast(context.get("selectedMap"));
+        Map<String, String> itemMap = UtilGenerics.cast(context.get("itemMap"));
+        Map<String, String> productMap = UtilGenerics.cast(context.get("productMap"));
+        Map<String, String> originGeoIdMap = UtilGenerics.cast(context.get("originGeoIdMap"));
+        Map<String, String> quantityMap = UtilGenerics.cast(context.get("quantityMap"));
         if (selectedMap != null) {
             for (String rowKey : selectedMap.keySet()) {
                 String orderItemSeqId = itemMap.get(rowKey);
@@ -70,7 +68,7 @@ public class VerifyPickServices {
                 String quantityStr = quantityMap.get(rowKey);
                 if (UtilValidate.isNotEmpty(quantityStr)) {
                     BigDecimal quantity = new BigDecimal(quantityStr);
-                    if (quantity.compareTo(ZERO) > 0) {
+                    if (quantity.compareTo(BigDecimal.ZERO) > 0) {
                         try {
                             pickSession.createRow(orderId, orderItemSeqId, shipGroupSeqId, productId, originGeoId, quantity, locale);
                         } catch (Exception ex) {
@@ -90,7 +88,7 @@ public class VerifyPickServices {
         String orderId = (String) context.get("orderId");
         try {
             shipmentId = pickSession.complete(orderId, locale);
-            Map<String, Object> shipment = new HashMap<String, Object>();
+            Map<String, Object> shipment = new HashMap<>();
             shipment.put("shipmentId", shipmentId);
             pickSession.clearAllRows();
             return shipment;

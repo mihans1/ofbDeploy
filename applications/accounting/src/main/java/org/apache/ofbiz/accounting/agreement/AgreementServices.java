@@ -20,6 +20,7 @@
 package org.apache.ofbiz.accounting.agreement;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Locale;
@@ -45,16 +46,9 @@ public class AgreementServices {
 
     public static final String module = AgreementServices.class.getName();
     // set some BigDecimal properties
-    private static BigDecimal ZERO = BigDecimal.ZERO;
-    private static int decimals = -1;
-    private static int rounding = -1;
-    static {
-        decimals = UtilNumber.getBigDecimalScale("invoice.decimals");
-        rounding = UtilNumber.getBigDecimalRoundingMode("invoice.rounding");
-
-        // set zero to the proper scale
-        if (decimals != -1) ZERO = ZERO.setScale(decimals, rounding);
-    }
+    public static final int decimals = UtilNumber.getBigDecimalScale("finaccount.decimals");
+    public static final RoundingMode rounding = UtilNumber.getRoundingMode("finaccount.rounding");
+    public static final BigDecimal ZERO = BigDecimal.ZERO.setScale(decimals, rounding);
     public static final String resource = "AccountingUiLabels";
 
     /**
@@ -78,7 +72,7 @@ public class AgreementServices {
         Delegator delegator = ctx.getDelegator();
         Locale locale = (Locale) context.get("locale");
         String errMsg = null;
-        List<Map<String, Object>> commissions = new LinkedList<Map<String,Object>>();
+        List<Map<String, Object>> commissions = new LinkedList<>();
 
         try {
             BigDecimal amount = ((BigDecimal)context.get("amount"));
@@ -146,9 +140,9 @@ public class AgreementServices {
                             // if days is greater than zero, then it has been set with another value, so we use the lowest term days
                             // if days is less than zero, then it has not been set yet.
                             if (days > 0) {
-                                days = Math.min(days, termDays.longValue());
+                                days = Math.min(days, termDays);
                             } else {
-                                days = termDays.longValue();
+                                days = termDays;
                             }
                         }
                     }
@@ -169,7 +163,7 @@ public class AgreementServices {
                             "currencyUomId", agreementItem.getString("currencyUomId"),
                             "productId", productId);
                     if (days >= 0) {
-                        partyCommissionResult.put("days", Long.valueOf(days));
+                        partyCommissionResult.put("days", days);
                     }
                     if (!commissions.contains(partyCommissionResult)) {
                         commissions.add(partyCommissionResult);

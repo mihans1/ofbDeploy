@@ -25,7 +25,7 @@ under the License.
       <li>
         <form id="createEmptyShoppingList" action="<@ofbizUrl>createEmptyShoppingList</@ofbizUrl>" method="post">
           <input type="hidden" name="partyId" value="${partyId!}" />
-          <a href="javascript:document.getElementById('createEmptyShoppingList').submit();" class="buttontext">${uiLabelMap.CommonCreateNew}</a>
+          <input type="submit" value="${uiLabelMap.CommonCreate}"/>
         </form>
       </li>
     </ul>
@@ -44,7 +44,7 @@ under the License.
           </#list>
         </select>
         <input type="hidden" name="partyId" value="${partyId!}" />
-        <a href="javascript:document.selectShoppingList.submit();" class="smallSubmit">${uiLabelMap.CommonEdit}</a>
+        <input type="submit" value="${uiLabelMap.CommonEdit}"/>
       </form>
     <#else>
       ${uiLabelMap.PartyNoShoppingListsParty}.
@@ -62,11 +62,11 @@ under the License.
       <form method="post" name="createQuoteFromShoppingListForm" action="/ordermgr/control/createQuoteFromShoppingList">
         <input type= "hidden" name= "applyStorePromotions" value= "N"/>
         <input type= "hidden" name= "shoppingListId" value= "${shoppingList.shoppingListId!}"/>
+        <input type="submit" value="${uiLabelMap.PartyCreateNewQuote}"/>
       </form>
-      <a href="javascript:document.createQuoteFromShoppingListForm.submit()">${uiLabelMap.PartyCreateNewQuote}</a>
       </li>
-      <li><a href="/ordermgr/control/createCustRequestFromShoppingList?shoppingListId=${shoppingList.shoppingListId!}">${uiLabelMap.PartyCreateNewCustRequest}</a></li>
-      <li><a href="/ordermgr/control/loadCartFromShoppingList?shoppingListId=${shoppingList.shoppingListId!}">${uiLabelMap.OrderNewOrder}</a></li>
+      <li><a href="<@ofbizUrl controlPath="/ordermgr/control">createCustRequestFromShoppingList?shoppingListId=${shoppingList.shoppingListId!}</@ofbizUrl>">${uiLabelMap.PartyCreateNewCustRequest}</a></li>
+      <li><a href="<@ofbizUrl controlPath="/ordermgr/control">loadCartFromShoppingList?shoppingListId=${shoppingList.shoppingListId!}</@ofbizUrl>">${uiLabelMap.OrderNewOrder}</a></li>
     </ul>
     <br class="clear"/>
   </div>
@@ -155,7 +155,7 @@ under the License.
         <#assign childShoppingList = childShoppingListData.childShoppingList>
         <tr>
           <td class="button-col"><a href="<@ofbizUrl>editShoppingList?shoppingListId=${childShoppingList.shoppingListId}</@ofbizUrl>">${childShoppingList.listName?default(childShoppingList.shoppingListId)}</a></li>
-          <td class="button-col align-float">
+          <td class="button-col align-text">
             <a href="<@ofbizUrl>editShoppingList?shoppingListId=${childShoppingList.shoppingListId}</@ofbizUrl>">${uiLabelMap.PartyGotoList}</a>
             <a href="<@ofbizUrl>addListToCart?shoppingListId=${childShoppingList.shoppingListId}</@ofbizUrl>">${uiLabelMap.PartyAddListToCart}</a>
           </td>
@@ -199,7 +199,7 @@ under the License.
           <#assign productVariantAssocs = shoppingListItemData.productVariantAssocs!>
           <#assign isVirtual = product.isVirtual?? && "Y" == product.isVirtual>
           <tr valign="middle"<#if alt_row> class="alternate-row"</#if>>
-            <td><a href="/catalog/control/EditProduct?productId=${shoppingListItem.productId}&amp;externalLoginKey=${requestAttributes.externalLoginKey}">${shoppingListItem.productId} -
+            <td><a href="<@ofbizUrl controlPath="/catalog/control">EditProduct?productId=${shoppingListItem.productId}&amp;externalLoginKey=${requestAttributes.externalLoginKey}</@ofbizUrl>">${shoppingListItem.productId} -
               ${productContentWrapper.get("PRODUCT_NAME", "html")?default("No Name")}</a> : ${productContentWrapper.get("DESCRIPTION", "html")!}
             </td>
             <form method="post" action="<@ofbizUrl>removeFromShoppingList</@ofbizUrl>" name='removeform_${shoppingListItem.shoppingListItemSeqId}'>

@@ -18,8 +18,7 @@
  *******************************************************************************/
 package org.apache.ofbiz.common;
 
-import static org.apache.ofbiz.base.util.UtilGenerics.checkList;
-
+import static org.apache.ofbiz.base.util.UtilGenerics.checkCollection;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -64,8 +63,8 @@ public class FtpServices {
         try {
             Integer defaultTimeout = (Integer) context.get("defaultTimeout");
             if (UtilValidate.isNotEmpty(defaultTimeout)) {
-                Debug.logInfo("[putFile] set default timeout to: " + defaultTimeout.intValue() + " milliseconds", module);
-                ftp.setDefaultTimeout(defaultTimeout.intValue());
+                Debug.logInfo("[putFile] set default timeout to: " + defaultTimeout + " milliseconds", module);
+                ftp.setDefaultTimeout(defaultTimeout);
             }
             Debug.logInfo("[putFile] connecting to: " + (String) context.get("hostname"), module);
             ftp.connect((String) context.get("hostname"));
@@ -81,12 +80,12 @@ public class FtpServices {
                     errorList.add(UtilProperties.getMessage(resource, "CommonFtpLoginFailure", UtilMisc.toMap("username", username, "password", password), locale));
                 } else {
                     Boolean binaryTransfer = (Boolean) context.get("binaryTransfer");
-                    boolean binary = (binaryTransfer == null) ? false : binaryTransfer.booleanValue();
+                    boolean binary = (binaryTransfer == null) ? false : binaryTransfer;
                     if (binary) {
                         ftp.setFileType(FTP.BINARY_FILE_TYPE);
                     }
                     Boolean passiveMode = (Boolean) context.get("passiveMode");
-                    boolean passive = (passiveMode == null) ? true : passiveMode.booleanValue();
+                    boolean passive = (passiveMode == null) ? true : passiveMode;
                     if (passive) {
                         ftp.enterLocalPassiveMode();
                     }
@@ -96,7 +95,7 @@ public class FtpServices {
                         errorList.add(UtilProperties.getMessage(resource, "CommonFtpFileNotSentSuccesfully", UtilMisc.toMap("replyString", ftp.getReplyString()), locale));
                     } else {
                         Debug.logInfo("[putFile] store was successful", module);
-                        List<String> siteCommands = checkList(context.get("siteCommands"), String.class);
+                        List<String> siteCommands = checkCollection(context.get("siteCommands"), String.class);
                         if (siteCommands != null) {
                             for (String command : siteCommands) {
                                 Debug.logInfo("[putFile] sending SITE command: " + command, module);
@@ -144,8 +143,8 @@ public class FtpServices {
         try {
             Integer defaultTimeout = (Integer) context.get("defaultTimeout");
             if (UtilValidate.isNotEmpty(defaultTimeout)) {
-                Debug.logInfo("[getFile] Set default timeout to: " + defaultTimeout.intValue() + " milliseconds", module);
-                ftp.setDefaultTimeout(defaultTimeout.intValue());
+                Debug.logInfo("[getFile] Set default timeout to: " + defaultTimeout + " milliseconds", module);
+                ftp.setDefaultTimeout(defaultTimeout);
             }
             ftp.connect((String) context.get("hostname"));
             if (!FTPReply.isPositiveCompletion(ftp.getReplyCode())) {
@@ -157,12 +156,12 @@ public class FtpServices {
                     errorList.add(UtilProperties.getMessage(resource, "CommonFtpLoginFailure", UtilMisc.toMap("username", username, "password", password), locale));
                 } else {
                     Boolean binaryTransfer = (Boolean) context.get("binaryTransfer");
-                    boolean binary = (binaryTransfer == null) ? false : binaryTransfer.booleanValue();
+                    boolean binary = (binaryTransfer == null) ? false : binaryTransfer;
                     if (binary) {
                         ftp.setFileType(FTP.BINARY_FILE_TYPE);
                     }
                     Boolean passiveMode = (Boolean) context.get("passiveMode");
-                    boolean passive = (passiveMode == null) ? false : passiveMode.booleanValue();
+                    boolean passive = (passiveMode == null) ? false : passiveMode;
                     if (passive) {
                         ftp.enterLocalPassiveMode();
                     }

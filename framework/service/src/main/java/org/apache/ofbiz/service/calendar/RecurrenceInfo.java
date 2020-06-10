@@ -147,7 +147,7 @@ public class RecurrenceInfo {
     /** Returns the current count of this recurrence. */
     public long getCurrentCount() {
         if (info.get("recurrenceCount") != null) {
-            return info.getLong("recurrenceCount").longValue();
+            return info.getLong("recurrenceCount");
         }
         return 0;
     }
@@ -270,7 +270,7 @@ public class RecurrenceInfo {
         return checkDateList(rDateList, nextTime, fromTime);
     }
 
-    private long checkDateList(List<Date> dateList, long time, long fromTime) {
+    private static long checkDateList(List<Date> dateList, long time, long fromTime) {
         long nextTime = time;
 
         if (UtilValidate.isNotEmpty(dateList)) {

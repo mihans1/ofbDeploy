@@ -19,7 +19,7 @@ specific language governing permissions and limitations
 under the License.
 -->
 
-<web-app version="3.0">
+<web-app version="4.0" xmlns="http://xmlns.jcp.org/xml/ns/javaee" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://xmlns.jcp.org/xml/ns/javaee http://xmlns.jcp.org/xml/ns/javaee/web-app_4_0.xsd">
   <display-name>Apache OFBiz - Marketing Manager</display-name>
   <description>Marketing Manager Module of the Apache OFBiz Project</description>
 
@@ -82,6 +82,10 @@ under the License.
     <servlet-name>ControlServlet</servlet-name>
     <url-pattern>/control/*</url-pattern>
   </servlet-mapping>
+
+  <session-config>
+    <session-timeout>60</session-timeout><!-- in minutes -->
+  </session-config>
 
   <welcome-file-list>
     <welcome-file>index.jsp</welcome-file>

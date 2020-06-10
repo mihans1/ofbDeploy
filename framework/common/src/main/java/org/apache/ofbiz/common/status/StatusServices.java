@@ -18,8 +18,7 @@
  *******************************************************************************/
 package org.apache.ofbiz.common.status;
 
-import static org.apache.ofbiz.base.util.UtilGenerics.checkList;
-
+import static org.apache.ofbiz.base.util.UtilGenerics.checkCollection;
 import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -46,13 +45,13 @@ public class StatusServices {
 
     public static Map<String, Object> getStatusItems(DispatchContext ctx, Map<String, ?> context) {
         Delegator delegator = ctx.getDelegator();
-        List<String> statusTypes = checkList(context.get("statusTypeIds"), String.class);
+        List<String> statusTypes = checkCollection(context.get("statusTypeIds"), String.class);
         Locale locale = (Locale) context.get("locale");
         if (UtilValidate.isEmpty(statusTypes)) {
             return ServiceUtil.returnError(UtilProperties.getMessage(resource, "CommonStatusMandatory", locale));
         }
 
-        List<GenericValue> statusItems = new LinkedList<GenericValue>();
+        List<GenericValue> statusItems = new LinkedList<>();
         for (String statusTypeId: statusTypes) {
             try {
                 List<GenericValue> myStatusItems = EntityQuery.use(delegator)
@@ -66,7 +65,7 @@ public class StatusServices {
                 Debug.logError(e, module);
             }
         }
-        Map<String, Object> ret =  new LinkedHashMap<String, Object>();
+        Map<String, Object> ret =  new LinkedHashMap<>();
         ret.put("statusItems",statusItems);
         return ret;
     }

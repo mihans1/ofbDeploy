@@ -23,14 +23,13 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.ServiceLoader;
 import java.util.Set;
 
 import javax.script.Bindings;
@@ -47,6 +46,8 @@ import javax.script.SimpleScriptContext;
 
 import org.apache.ofbiz.base.location.FlexibleLocation;
 import org.apache.ofbiz.base.util.cache.UtilCache;
+import org.apache.ofbiz.base.util.ScriptHelper;
+import org.apache.ofbiz.common.scripting.ScriptHelperImpl;
 import org.codehaus.groovy.runtime.InvokerHelper;
 
 /**
@@ -70,7 +71,6 @@ public final class ScriptUtil {
     public static final String SCRIPT_HELPER_KEY = "ofbiz";
     private static final UtilCache<String, CompiledScript> parsedScripts = UtilCache.createUtilCache("script.ParsedScripts", 0, 0, false);
     private static final Object[] EMPTY_ARGS = {};
-    private static ScriptHelperFactory helperFactory = null;
     /** A set of script names - derived from the JSR-223 scripting engines. */
     public static final Set<String> SCRIPT_NAMES;
 
@@ -104,15 +104,6 @@ public final class ScriptUtil {
             }
         }
         SCRIPT_NAMES = Collections.unmodifiableSet(writableScriptNames);
-        Iterator<ScriptHelperFactory> iter = ServiceLoader.load(ScriptHelperFactory.class).iterator();
-        if (iter.hasNext()) {
-            helperFactory = iter.next();
-            if (Debug.verboseOn()) {
-                Debug.logVerbose("ScriptHelper factory set to " + helperFactory.getClass().getName(), module);
-            }
-        } else {
-            Debug.logWarning("ScriptHelper factory not found", module);
-        }
     }
 
     /**
@@ -136,8 +127,7 @@ public final class ScriptUtil {
             try {
                 Compilable compilableEngine = (Compilable) engine;
                 URL scriptUrl = FlexibleLocation.resolveLocation(filePath);
-                BufferedReader reader = new BufferedReader(new InputStreamReader(scriptUrl.openStream(), UtilIO
-                        .getUtf8()));
+                BufferedReader reader = new BufferedReader(new InputStreamReader(scriptUrl.openStream(), StandardCharsets.UTF_8));
                 script = compilableEngine.compile(reader);
                 if (Debug.verboseOn()) {
                     Debug.logVerbose("Compiled script " + filePath + " using engine " + engine.getClass().getName(), module);
@@ -206,10 +196,8 @@ public final class ScriptUtil {
         localContext.put(WIDGET_CONTEXT_KEY, context);
         localContext.put("context", context);
         ScriptContext scriptContext = new SimpleScriptContext();
-        ScriptHelper helper = createScriptHelper(scriptContext);
-        if (helper != null) {
-            localContext.put(SCRIPT_HELPER_KEY, helper);
-        }
+        ScriptHelper helper = new ScriptHelperImpl(scriptContext);
+        localContext.put(SCRIPT_HELPER_KEY, helper);
         Bindings bindings = new SimpleBindings(localContext);
         scriptContext.setBindings(bindings, ScriptContext.ENGINE_SCOPE);
         return scriptContext;
@@ -233,21 +221,11 @@ public final class ScriptUtil {
         ScriptContext scriptContext = new SimpleScriptContext();
         Bindings bindings = new ProtectedBindings(localContext, Collections.unmodifiableSet(protectedKeys));
         scriptContext.setBindings(bindings, ScriptContext.ENGINE_SCOPE);
-        ScriptHelper helper = createScriptHelper(scriptContext);
-        if (helper != null) {
-            localContext.put(SCRIPT_HELPER_KEY, helper);
-        }
+        localContext.put(SCRIPT_HELPER_KEY, new ScriptHelperImpl(scriptContext));
         return scriptContext;
     }
 
-    public static ScriptHelper createScriptHelper(ScriptContext context) {
-        if (helperFactory != null) {
-            return helperFactory.getInstance(context);
-        }
-        return null;
-    }
-
-     /**
+    /**
      * Executes a script <code>String</code> and returns the result.
      *
      * @param language
@@ -385,8 +363,7 @@ public final class ScriptUtil {
         engine.setContext(scriptContext);
         URL scriptUrl = FlexibleLocation.resolveLocation(filePath);
         try (
-                InputStreamReader reader = new InputStreamReader(new FileInputStream(scriptUrl.getFile()), UtilIO
-                        .getUtf8());) {
+                InputStreamReader reader = new InputStreamReader(new FileInputStream(scriptUrl.getFile()), StandardCharsets.UTF_8);) {
             Object result = engine.eval(reader);
             if (UtilValidate.isNotEmpty(functionName)) {
                 try {
@@ -431,6 +408,7 @@ public final class ScriptUtil {
             this.bindings = bindings;
             this.protectedKeys = protectedKeys;
         }
+        @Override
         public void clear() {
             for (String key : bindings.keySet()) {
                 if (!protectedKeys.contains(key)) {
@@ -438,12 +416,15 @@ public final class ScriptUtil {
                 }
             }
         }
+        @Override
         public boolean containsKey(Object key) {
             return bindings.containsKey(key);
         }
+        @Override
         public boolean containsValue(Object value) {
             return bindings.containsValue(value);
         }
+        @Override
         public Set<java.util.Map.Entry<String, Object>> entrySet() {
             return bindings.entrySet();
         }
@@ -451,6 +432,7 @@ public final class ScriptUtil {
         public boolean equals(Object o) {
             return bindings.equals(o);
         }
+        @Override
         public Object get(Object key) {
             return bindings.get(key);
         }
@@ -458,12 +440,15 @@ public final class ScriptUtil {
         public int hashCode() {
             return bindings.hashCode();
         }
+        @Override
         public boolean isEmpty() {
             return bindings.isEmpty();
         }
+        @Override
         public Set<String> keySet() {
             return bindings.keySet();
         }
+        @Override
         public Object put(String key, Object value) {
             Assert.notNull("key", key);
             if (protectedKeys.contains(key)) {
@@ -473,6 +458,7 @@ public final class ScriptUtil {
             }
             return bindings.put(key, value);
         }
+        @Override
         public void putAll(Map<? extends String, ? extends Object> map) {
             for (Map.Entry<? extends String, ? extends Object> entry : map.entrySet()) {
                 Assert.notNull("key", entry.getKey());
@@ -481,6 +467,7 @@ public final class ScriptUtil {
                 }
             }
         }
+        @Override
         public Object remove(Object key) {
             if (protectedKeys.contains(key)) {
                 UnsupportedOperationException e = new UnsupportedOperationException("Variable " + key + " is read-only");
@@ -489,9 +476,11 @@ public final class ScriptUtil {
             }
             return bindings.remove(key);
         }
+        @Override
         public int size() {
             return bindings.size();
         }
+        @Override
         public Collection<Object> values() {
             return bindings.values();
         }

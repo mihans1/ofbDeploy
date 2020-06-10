@@ -20,7 +20,6 @@ package org.apache.ofbiz.content.survey;
 
 import java.io.ByteArrayOutputStream;
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -90,7 +89,7 @@ public class PdfSurveyServices {
             PdfReader pdfReader = new PdfReader(byteBuffer.array());
             PdfStamper pdfStamper = new PdfStamper(pdfReader, os);
             AcroFields acroFields = pdfStamper.getAcroFields();
-            Map<String, Object> acroFieldMap = UtilGenerics.checkMap(acroFields.getFields());
+            Map<String, Object> acroFieldMap = UtilGenerics.cast(acroFields.getFields());
 
             String contentId = (String) context.get("contentId");
             GenericValue survey = null;
@@ -106,6 +105,9 @@ public class PdfSurveyServices {
 
             // create a SurveyQuestionCategory to put the questions in
             Map<String, Object> createCategoryResultMap = dispatcher.runSync("createSurveyQuestionCategory", UtilMisc.<String, Object>toMap("description", "From AcroForm in Content [" + contentId + "] for Survey [" + surveyId + "]", "userLogin", userLogin));
+            if (ServiceUtil.isError(createCategoryResultMap)) {
+                return ServiceUtil.returnError(ServiceUtil.getErrorMessage(createCategoryResultMap));
+            }
             String surveyQuestionCategoryId = (String) createCategoryResultMap.get("surveyQuestionCategoryId");
 
             pdfStamper.setFormFlattening(true);
@@ -149,10 +151,10 @@ public class PdfSurveyServices {
 
                 Long sequenceNum = null;
                 if (tabPage != null && tabOrder != null) {
-                    sequenceNum = Long.valueOf(tabPage.intValue() * 1000 + tabOrder.intValue());
+                    sequenceNum = (long) (tabPage * 1000 + tabOrder);
                     Debug.logInfo("tabPage=" + tabPage + ", tabOrder=" + tabOrder + ", sequenceNum=" + sequenceNum, module);
                 } else if (fieldPositions.length > 0) {
-                    sequenceNum = Long.valueOf((long) fieldPage * 10000 + (long) fieldLly * 1000 + (long) fieldLlx);
+                    sequenceNum = (long) fieldPage * 10000 + (long) fieldLly * 1000 + (long) fieldLlx;
                     Debug.logInfo("fieldPage=" + fieldPage + ", fieldLlx=" + fieldLlx + ", fieldLly=" + fieldLly + ", fieldUrx=" + fieldUrx + ", fieldUry=" + fieldUry + ", sequenceNum=" + sequenceNum, module);
                 }
 
@@ -166,7 +168,7 @@ public class PdfSurveyServices {
                     PdfObject typeValue = null;
                     PdfObject tuValue = null;
 
-                    Set<PdfName> dictKeys = UtilGenerics.checkSet(dict.getKeys());
+                    Set<PdfName> dictKeys = UtilGenerics.cast(dict.getKeys());
                     for (PdfName dictKeyName : dictKeys) {
                         PdfObject dictObject = dict.get(dictKeyName);
 
@@ -244,7 +246,7 @@ public class PdfSurveyServices {
             PdfReader r = new PdfReader(byteBuffer.array());
             PdfStamper s = new PdfStamper(r,os);
             AcroFields fs = s.getAcroFields();
-            Map<String, Object> hm = UtilGenerics.checkMap(fs.getFields());
+            Map<String, Object> hm = UtilGenerics.cast(fs.getFields());
             s.setFormFlattening(true);
             for (String fieldName : hm.keySet()) {
                 //AcroFields.Item item = fs.getFieldItem(fieldName);
@@ -289,7 +291,7 @@ public class PdfSurveyServices {
             PdfReader r = new PdfReader(byteBuffer.array());
             PdfStamper s = new PdfStamper(r,os);
             AcroFields fs = s.getAcroFields();
-            Map<String, Object> map = UtilGenerics.checkMap(fs.getFields());
+            Map<String, Object> map = UtilGenerics.cast(fs.getFields());
             s.setFormFlattening(true);
 
             for (String fieldName : map.keySet()) {
@@ -313,13 +315,13 @@ public class PdfSurveyServices {
         Map<String, Object> results = ServiceUtil.returnSuccess();
         Delegator delegator = dctx.getDelegator();
         try {
-            Map<String, Object> acroFieldMap = UtilGenerics.checkMap(context.get("acroFieldMap"));
+            Map<String, Object> acroFieldMap = UtilGenerics.cast(context.get("acroFieldMap"));
             ByteBuffer byteBuffer = getInputByteBuffer(context, delegator);
             PdfReader r = new PdfReader(byteBuffer.array());
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
             PdfStamper s = new PdfStamper(r, baos);
             AcroFields fs = s.getAcroFields();
-            Map<String, Object> map = UtilGenerics.checkMap(fs.getFields());
+            Map<String, Object> map = UtilGenerics.cast(fs.getFields());
             s.setFormFlattening(true);
 
             for (String fieldName : map.keySet()) {
@@ -516,7 +518,7 @@ public class PdfSurveyServices {
             ctx.put("contentId", acroFormContentId);
             Map<String, Object> map = dispatcher.runSync("setAcroFields", ctx);
             if (ServiceUtil.isError(map)) {
-                return ServiceUtil.returnError(ServiceUtil.makeErrorMessage(map, null, null, null, null));
+                return ServiceUtil.returnError(ServiceUtil.getErrorMessage(map));
             }
             String pdfFileNameOut = (String) context.get("pdfFileNameOut");
             ByteBuffer outByteBuffer = (ByteBuffer) map.get("outByteBuffer");

@@ -24,7 +24,6 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Set;
 import java.util.TimeZone;
 
 import javax.servlet.ServletContext;
@@ -66,16 +65,12 @@ public class ServiceMultiEventHandler implements EventHandler {
 
     protected ServletContext servletContext;
 
-    /**
-     * @see org.apache.ofbiz.webapp.event.EventHandler#init(javax.servlet.ServletContext)
-     */
+    @Override
     public void init(ServletContext servletContext) throws EventHandlerException {
         this.servletContext = servletContext;
     }
 
-    /**
-     * @see org.apache.ofbiz.webapp.event.EventHandler#invoke(ConfigXMLReader.Event, ConfigXMLReader.RequestMap, javax.servlet.http.HttpServletRequest, javax.servlet.http.HttpServletResponse)
-     */
+    @Override
     public String invoke(Event event, RequestMap requestMap, HttpServletRequest request, HttpServletResponse response) throws EventHandlerException {
         // TODO: consider changing this to use the new UtilHttp.parseMultiFormData method
 
@@ -154,8 +149,8 @@ public class ServiceMultiEventHandler implements EventHandler {
         String messageSuffixStr = UtilProperties.getMessage("DefaultMessagesUiLabels", "service.message.suffix", locale);
 
         // prepare the error message and success message lists
-        List<Object> errorMessages = new LinkedList<Object>();
-        List<String> successMessages = new LinkedList<String>();
+        List<Object> errorMessages = new LinkedList<>();
+        List<String> successMessages = new LinkedList<>();
 
         // Check the global-transaction attribute of the event from the controller to see if the
         //  event should be wrapped in a transaction
@@ -166,14 +161,7 @@ public class ServiceMultiEventHandler implements EventHandler {
         } catch (WebAppConfigurationException e) {
             throw new EventHandlerException(e);
         }
-        boolean eventGlobalTransaction;
-        try {
-            eventGlobalTransaction = controllerConfig.getRequestMapMap().get(requestUri).event.globalTransaction;
-        } catch (WebAppConfigurationException e) {
-            throw new EventHandlerException(e);
-        }
-
-        Set<String> urlOnlyParameterNames = UtilHttp.getUrlOnlyParameterMap(request).keySet();
+        boolean eventGlobalTransaction = controllerConfig.getRequestMapMap().get(requestUri).event.globalTransaction;
 
         // big try/finally to make sure commit or rollback are run
         boolean beganTrans = false;
@@ -206,7 +194,7 @@ public class ServiceMultiEventHandler implements EventHandler {
                 }
 
                 // build the context
-                Map<String, Object> serviceContext = new HashMap<String, Object>();
+                Map<String, Object> serviceContext = new HashMap<>();
                 for (ModelParam modelParam: modelService.getInModelParamList()) {
                     String paramName = modelParam.name;
 
@@ -233,8 +221,6 @@ public class ServiceMultiEventHandler implements EventHandler {
                         // first check for request parameters
                         if (value == null) {
                             String name = paramName + curSuffix;
-
-                            ServiceEventHandler.checkSecureParameter(requestMap, urlOnlyParameterNames, name, session, serviceName, dctx.getDelegator());
 
                             String[] paramArr = request.getParameterValues(name);
                             if (paramArr != null) {
@@ -273,7 +259,7 @@ public class ServiceMultiEventHandler implements EventHandler {
 
                         // make any composite parameter data (e.g., from a set of parameters {name_c_date, name_c_hour, name_c_minutes})
                         if (value == null) {
-                            value = UtilHttp.makeParamValueFromComposite(request, paramName + curSuffix, locale);
+                            value = UtilHttp.makeParamValueFromComposite(request, paramName + curSuffix);
                         }
 
                         if (value == null) {
@@ -352,7 +338,7 @@ public class ServiceMultiEventHandler implements EventHandler {
                         }
                     }
                     if (UtilValidate.isNotEmpty(result.get(ModelService.SUCCESS_MESSAGE_LIST))) {
-                        List<String> newSuccessMessages = UtilGenerics.<String>checkList(result.get(ModelService.SUCCESS_MESSAGE_LIST));
+                        List<String> newSuccessMessages = UtilGenerics.cast(result.get(ModelService.SUCCESS_MESSAGE_LIST));
                         for (int j = 0; j < newSuccessMessages.size(); j++) {
                             String newSuccessMessage = newSuccessMessages.get(j);
                             if (!successMessages.contains(newSuccessMessage)) {

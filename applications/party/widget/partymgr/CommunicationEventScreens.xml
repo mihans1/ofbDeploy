@@ -34,8 +34,8 @@ under the License.
                                 <if-has-permission permission="PARTYMGR" action="_VIEW"/>
                             </condition>
                             <widgets>
-                                <include-menu location="component://party/widget/partymgr/PartyMenus.xml" name="CommEventTabBar"/>
-                                <include-menu location="component://party/widget/partymgr/PartyMenus.xml" name="CommSubTabBar"/>
+                                <include-menu name="CommEventTabBar" location="component://party/widget/partymgr/PartyMenus.xml"/>
+                                <include-menu name="CommSubTabBar" location="component://party/widget/partymgr/PartyMenus.xml"/>
                             </widgets>
                         </section>
                     </decorator-section>
@@ -65,8 +65,8 @@ under the License.
             <widgets>
                 <decorator-screen name="main-decorator" location="${parameters.mainDecoratorLocation}">
                     <decorator-section name="pre-body">
-                                <include-menu location="component://party/widget/partymgr/PartyMenus.xml" name="CommEventTabBar"/>
-                                <include-menu location="component://party/widget/partymgr/PartyMenus.xml" name="CommSubTabBar"/>
+                                <include-menu name="CommEventTabBar" location="component://party/widget/partymgr/PartyMenus.xml"/>
+                                <include-menu name="CommSubTabBar" location="component://party/widget/partymgr/PartyMenus.xml"/>
                     </decorator-section>
                     <decorator-section name="body">
                         <section>
@@ -110,10 +110,10 @@ under the License.
                                         <not><if-empty field="partyId"/></not>
                                     </condition>
                                     <widgets>
-                                        <include-menu location="component://party/widget/partymgr/PartyMenus.xml" name="ProfileTabBar"/>
+                                        <include-menu name="ProfileTabBar" location="component://party/widget/partymgr/PartyMenus.xml"/>
                                     </widgets>
                                 </section>
-                                <include-menu location="component://party/widget/partymgr/PartyMenus.xml" name="CommFindTabBar"/>
+                                <include-menu name="CommFindTabBar" location="component://party/widget/partymgr/PartyMenus.xml"/>
                                 <container><label style="h1" text="${uiLabelMap.PartyPendingCommunicationEvents}"/></container>
                                 <container>
                                     <link style="smallSubmit" target="ViewCommunicationEvent" text="${uiLabelMap.PartyNewCommunication}">
@@ -327,6 +327,39 @@ under the License.
                                     </decorator-section>
                                     <decorator-section name="search-results">
                                         <include-form name="ListCommunicationByOrder" location="component://party/widget/partymgr/CommunicationEventForms.xml"/>
+                                    </decorator-section>
+                                </decorator-screen>
+                            </widgets>
+                            <fail-widgets>
+                                <label style="h3">${uiLabelMap.PartyMgrViewPermissionError}</label>
+                            </fail-widgets>
+                        </section>
+                    </decorator-section>
+                </decorator-screen>
+            </widgets>
+        </section>
+    </screen>
+    
+    <screen name="FindCommunicationByReturn">
+        <section>
+            <actions>
+                <set field="tabButtonItem" value="FindCommunicationByReturn"/>
+                <set field="entityName" value="CommunicationEventAndReturn"/>
+            </actions>
+            <widgets>
+                <decorator-screen name="CommonCommunicationEventDecorator" location="${parameters.communicationEventDecoratorLocation}">
+                    <decorator-section name="body">
+                        <section>
+                            <condition>
+                                <if-service-permission service-name="partyCommunicationEventPermissionCheck" main-action="VIEW"/>
+                            </condition>
+                            <widgets>
+                                <decorator-screen name="FindScreenDecorator" location="component://common/widget/CommonScreens.xml">
+                                    <decorator-section name="search-options">
+                                        <include-form name="FindCommunicationByReturn" location="component://party/widget/partymgr/CommunicationEventForms.xml"/>
+                                    </decorator-section>
+                                    <decorator-section name="search-results">
+                                        <include-form name="ListCommunicationByReturn" location="component://party/widget/partymgr/CommunicationEventForms.xml"/>
                                     </decorator-section>
                                 </decorator-screen>
                             </widgets>
@@ -768,7 +801,7 @@ under the License.
                                         <not><if-empty field="partyId"/></not>
                                     </condition>
                                     <widgets>
-                                        <include-menu location="component://party/widget/partymgr/PartyMenus.xml" name="ProfileTabBar"/>
+                                        <include-menu name="ProfileTabBar" location="component://party/widget/partymgr/PartyMenus.xml"/>
                                     </widgets>
                                 </section>
                                 <container style="h1"><label text="${uiLabelMap.PageTitleEditCommContent}"/></container>
@@ -866,7 +899,7 @@ under the License.
                             <set field="partyIdFrom" from-field="parameters.partyId" default-value="${userLogin.partyId}"/>
                         </actions>
                         <widgets>
-                            <include-menu location="component://party/widget/partymgr/PartyMenus.xml" name="MyCommSubTabBar"/>
+                            <include-menu name="MyCommSubTabBar" location="component://party/widget/partymgr/PartyMenus.xml"/>
                             <include-screen name="commOverview"/>
                         </widgets>
                     </section>
@@ -1175,6 +1208,73 @@ under the License.
                         </screenlet>
                     </widgets>
                 </section>
+            </widgets>
+        </section>
+    </screen>
+    <screen name="UpdateCommReturns">
+        <section>
+            <actions>
+                <set field="titleProperty" value="PartyViewCommReturns"/>
+                <set field="tabButtonItem" value="UpdateCommReturns"/>
+                <set field="communicationEventId" from-field="parameters.communicationEventId"/>
+                <set field="partyId" from-field="parameters.partyId"/>
+                <set field="partyIdFrom" from-field="parameters.partyIdFrom" default-value="${userLogin.partyId}"/>
+                <set field="partyIdTo" from-field="parameters.partyIdTo" default-value="${userLogin.partyId}"/>
+                <entity-one entity-name="CommunicationEvent" value-field="communicationEvent"/>
+            </actions>
+            <widgets>
+                <decorator-screen name="CommonCommunicationEventDecorator" location="${parameters.communicationEventDecoratorLocation}">
+                    <decorator-section name="body">
+                        <screenlet title="${uiLabelMap.PartyCommEventReturns}">
+                            <include-form name="ListCommReturns" location="component://party/widget/partymgr/CommunicationEventForms.xml"/>
+                        </screenlet>
+                        <screenlet title="${uiLabelMap.PartyAddCommEventReturn}">
+                            <include-form name="AddCommReturn" location="component://party/widget/partymgr/CommunicationEventForms.xml"/>
+                        </screenlet>
+                    </decorator-section>
+                </decorator-screen>
+            </widgets>
+           </section>
+    </screen>
+    <screen name="ConversationThread">
+        <section>
+            <actions>
+                <entity-one entity-name="CommunicationEvent" value-field="commEvent"/>
+                <entity-one entity-name="CommunicationEventType" value-field="commEventType">
+                    <field-map field-name="communicationEventTypeId" from-field="commEvent.communicationEventTypeId"/>
+                </entity-one>
+                <set field="parentCommEventId" from-field="commEvent.communicationEventId"/>
+                <entity-condition entity-name="CommunicationEvent" list="childrenCommEvents">
+                    <condition-expr field-name="parentCommEventId" from-field="parentCommEventId"/>
+                    <order-by field-name="entryDate"/>
+                </entity-condition>
+                <set field="childrenCommEvents[+0]" from-field="commEvent"/>
+                <entity-condition entity-name="UserLogin" list="userlogins">
+                    <condition-expr field-name="partyId" from-field="commEvent.partyIdTo"/>
+                </entity-condition>
+                <set field="userLogin" from-field="userlogins[0]"/>
+                <set field="userLoginIdTo" value="${groovy: if (userLogin) return userLogin.userLoginId else return ''}"/>
+            </actions>
+            <widgets>
+                <screenlet name="conversationThread" id="${commEvent.communicationEventId}" 
+                    title="${groovy:commEventType.get('description', locale)} ${date:localizedDateStr(commEvent.entryDate, timeZone, locale)} (${groovy:childrenCommEvents.size()}), ${commEvent.subject}" 
+                    initially-collapsed="true">
+                    <include-form name="DisplayConversationThread" location="component://party/widget/partymgr/CommunicationEventForms.xml"/>
+                    <iterate-section entry="childCommEvent" list="childrenCommEvents" paginate="false">
+                        <section>
+                            <actions>
+                                <set field="classFrom" value="${groovy: commEvent.partyIdFrom == childCommEvent.partyIdFrom? 'commEventFrom':'commEventTo'}"/>
+                            </actions>
+                            <widgets>
+                                <include-form name="DisplayConversationMessage" location="component://party/widget/partymgr/CommunicationEventForms.xml"/>
+                                <platform-specific>
+                                    <html><html-template location="component://party/template/party/DisplayCommunicationContent.ftl"/></html>
+                                </platform-specific>
+                                <horizontal-separator/>
+                            </widgets>
+                        </section>
+                    </iterate-section>
+                </screenlet>
             </widgets>
         </section>
     </screen>

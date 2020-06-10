@@ -20,10 +20,13 @@ package org.apache.ofbiz.webtools;
 
 import java.util.Iterator;
 import java.util.Locale;
-
+import java.util.List;
+import java.util.Map;
+import java.util.LinkedList;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import org.apache.ofbiz.base.util.Debug;
 import org.apache.ofbiz.base.util.UtilDateTime;
 import org.apache.ofbiz.base.util.UtilHttp;
 import org.apache.ofbiz.base.util.UtilMisc;
@@ -37,6 +40,8 @@ import org.apache.ofbiz.security.Security;
 public final class UtilCacheEvents {
 
     private static final String err_resource = "WebtoolsErrorUiLabels";
+    private static final String module = UtilCacheEvents.class.getName();
+
 
     private UtilCacheEvents() {}
 
@@ -170,6 +175,56 @@ public final class UtilCacheEvents {
         request.setAttribute("_EVENT_MESSAGE_", errMsg + " (" + UtilDateTime.nowDateString("yyyy-MM-dd HH:mm:ss")  + ").");
         return "success";
     }
+    
+    /** An HTTP WebEvent handler that clears the selected caches
+     * @param request The HTTP request object for the current JSP or Servlet request.
+     * @param response The HTTP response object for the current JSP or Servlet request.
+     * @return return an HTTP WebEvent handler that clears all caches
+     */
+    public static String clearSelectedCachesEvent(HttpServletRequest request, HttpServletResponse response) {
+
+        String errMsg = "";
+        Locale locale = UtilHttp.getLocale(request);
+
+        Security security = (Security) request.getAttribute("security");
+        if (!security.hasPermission("UTIL_CACHE_EDIT", request.getSession())) {
+            errMsg = UtilProperties.getMessage(err_resource, "utilCacheEvents.permissionEdit", locale) + ".";
+            request.setAttribute("_ERROR_MESSAGE_", errMsg);
+            return "error";
+        }
+
+        Map<String, Object> ctx = UtilHttp.getParameterMap(request);
+        boolean isSelected;
+        List<String> eventList = new LinkedList<>();
+        int rowCount = UtilHttp.getMultiFormRowCount(ctx);
+        for (int i = 0; i < rowCount; i++) {
+            String suffix = UtilHttp.getMultiRowDelimiter() + i;
+            isSelected = (ctx.containsKey("_rowSubmit" + suffix) && "Y".equalsIgnoreCase((String)ctx.get("_rowSubmit" + suffix)));
+            if (!isSelected) {
+                continue;
+            }
+
+            String name = request.getParameter("cacheName"+suffix);
+
+            if (name == null) {
+                errMsg = UtilProperties.getMessage(err_resource, "utilCache.couldNotClearCache", locale) + ".";
+                eventList.add(errMsg);
+            }
+
+            UtilCache<?, ?> utilCache = UtilCache.findCache(name);
+
+            if (utilCache != null) {
+                utilCache.clear();
+                errMsg = UtilProperties.getMessage(err_resource, "utilCache.clearCache", UtilMisc.toMap("name", name), locale) + ".";
+                eventList.add(errMsg);
+            } else {
+                errMsg = UtilProperties.getMessage(err_resource, "utilCache.couldNotClearCacheNotFoundName", UtilMisc.toMap("name", name), locale) + ".";
+                eventList.add(errMsg);
+            }
+        }
+        request.setAttribute("_EVENT_MESSAGE_LIST_", eventList);
+        return "success";
+    }
 
     /** An HTTP WebEvent handler that updates the named cache
      * @param request The HTTP request object for the current JSP or Servlet request.
@@ -203,18 +258,24 @@ public final class UtilCacheEvents {
 
         try {
             maxInMemory = Integer.valueOf(maxInMemoryStr);
-        } catch (Exception e) {}
+        } catch (Exception e) {
+            Debug.logError(e, module);
+        }
+
         try {
             expireTime = Long.valueOf(expireTimeStr);
-        } catch (Exception e) {}
+        } catch (Exception e) {
+            Debug.logError(e, module);
+        }
+
 
         UtilCache<?, ?> utilCache = UtilCache.findCache(name);
 
         if (utilCache != null) {
             if (maxInMemory != null)
-                utilCache.setMaxInMemory(maxInMemory.intValue());
+                utilCache.setMaxInMemory(maxInMemory);
             if (expireTime != null)
-                utilCache.setExpireTime(expireTime.longValue());
+                utilCache.setExpireTime(expireTime);
             if (useSoftReferenceStr != null) {
                 utilCache.setUseSoftReference("true".equals(useSoftReferenceStr));
             }

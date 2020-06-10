@@ -160,9 +160,9 @@ public final class ProductDisplayWorker {
         }
 
         try {
-            Map<String, GenericValue> products = UtilGenerics.checkMap(httpRequest.getSession().getAttribute("_QUICK_REORDER_PRODUCTS_"));
-            Map<String, BigDecimal> productQuantities = UtilGenerics.checkMap(httpRequest.getSession().getAttribute("_QUICK_REORDER_PRODUCT_QUANTITIES_"));
-            Map<String, Integer> productOccurances = UtilGenerics.checkMap(httpRequest.getSession().getAttribute("_QUICK_REORDER_PRODUCT_OCCURANCES_"));
+            Map<String, GenericValue> products = UtilGenerics.cast(httpRequest.getSession().getAttribute("_QUICK_REORDER_PRODUCTS_"));
+            Map<String, BigDecimal> productQuantities = UtilGenerics.cast(httpRequest.getSession().getAttribute("_QUICK_REORDER_PRODUCT_QUANTITIES_"));
+            Map<String, Integer> productOccurances = UtilGenerics.cast(httpRequest.getSession().getAttribute("_QUICK_REORDER_PRODUCT_OCCURANCES_"));
 
             if (products == null || productQuantities == null || productOccurances == null) {
                 products = new HashMap<>();
@@ -204,9 +204,9 @@ public final class ProductDisplayWorker {
                             Integer curOcc = productOccurances.get(product.get("productId"));
 
                             if (curOcc == null) {
-                                curOcc = Integer.valueOf(0);
+                                curOcc = 0;
                             }
-                            productOccurances.put(product.getString("productId"), Integer.valueOf(curOcc.intValue() + 1));
+                            productOccurances.put(product.getString("productId"), curOcc + 1);
                         }
                     }
                 }
@@ -272,10 +272,10 @@ public final class ProductDisplayWorker {
                 BigDecimal occs = productQuantities.get(prodId);
                 //For quantity we should test if we allow to add decimal quantity for this product an productStore : if not then round to 0
                 if(! ProductWorker.isDecimalQuantityOrderAllowed(delegator, prodId, cart.getProductStoreId())){
-                    occs = occs.setScale(0, UtilNumber.getBigDecimalRoundingMode("order.rounding"));
+                    occs = occs.setScale(0, UtilNumber.getRoundingMode("order.rounding"));
                 }
                 else {
-                    occs = occs.setScale(UtilNumber.getBigDecimalScale("order.decimals"), UtilNumber.getBigDecimalRoundingMode("order.rounding"));
+                    occs = occs.setScale(UtilNumber.getBigDecimalScale("order.decimals"), UtilNumber.getRoundingMode("order.rounding"));
                 }
                 productQuantities.put(prodId, occs);
                 BigDecimal nqdbl = quantityModifier.multiply(new BigDecimal(quantity)).add(occs.multiply(occurancesModifier));
@@ -303,12 +303,10 @@ public final class ProductDisplayWorker {
             return null;
         }
         if (values.size() == 0) {
-            return UtilMisc.toList(values);
+            return values;
         }
 
-        List<GenericValue> result = new LinkedList<>();
-        result.addAll(values);
-
+        List<GenericValue> result = new LinkedList<>(values);
         Collections.sort(result, new ProductByMapComparator(orderByMap, descending));
         return result;
     }
@@ -322,6 +320,7 @@ public final class ProductDisplayWorker {
             this.descending = descending;
         }
 
+        @Override
         public int compare(java.lang.Object prod1, java.lang.Object prod2) {
             int result = compareAsc((GenericEntity) prod1, (GenericEntity) prod2);
 

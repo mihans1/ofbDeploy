@@ -75,7 +75,7 @@ public abstract class AbstractJmsListener implements GenericMessageListener, Exc
 
             if (Debug.verboseOn()) Debug.logVerbose("De-Serialized Context --> " + o, module);
             if (ObjectType.instanceOf(o, "java.util.Map"))
-                context = UtilGenerics.checkMap(o);
+                context = UtilGenerics.cast(o);
         } catch (JMSException je) {
             Debug.logError(je, "Problems reading message.", module);
         } catch (Exception e) {
@@ -109,6 +109,7 @@ public abstract class AbstractJmsListener implements GenericMessageListener, Exc
      * Receives the MapMessage and processes the service.
      * @see javax.jms.MessageListener#onMessage(Message)
      */
+    @Override
     public void onMessage(Message message) {
         MapMessage mapMessage = null;
 
@@ -127,6 +128,7 @@ public abstract class AbstractJmsListener implements GenericMessageListener, Exc
      * On exception try to re-establish connection to the JMS server.
      * @see javax.jms.ExceptionListener#onException(JMSException)
      */
+    @Override
     public void onException(JMSException je) {
         this.setConnected(false);
         Debug.logError(je, "JMS connection exception", module);
@@ -136,25 +138,21 @@ public abstract class AbstractJmsListener implements GenericMessageListener, Exc
             } catch (GenericServiceException e) {
                 try {
                     Thread.sleep(10000);
-                } catch (InterruptedException ie) {}
+                } catch (InterruptedException ie) {
+                    Debug.logError(ie, module);
+                }
                 continue;
             }
         }
     }
 
-    /**
-     *
-     * @see org.apache.ofbiz.service.jms.GenericMessageListener#refresh()
-     */
+    @Override
     public void refresh() throws GenericServiceException {
         this.close();
         this.load();
     }
 
-    /**
-     *
-     * @see org.apache.ofbiz.service.jms.GenericMessageListener#isConnected()
-     */
+    @Override
     public boolean isConnected() {
         return this.isConnected;
     }

@@ -50,7 +50,7 @@ public class RoutingServices {
      * @return Map with the result of the service, the output parameters.
      */
     public static Map<String, Object> getEstimatedTaskTime(DispatchContext ctx, Map<String, ? extends Object> context) {
-        Map<String, Object> result = new HashMap<String, Object>();
+        Map<String, Object> result = new HashMap<>();
         Delegator delegator = ctx.getDelegator();
         LocalDispatcher dispatcher = ctx.getDispatcher();
         Locale locale = (Locale) context.get("locale");
@@ -75,7 +75,7 @@ public class RoutingServices {
         // FIXME: the ProductionRun.getEstimatedTaskTime(...) method will be removed and
         // its logic will be implemented inside this method.
         long estimatedTaskTime = ProductionRun.getEstimatedTaskTime(task, quantity, productId, routingId, dispatcher);
-        result.put("estimatedTaskTime", Long.valueOf(estimatedTaskTime));
+        result.put("estimatedTaskTime", estimatedTaskTime);
         if (task != null && task.get("estimatedSetupMillis") != null) {
             result.put("setupTime", task.getBigDecimal("estimatedSetupMillis"));
         }

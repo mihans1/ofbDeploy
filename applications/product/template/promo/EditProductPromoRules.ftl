@@ -51,7 +51,7 @@ under the License.
           <form name="deleteProductPromoRule_${productPromoRule_index}" method="post" action="<@ofbizUrl>deleteProductPromoRule</@ofbizUrl>">
             <input type="hidden" name="productPromoId" value="${(productPromoRule.productPromoId)!}" />
             <input type="hidden" name="productPromoRuleId" value="${(productPromoRule.productPromoRuleId)!}" />
-            <a href="javascript:document.deleteProductPromoRule_${productPromoRule_index}.submit()" class="buttontext">${uiLabelMap.CommonDelete}</a>
+            <input type="submit" value="${uiLabelMap.CommonDelete}"/>
           </form>
     </#if>
         </td>
@@ -74,21 +74,26 @@ under the License.
       </#if>
               <td></td>
               <td>
-                <b>${uiLabelMap.ProductCondition} ${(productPromoCond.productPromoCondSeqId)!}</b>
+                <b>${uiLabelMap.ProductCondition} ${(productPromoCond.productPromoCondSeqId)!}.</b>
+                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;${uiLabelMap.ProductConditionXquantityOfProduct}
                 <form method="post" action="<@ofbizUrl>updateProductPromoCond</@ofbizUrl>">
                   <input type="hidden" name="productPromoId" value="${(productPromoCond.productPromoId)!}"/>
                   <input type="hidden" name="productPromoRuleId" value="${(productPromoCond.productPromoRuleId)!}"/>
                   <input type="hidden" name="productPromoCondSeqId" value="${(productPromoCond.productPromoCondSeqId)!}"/>
-                  <select name="inputParamEnumId" size="1">
-      <#if (productPromoCond.inputParamEnumId)??>
-        <#assign inputParamEnum = productPromoCond.getRelatedOne("InputParamEnumeration", true)>
-                    <option value="${productPromoCond.inputParamEnumId}"><#if inputParamEnum??>${(inputParamEnum.get("description",locale))!}<#else>[${(productPromoCond.inputParamEnumId)!}]</#if></option>
-                    <option value="${(productPromoCond.inputParamEnumId)!}">&nbsp;</option>
+                  <select name="customMethodId" size="1">
+                  <#if (productPromoCond.customMethodId)??>
+                    <#assign customMethod = productPromoCond.getRelatedOne("CustomMethod", true)>
+                             <option value="${productPromoCond.customMethodId}"><#if customMethod??>${(customMethod.get("description",locale))!}<#else>[${(productPromoCond.customMethodId)!}]</#if></option>
+                             <option value="${(productPromoCond.customMethodId)!}">&nbsp;</option>
+                      <#elseif (productPromoCond.inputParamEnumId)??>
+                        <#assign inputParamEnumeration = productPromoCond.getRelatedOne("InputParamEnumeration", true)! />
+                        <#assign customMethod = EntityQuery.use(delegator).from("CustomMethod").where("customMethodId", inputParamEnumeration.enumCode!).cache().queryOne()!>
+                        <option value="${(customMethod.customMethodId)!}">${(inputParamEnumeration.get("description",locale))!}</option>
       <#else>
                     <option value="">&nbsp;</option>
       </#if>
-      <#list inputParamEnums as inputParamEnum>
-                    <option value="${(inputParamEnum.enumId)!}">${(inputParamEnum.get("description",locale))!}</option>
+      <#list inputParamCustomMethods as inputParamCustomMethod>
+                    <option value="${(inputParamCustomMethod.customMethodId)!}">${(inputParamCustomMethod.get("description",locale))!}</option>
       </#list>
                   </select>
                   <select name="operatorEnumId" size="1">
@@ -138,7 +143,7 @@ under the License.
                   <input type="hidden" name="productPromoId" value="${(productPromoCond.productPromoId)!}" />
                   <input type="hidden" name="productPromoRuleId" value="${(productPromoCond.productPromoRuleId)!}" />
                   <input type="hidden" name="productPromoCondSeqId" value="${(productPromoCond.productPromoCondSeqId)!}" />
-                  <a href="javascript:document.deleteProductPromoCondition_${productPromoRule_index}_${productPromoCond_index}.submit()" class="buttontext">${uiLabelMap.CommonDelete}</a>
+                  <input type="submit" value="${uiLabelMap.CommonDelete}"/>
                 </form>
       <#-- ======================= Categories ======================== -->
                 <div class="label">${uiLabelMap.ProductConditionsCategoriesForCondition} ${(productPromoCond.productPromoCondSeqId)!}:</div>
@@ -159,7 +164,7 @@ under the License.
                     <input type="hidden" name="productPromoCondSeqId" value="${(condProductPromoCategory.productPromoCondSeqId)!}" />
                     <input type="hidden" name="productCategoryId" value="${(condProductPromoCategory.productCategoryId)!}" />
                     <input type="hidden" name="andGroupId" value="${(condProductPromoCategory.andGroupId)!}" />
-                    <a href="javascript:document.deleteProductPromoCategoryCondition_${productPromoRule_index}_${condProductPromoCategory_index}_${productPromoCond_index}.submit()" class="buttontext">${uiLabelMap.CommonDelete}</a>
+                    <input type="submit" value="${uiLabelMap.CommonDelete}"/>
                   </form>
                 </div>
       </#list>
@@ -240,9 +245,9 @@ under the License.
                   <input type="hidden" name="productPromoId" value="${(productPromoRule.productPromoId)!}" />
                   <input type="hidden" name="productPromoRuleId" value="${(productPromoRule.productPromoRuleId)!}" />
                   <span class="label"><b>${uiLabelMap.CommonNew}</b>&nbsp;</span>
-                  <select name="inputParamEnumId" size="1">
-    <#list inputParamEnums as inputParamEnum>
-                    <option value="${(inputParamEnum.enumId)!}">${(inputParamEnum.get("description",locale))!}</option>
+                  <select name="customMethodId" size="1">
+    <#list inputParamCustomMethods as inputParamCustomMethod>
+                    <option value="${(inputParamCustomMethod.customMethodId)!}">${(inputParamCustomMethod.get("description",locale))!}</option>
     </#list>
                   </select>
                   <select name="operatorEnumId" size="1">
@@ -268,7 +273,7 @@ under the License.
           </table>
         </td>
       </tr>
-      <tr><td><hr /></td><td colspan="2"></td></tr>
+      <tr><td><hr/> </td><td colspan="2"></td></tr>
       <tr valign="top" class="row-level-one<#if "1" == ruleClass> alternate-row</#if>">
         <td align="right" class="label">${uiLabelMap.ProductActionForRule} ${(productPromoRule.productPromoRuleId)!} :</td>
         <td colspan="2">
@@ -284,16 +289,20 @@ under the License.
                     <input type="hidden" name="productPromoId" value="${(productPromoAction.productPromoId)!}" />
                     <input type="hidden" name="productPromoRuleId" value="${(productPromoAction.productPromoRuleId)!}" />
                     <input type="hidden" name="productPromoActionSeqId" value="${(productPromoAction.productPromoActionSeqId)!}" />
-                    <select name="productPromoActionEnumId" size="1">
-      <#if (productPromoAction.productPromoActionEnumId)??>
+                    <select name="customMethodId" size="1">
+      <#if (productPromoAction.customMethodId)??>
         <#assign productPromoActionCurEnum = productPromoAction.getRelatedOne("ActionEnumeration", true)>
-                      <option value="${(productPromoAction.productPromoActionEnumId)!}"><#if productPromoActionCurEnum??>${(productPromoActionCurEnum.get("description",locale))!}<#else>[${(productPromoAction.productPromoActionEnumId)!}]</#if></option>
-                      <option value="${(productPromoAction.productPromoActionEnumId)!}">&nbsp;</option>
+                      <option value="${(productPromoAction.customMethodId)!}"><#if productPromoActionCurEnum??>${(productPromoActionCurEnum.get("description",locale))!}<#else>[${(productPromoAction.customMethodId)!}]</#if></option>
+                      <option value="${(productPromoAction.customMethodId)!}">&nbsp;</option>
+        <#elseif (productPromoAction.productPromoActionEnumId)??>
+          <#assign actionEnumeration = productPromoAction.getRelatedOne("ActionEnumeration", true)! />
+          <#assign customMethod = EntityQuery.use(delegator).from("CustomMethod").where("customMethodId", actionEnumeration.enumCode!).cache().queryOne()!>
+            <option value="${(customMethod.customMethodId)!}">${(actionEnumeration.get("description",locale))!}</option>
       <#else>
                       <option value="">&nbsp;</option>
       </#if>
-      <#list productPromoActionEnums as productPromoActionEnum>
-                      <option value="${(productPromoActionEnum.enumId)!}">${(productPromoActionEnum.get("description",locale))!}</option>
+      <#list PromoActionCustomMethods as PromoActionCustomMethod>
+                      <option value="${(PromoActionCustomMethod.customMethodId)!}">${(PromoActionCustomMethod.get("description",locale))!}</option>
       </#list>
                     </select>
                     <input type="hidden" name="orderAdjustmentTypeId" value="${(productPromoAction.orderAdjustmentTypeId)!}" />
@@ -323,7 +332,7 @@ under the License.
                     <input type="hidden" name="productPromoId" value="${(productPromoAction.productPromoId)!}" />
                     <input type="hidden" name="productPromoRuleId" value="${(productPromoAction.productPromoRuleId)!}" />
                     <input type="hidden" name="productPromoActionSeqId" value="${(productPromoAction.productPromoActionSeqId)!}" />
-                    <a href="javascript:document.deleteProductPromoAction_${productPromoRule_index}_${productPromoAction_index}.submit()" class="buttontext">${uiLabelMap.CommonDelete}</a>
+                    <input type="submit" value="${uiLabelMap.CommonDelete}"/>
                   </form>
                 </div>
       <#-- ======================= Categories ======================== -->
@@ -345,7 +354,7 @@ under the License.
                     <input type="hidden" name="productPromoActionSeqId" value="${(actionProductPromoCategory.productPromoActionSeqId)!}" />
                     <input type="hidden" name="productCategoryId" value="${(actionProductPromoCategory.productCategoryId)!}" />
                     <input type="hidden" name="andGroupId" value="${(actionProductPromoCategory.andGroupId)!}" />
-                    <a href="javascript:document.deleteProductPromoCategoryAction_${productPromoRule_index}_${productPromoAction_index}_${actionProductPromoCategory_index}.submit()" class="buttontext">${uiLabelMap.CommonDelete}</a>
+                    <input type="submit" value="${uiLabelMap.CommonDelete}"/>
                   </form>
                 </div>
       </#list>
@@ -389,7 +398,7 @@ under the License.
                     <input type="hidden" name="productPromoCondSeqId" value="${(actionProductPromoProduct.productPromoCondSeqId)!}" />
                     <input type="hidden" name="productPromoActionSeqId" value="${(actionProductPromoProduct.productPromoActionSeqId)!}" />
                     <input type="hidden" name="productId" value="${(actionProductPromoProduct.productId)!}" />
-                    <a href="javascript:document.deleteProductPromoProductAction_${productPromoRule_index}_${productPromoAction_index}_${actionProductPromoProduct_index}.submit()" class="buttontext">${uiLabelMap.CommonDelete}</a>
+                    <input type="submit" value="${uiLabelMap.CommonDelete}"/>
                   </form>
                 </div>
       </#list>
@@ -400,7 +409,6 @@ under the License.
                   <form method="post" action="<@ofbizUrl>createProductPromoProduct</@ofbizUrl>" name="createProductPromoProductActions">
                     <input type="hidden" name="productPromoId" value="${productPromoId}" />
                     <input type="hidden" name="productPromoRuleId" value="${productPromoAction.productPromoRuleId}" />
-                    <input type="hidden" name="productPromoActionSeqId" value="${productPromoAction.productPromoActionSeqId}" />
                     <input type="hidden" name="productPromoCondSeqId" value="_NA_" />
                     <@htmlTemplate.lookupField formName="createProductPromoProductActions" name="productId" id="productId" fieldFormName="LookupProduct"/>
                     <select name="productPromoApplEnumId">
@@ -428,9 +436,9 @@ under the License.
                     <input type="hidden" name="productPromoId" value="${(productPromoRule.productPromoId)!}" />
                     <input type="hidden" name="productPromoRuleId" value="${(productPromoRule.productPromoRuleId)!}" />
                     <span class="label"><b>${uiLabelMap.CommonNew}:</b>&nbsp;</span>
-                    <select name="productPromoActionEnumId" size="1">
-    <#list productPromoActionEnums as productPromoActionEnum>
-                      <option value="${(productPromoActionEnum.enumId)!}">${(productPromoActionEnum.get("description",locale))!}</option>
+                    <select name="customMethodId" size="1">
+    <#list PromoActionCustomMethods as PromoActionCustomMethod>
+                      <option value="${(PromoActionCustomMethod.customMethodId)!}">${(PromoActionCustomMethod.get("description",locale))!}</option>
     </#list>
                     </select>
                     <input type="hidden" name="orderAdjustmentTypeId" value="PROMOTION_ADJUSTMENT" />
@@ -502,7 +510,7 @@ under the License.
         <input type="hidden" name="productPromoCondSeqId" value="${(promoProductPromoCategory.productPromoCondSeqId)!}" />
         <input type="hidden" name="productCategoryId" value="${(promoProductPromoCategory.productCategoryId)!}" />
         <input type="hidden" name="andGroupId" value="${(promoProductPromoCategory.andGroupId)!}" />
-        <a href="javascript:document.deleteProductPromoCategoryAction_${promoProductPromoCategory_index}.submit()" class="buttontext">${uiLabelMap.CommonDelete}</a>
+        <input type="submit" value="${uiLabelMap.CommonDelete}"/>
       </form>
     </div>
   </#list>
@@ -546,7 +554,7 @@ under the License.
         <input type="hidden" name="productPromoActionSeqId" value="${(promoProductPromoProduct.productPromoActionSeqId)!}" />
         <input type="hidden" name="productPromoCondSeqId" value="${(promoProductPromoProduct.productPromoCondSeqId)!}" />
         <input type="hidden" name="productId" value="${(promoProductPromoProduct.productId)!}" />
-        <a href="javascript:document.deleteProductPromoProductAction_${promoProductPromoProduct_index}.submit()" class="buttontext">${uiLabelMap.CommonDelete}</a>
+        <input type="submit" value="${uiLabelMap.CommonDelete}"/>
       </form>
     </div>
   </#list>

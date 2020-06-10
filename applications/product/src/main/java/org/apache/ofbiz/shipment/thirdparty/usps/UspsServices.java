@@ -24,7 +24,9 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.nio.charset.StandardCharsets;
 import java.text.DecimalFormat;
+import java.util.Base64;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.LinkedList;
@@ -36,14 +38,12 @@ import java.util.Map;
 import javax.xml.transform.TransformerException;
 
 import org.apache.commons.lang.StringUtils;
-import org.apache.ofbiz.base.util.Base64;
 import org.apache.ofbiz.base.util.Debug;
 import org.apache.ofbiz.base.util.GeneralException;
 import org.apache.ofbiz.base.util.HttpClient;
 import org.apache.ofbiz.base.util.HttpClientException;
 import org.apache.ofbiz.base.util.StringUtil;
 import org.apache.ofbiz.base.util.UtilGenerics;
-import org.apache.ofbiz.base.util.UtilIO;
 import org.apache.ofbiz.base.util.UtilMisc;
 import org.apache.ofbiz.base.util.UtilProperties;
 import org.apache.ofbiz.base.util.UtilValidate;
@@ -76,7 +76,7 @@ public class UspsServices {
     public final static String module = UspsServices.class.getName();
     public final static String resourceError = "ProductUiLabels";
 
-    private static List<String> domesticCountries = new LinkedList<String>();
+    private static List<String> domesticCountries = new LinkedList<>();
     // Countries treated as domestic for rate enquiries
     static {
         domesticCountries.add("USA");
@@ -146,7 +146,9 @@ public class UspsServices {
         String serviceCode = null;
         try {
             GenericValue carrierShipmentMethod = EntityQuery.use(delegator).from("CarrierShipmentMethod")
-                    .where("shipmentMethodTypeId", (String) context.get("shipmentMethodTypeId"), "partyId", (String) context.get("carrierPartyId"), "roleTypeId", (String) context.get("carrierRoleTypeId"))
+                    .where("shipmentMethodTypeId", context.get("shipmentMethodTypeId"),
+                           "partyId", context.get("carrierPartyId"),
+                           "roleTypeId", context.get("carrierRoleTypeId"))
                     .queryOne();
             if (carrierShipmentMethod != null) {
                 serviceCode = carrierShipmentMethod.getString("carrierServiceCode").toUpperCase(Locale.getDefault());
@@ -173,7 +175,7 @@ public class UspsServices {
             maxWeight = new BigDecimal("70");
         }
 
-        List<Map<String, Object>> shippableItemInfo = UtilGenerics.checkList(context.get("shippableItemInfo"));
+        List<Map<String, Object>> shippableItemInfo = UtilGenerics.cast(context.get("shippableItemInfo"));
         List<Map<String, BigDecimal>> packages = ShipmentWorker.getPackageSplit(dctx, shippableItemInfo, maxWeight);
         boolean isOnePackage = packages.size() == 1; // use shippableWeight if there's only one package
         // TODO: Up to 25 packages can be included per request - handle more than 25
@@ -315,7 +317,9 @@ public class UspsServices {
         String serviceCode = null;
         try {
             GenericValue carrierShipmentMethod = EntityQuery.use(delegator).from("CarrierShipmentMethod")
-                    .where("shipmentMethodTypeId", (String) context.get("shipmentMethodTypeId"), "partyId", (String) context.get("carrierPartyId"), "roleTypeId", (String) context.get("carrierRoleTypeId"))
+                    .where("shipmentMethodTypeId", context.get("shipmentMethodTypeId"),
+                           "partyId", context.get("carrierPartyId"),
+                           "roleTypeId", context.get("carrierRoleTypeId"))
                     .queryOne();
             if (carrierShipmentMethod != null) {
                 serviceCode = carrierShipmentMethod.getString("carrierServiceCode");
@@ -338,7 +342,7 @@ public class UspsServices {
             maxWeight = new BigDecimal("70");
         }
 
-        List<Map<String, Object>> shippableItemInfo = UtilGenerics.checkList(context.get("shippableItemInfo"));
+        List<Map<String, Object>> shippableItemInfo = UtilGenerics.cast(context.get("shippableItemInfo"));
         List<Map<String, BigDecimal>> packages = ShipmentWorker.getPackageSplit(dctx, shippableItemInfo, maxWeight);
         boolean isOnePackage = packages.size() == 1; // use shippableWeight if there's only one package
 
@@ -479,7 +483,7 @@ public class UspsServices {
 
         List<? extends Element> detailElementList = UtilXml.childElementList(trackInfoElement, "TrackDetail");
         if (UtilValidate.isNotEmpty(detailElementList)) {
-            List<String> trackingDetailList = new LinkedList<String>();
+            List<String> trackingDetailList = new LinkedList<>();
             for (Element detailElement: detailElementList) {
                 trackingDetailList.add(UtilXml.elementValue(detailElement));
             }
@@ -1057,6 +1061,9 @@ public class UspsServices {
                     Map<String, Object> result;
                     try {
                         result = dispatcher.runSync("convertUom", UtilMisc.<String, Object>toMap("uomId", weightUomId, "uomIdTo", "WT_lb", "originalValue", weight));
+                        if (ServiceUtil.isError(result)) {
+                            return ServiceUtil.returnError(ServiceUtil.getErrorMessage(result));
+                        }
                     } catch (GenericServiceException ex) {
                         return ServiceUtil.returnError(UtilProperties.getMessage(resourceError, 
                                 "FacilityShipmentUspsWeightConversionError", 
@@ -1403,7 +1410,7 @@ public class UspsServices {
                     return ServiceUtil.returnError(UtilProperties.getMessage(resourceError, 
                             "FacilityShipmentUspsDeliveryConfirmationResponseIncompleteElementDeliveryConfirmationLabel", locale));
                 }
-                shipmentPackageRouteSeg.setBytes("labelImage", Base64.base64Decode(labelImageString.getBytes(UtilIO.getUtf8())));
+                shipmentPackageRouteSeg.setBytes("labelImage", Base64.getMimeDecoder().decode(labelImageString.getBytes(StandardCharsets.UTF_8)));
                 String trackingCode = UtilXml.childElementValue(responseElement, "DeliveryConfirmationNumber");
                 if (UtilValidate.isEmpty(trackingCode)) {
                     return ServiceUtil.returnError(UtilProperties.getMessage(resourceError, 
@@ -1447,7 +1454,6 @@ public class UspsServices {
                 try (FileOutputStream fileOut = new FileOutputStream(outFileName)) {
                     fileOut.write(labelImageBytes);
                     fileOut.flush();
-                    fileOut.close();
                 } catch (IOException e) {
                     Debug.logInfo(e, module);
                     return ServiceUtil.returnError(e.getMessage());
@@ -1644,7 +1650,7 @@ public class UspsServices {
                 return ServiceUtil.returnError(UtilProperties.getMessage(resourceError, 
                         "FacilityShipmentUspsPriorityMailLabelResponseIncompleteElementLabelImage", locale));
             }
-            shipmentPackageRouteSeg.setBytes("labelImage", Base64.base64Decode(labelImageString.getBytes(UtilIO.getUtf8())));
+            shipmentPackageRouteSeg.setBytes("labelImage", Base64.getMimeDecoder().decode(labelImageString.getBytes(StandardCharsets.UTF_8)));
             String trackingCode = UtilXml.childElementValue(responseElement, "BarcodeNumber");
             if (UtilValidate.isEmpty(trackingCode)) {
                 return ServiceUtil.returnError(UtilProperties.getMessage(resourceError, 
@@ -1698,7 +1704,7 @@ public class UspsServices {
                             UtilMisc.toMap("errorString", e.getMessage()), locale));
         }
 
-        String xmlString = new String(os.toByteArray(), UtilIO.getUtf8());
+        String xmlString = new String(os.toByteArray(), StandardCharsets.UTF_8);
 
         Debug.logInfo("USPS XML request string: " + xmlString, module);
 

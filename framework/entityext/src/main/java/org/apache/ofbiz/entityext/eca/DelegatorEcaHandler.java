@@ -48,21 +48,20 @@ public class DelegatorEcaHandler implements EntityEcaHandler<EntityEcaRule> {
     protected Delegator delegator = null;
     protected String delegatorName = null;
     protected String entityEcaReaderName = null;
-    protected AtomicReference<Future<DispatchContext>> dctx = new AtomicReference<Future<DispatchContext>>();
+    protected AtomicReference<Future<DispatchContext>> dctx = new AtomicReference<>();
 
     public DelegatorEcaHandler() { }
 
+    @Override
     public void setDelegator(Delegator delegator) {
         this.delegator = delegator;
         this.delegatorName = delegator.getDelegatorName();
         this.entityEcaReaderName = EntityEcaUtil.getEntityEcaReaderName(delegator.getDelegatorBaseName());
 
-        Callable<DispatchContext> creator = new Callable<DispatchContext>() {
-            public DispatchContext call() {
-                return EntityServiceFactory.getDispatchContext(DelegatorEcaHandler.this.delegator);
-            }
+        Callable<DispatchContext> creator = () -> {
+            return EntityServiceFactory.getDispatchContext(DelegatorEcaHandler.this.delegator);
         };
-        FutureTask<DispatchContext> futureTask = new FutureTask<DispatchContext>(creator);
+        FutureTask<DispatchContext> futureTask = new FutureTask<>(creator);
         if (this.dctx.compareAndSet(null, futureTask)) {
             ExecutionPool.GLOBAL_BATCH.submit(futureTask);
         }
@@ -82,12 +81,14 @@ public class DelegatorEcaHandler implements EntityEcaHandler<EntityEcaRule> {
         }
     }
 
+    @Override
     public Map<String, List<EntityEcaRule>> getEntityEventMap(String entityName) {
         Map<String, Map<String, List<EntityEcaRule>>> ecaCache = EntityEcaUtil.getEntityEcaCache(this.entityEcaReaderName);
         if (ecaCache == null) return null;
         return ecaCache.get(entityName);
     }
 
+    @Override
     public void evalRules(String currentOperation, Map<String, List<EntityEcaRule>> eventMap, String event, GenericEntity value, boolean isError) throws GenericEntityException {
         // if the eventMap is passed we save a HashMap lookup, but if not that's okay we'll just look it up now
         if (eventMap == null) eventMap = this.getEntityEventMap(value.getEntityName());
@@ -104,7 +105,7 @@ public class DelegatorEcaHandler implements EntityEcaHandler<EntityEcaRule> {
         }
 
         if (!rules.isEmpty() && Debug.verboseOn()) Debug.logVerbose("Running ECA (" + event + ").", module);
-        Set<String> actionsRun = new TreeSet<String>();
+        Set<String> actionsRun = new TreeSet<>();
         for (EntityEcaRule eca: rules) {
             eca.eval(currentOperation, this.getDispatchContext(), value, isError, actionsRun);
         }

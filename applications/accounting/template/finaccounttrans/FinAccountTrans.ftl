@@ -17,7 +17,7 @@ specific language governing permissions and limitations
 under the License.
 -->
 
-<script language="JavaScript" type="text/javascript">
+<script type="application/javascript">
 function togglefinAccountTransId(master) {
     var form = document.selectAllForm;
     var finAccountTransList = form.elements.length;
@@ -106,12 +106,12 @@ function getFinAccountTransRunningTotalAndBalances() {
                   <option value="${glReconciliation.glReconciliationId}">${glReconciliation.glReconciliationName!}[[${glReconciliation.glReconciliationId}] [${glReconciliation.reconciledDate!}] [${glReconciliation.reconciledBalance!}]]</option>
                 </#list>
               </select>
-              <input id="submitButton" type="submit" onclick="javascript:document.selectAllForm.submit();" value="${uiLabelMap.AccountingAssignToReconciliation}" disabled="disabled" />
+              <input id="submitButton" type="submit" value="${uiLabelMap.AccountingAssignToReconciliation}" disabled="disabled" />
             <#else>
               <span class="tooltip">${uiLabelMap.AccountingNoGlReconciliationExists} <a href="<@ofbizUrl>EditFinAccountReconciliations?finAccountId=${parameters.finAccountId!}</@ofbizUrl>">${uiLabelMap.CommonClickHere}</a></span>
             </#if>
           <#else>
-            <input id="submitButton" type="submit" onclick="javascript:document.selectAllForm.submit();" value="${uiLabelMap.AccountingReconcile}" disabled="disabled" />
+            <input id="submitButton" type="submit" value="${uiLabelMap.AccountingReconcile}" disabled="disabled" />
           </#if>
         </div>
       </#if>
@@ -212,13 +212,13 @@ function getFinAccountTransRunningTotalAndBalances() {
                         <td><#if paymentType?has_content>${paymentType.description!}</#if></td>
                         <td><#if paymentMethodType?has_content>${paymentMethodType.description!}</#if></td>
                         <td><@ofbizCurrency amount=payment.amount!/></td>
-                        <td><#if fromPartyName?has_content>${fromPartyName.groupName!}${fromPartyName.firstName!} ${fromPartyName.lastName!}<a href="/partymgr/control/viewprofile?partyId=${fromPartyName.partyId!}">[${fromPartyName.partyId!}]</a></#if></td>
-                        <td><#if toPartyName?has_content>${toPartyName.groupName!}${toPartyName.firstName!} ${toPartyName.lastName!}<a href="/partymgr/control/viewprofile?partyId=${toPartyName.partyId!}">[${toPartyName.partyId!}]</a></#if></td>
+                        <td><#if fromPartyName?has_content>${fromPartyName.groupName!}${fromPartyName.firstName!} ${fromPartyName.lastName!}<a href="<@ofbizUrl controlPath="/partymgr/control">viewprofile?partyId=${fromPartyName.partyId!}</@ofbizUrl>">[${fromPartyName.partyId!}]</a></#if></td>
+                        <td><#if toPartyName?has_content>${toPartyName.groupName!}${toPartyName.firstName!} ${toPartyName.lastName!}<a href="<@ofbizUrl controlPath="/partymgr/control">viewprofile?partyId=${toPartyName.partyId!}</@ofbizUrl>">[${toPartyName.partyId!}]</a></#if></td>
                       </tr>
                     </#list>
                   </table>
                 </div>
-                <script type="text/javascript">
+                <script type="application/javascript">
                    jQuery(document).ready( function() {
                         jQuery("#displayPayments_${finAccountTrans.finAccountTransId}").dialog({autoOpen: false, modal: true,
                                 buttons: {
@@ -236,7 +236,7 @@ function getFinAccountTransRunningTotalAndBalances() {
               </#if>
             </td>
             <td>${finAccountTransType.description!}</td>
-            <td><#if partyName?has_content>${(partyName.firstName)!} ${(partyName.lastName)!} ${(partyName.groupName)!}<a href="/partymgr/control/viewprofile?partyId=${partyName.partyId}">[${(partyName.partyId)!}]</a></#if></td>
+            <td><#if partyName?has_content>${(partyName.firstName)!} ${(partyName.lastName)!} ${(partyName.groupName)!}<a href="<@ofbizUrl controlPath="/partymgr/control">viewprofile?partyId=${partyName.partyId}</@ofbizUrl>">[${(partyName.partyId)!}]</a></#if></td>
             <td><#if glReconciliation?has_content>${glReconciliation.glReconciliationName!}<a href="ViewGlReconciliationWithTransaction?glReconciliationId=${glReconciliation.glReconciliationId!}&amp;finAccountId=${parameters.finAccountId!}">[${glReconciliation.glReconciliationId!}]</a></#if></td>
             <td>${finAccountTrans.transactionDate!}</td>
             <td>${finAccountTrans.entryDate!}</td>

@@ -893,6 +893,21 @@
         <value xml:lang="zh">错误：无法存储状态修改： </value>
         <value xml:lang="zh-TW">錯誤：無法存儲狀態修改： </value>
     </property>
+    <property key="OrderErrorAllocationPlanIsNotAvailable">
+        <value xml:lang="en">ERROR : Allocation plan is not available.</value>
+    </property>
+    <property key="OrderErrorCouldNotChangeAllocationPlanItemStatus">
+        <value xml:lang="en">ERROR : Could not change allocation plan item status.</value>
+    </property>
+    <property key="OrderErrorCouldNotChangeAllocationPlanItemStatusStatusIsNotAValidChange">
+        <value xml:lang="en">ERROR : Could not change allocation plan item status; status is not a valid change. </value>
+    </property>
+    <property key="OrderErrorCouldNotChangeAllocationPlanStatus">
+        <value xml:lang="en">ERROR : Could not change allocation plan status.</value>
+    </property>
+    <property key="OrderErrorCouldNotChangeAllocationPlanStatusStatusIsNotAValidChange">
+        <value xml:lang="en">ERROR : Could not change allocation plan status; status is not a valid change. </value>
+    </property>
     <property key="OrderErrorCouldNotChangeItemStatus">
         <value xml:lang="ar">خطأ: لا يمكن تغيير حالة البند</value>
         <value xml:lang="de">FEHLER: Positionsstatus konnte nicht geändert werden : </value>
@@ -1079,7 +1094,7 @@
     <property key="OrderErrorCreateReturnHeaderWithoutId">
         <value xml:lang="ar">خلق الإسترجاع لم يرد دليل مسترجع صحيح</value>
         <value xml:lang="de">Bei der Erstellung der Retoure wurde keine gültige Retouren-Id zurückgegeben</value>
-        <value xml:lang="en">Create return did not return a valid return id</value>
+        <value xml:lang="en">Create return did not return a valid return ID</value>
         <value xml:lang="fr">La création du retour n'a pas retourné une référence valide</value>
         <value xml:lang="it">Creazione testata reso non ha ristituito in numero di reso</value>
         <value xml:lang="ja">返品作成が有効な返品IDを戻しませんでした</value>
@@ -1089,7 +1104,7 @@
     <property key="OrderErrorCreateReturnItemWithoutId">
         <value xml:lang="ar">خلق الإسترجاع لم يرد دليل تسلسلي صحيح</value>
         <value xml:lang="de">Bei der Erstellung der Retourenposition wurde keine gültige Sequenz-Id zurückgegeben</value>
-        <value xml:lang="en">Create return item did not return a valid sequence id</value>
+        <value xml:lang="en">Create return item did not return a valid sequence ID</value>
         <value xml:lang="fr">La création d'une ligne de retour n'a pas retourné une référence valide</value>
         <value xml:lang="it">Creazione riga reso non ha ristituito un numero di riga reso</value>
         <value xml:lang="ja">返品アイテム作成が有効な連番IDを戻しませんでした</value>
@@ -1838,7 +1853,7 @@
     <property key="OrderIdAlreadyExistsPleaseChooseAnother">
         <value xml:lang="ar">دليل أمر البيع\الشراء متواجد مسبقا, يرجى اختيار دليل آخر</value>
         <value xml:lang="de">Auftragsnummer schon vorhanden, bitte eine andere angeben </value>
-        <value xml:lang="en">Order Id already exists please choose another </value>
+        <value xml:lang="en">Order ID already exists please choose another </value>
         <value xml:lang="fr">Cette réf. de commande existe déjà, SVP chjoisissez en une autre </value>
         <value xml:lang="ja">注文IDはすでに存在します。別のIDを選択してください </value>
         <value xml:lang="pt-BR">ID de pedido já existe por favor escolha outro </value>
@@ -3180,6 +3195,14 @@
         <value xml:lang="vi">Thêm nhanh hạng mục hàng hóa đơn hàng</value>
         <value xml:lang="zh">快速添加订单明细</value>
         <value xml:lang="zh-TW">快速添加訂單明細</value>
+    </property>
+    <property key="OrderQuoteGetNextIdError">
+        <value xml:lang="en">Error during id creation</value>
+        <value xml:lang="fr">Erreur durant la création de l'ID.</value>
+    </property>
+    <property key="OrderQuoteIdAlreadyExists">
+        <value xml:lang="en">ERROR: Quote with ID ${quoteId} already exists</value>
+        <value xml:lang="fr">ERREUR : Un devis avec la référence ${quoteId} existe déjà.</value>
     </property>
     <property key="OrderQuotePercent">
         <value xml:lang="ar">نسبة عرض السعر</value>

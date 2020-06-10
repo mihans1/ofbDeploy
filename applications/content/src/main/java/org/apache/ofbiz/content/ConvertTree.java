@@ -70,6 +70,7 @@ In order to make this service active add the following to the service definition
         Locale locale = (Locale) context.get("locale");
         GenericValue userLogin = (GenericValue) context.get("userLogin");
         String file = (String) context.get("file");
+        Map<String, Object> result = new HashMap<>();
         String errMsg = "", sucMsg= "";
         GenericValue Entity = null;
         if (UtilValidate.isNotEmpty(file)) {
@@ -77,8 +78,6 @@ In order to make this service active add the following to the service definition
                 String line = null;
                 int size = 0;
                 int counterLine = 0;
-                //Home Document
-                Entity = null;
                 Entity = delegator.makeValue("Content");
                 Entity.set("contentId", "ROOT");
                 Entity.set("contentName", "ROOT");
@@ -92,7 +91,6 @@ In order to make this service active add the following to the service definition
                 Entity.set("createdTxStamp", UtilDateTime.nowTimestamp());
                 delegator.create(Entity);
 
-                Entity = null;
                 Entity = delegator.makeValue("Content");
                 Entity.set("contentId", "HOME_DOCUMENT");
                 Entity.set("contentName", "Home");
@@ -106,12 +104,15 @@ In order to make this service active add the following to the service definition
                 Entity.set("createdTxStamp", UtilDateTime.nowTimestamp());
                 delegator.create(Entity);
 
-                Map<String, Object> contentAssoc = new HashMap<String, Object>();
+                Map<String, Object> contentAssoc = new HashMap<>();
                 contentAssoc.put("contentId", "HOME_DOCUMENT");
                 contentAssoc.put("contentAssocTypeId", "TREE_CHILD");
                 contentAssoc.put("contentIdTo", "ROOT");
                 contentAssoc.put("userLogin", userLogin);
-                dispatcher.runSync("createContentAssoc", contentAssoc);
+                result = dispatcher.runSync("createContentAssoc", contentAssoc);
+                if (ServiceUtil.isError(result)) {
+                    return ServiceUtil.returnError(ServiceUtil.getErrorMessage(result));
+                }
                 while ((line = input.readLine()) != null) {//start line
                     boolean hasFolder = true;
                     String rootContent = null, contentId = null; counterLine++;
@@ -162,7 +163,6 @@ In order to make this service active add the following to the service definition
                                 }
 
                                 if (contentAssocSize == 0 && contentNameMatch == false) {//New Root Content
-                                    Entity = null;
                                     contentId = delegator.getNextSeqId("Content");
                                     Entity = delegator.makeValue("Content");
                                     Entity.set("contentId", contentId);
@@ -187,12 +187,15 @@ In order to make this service active add the following to the service definition
                                         .queryList();
 
                                 if (contentAssocs.size() == 0) {
-                                    contentAssoc = new HashMap<String, Object>();
+                                    contentAssoc = new HashMap<>();
                                     contentAssoc.put("contentId", contentId);
                                     contentAssoc.put("contentAssocTypeId", "TREE_CHILD");
                                     contentAssoc.put("contentIdTo", rootContent);
                                     contentAssoc.put("userLogin", userLogin);
-                                    dispatcher.runSync("createContentAssoc", contentAssoc);
+                                    result = dispatcher.runSync("createContentAssoc", contentAssoc);
+                                    if (ServiceUtil.isError(result)) {
+                                        return ServiceUtil.returnError(ServiceUtil.getErrorMessage(result));
+                                    }
                                     rootContent = contentId;
                                 } else {
                                     //Debug.logInfo("ContentAssoc [contentId= " + contentId + ", contentIdTo=" + rootContent + "] already exist.");//ShoW log file
@@ -230,6 +233,7 @@ In order to make this service active add the following to the service definition
         Delegator delegator = dctx.getDelegator();
         LocalDispatcher dispatcher = dctx.getDispatcher();
         GenericValue userLogin = (GenericValue) context.get("userLogin");
+        Map<String, Object> result = new HashMap<>();
         String subContents = null, check = ",", oldChar = "\"", newChar = "", contentNameInprogress = "", contentName = "", contentId = null;
         GenericValue Entity = null;
         String errMsg = "", sucMsg= "";
@@ -259,16 +263,17 @@ In order to make this service active add the following to the service definition
                             }
                         }
                     }
-                    contentId = null;
                     if (contentNameMatch == false) {
                         //create DataResource
-                        Map<String,Object> data = new HashMap<String, Object>();
+                        Map<String,Object> data = new HashMap<>();
                         data.put("userLogin", userLogin);
-                        String dataResourceId = dispatcher.runSync("createDataResource", data).get("dataResourceId").toString();
-
+                        result = dispatcher.runSync("createDataResource", data);
+                        if (ServiceUtil.isError(result)) {
+                            return ServiceUtil.returnError(ServiceUtil.getErrorMessage(result));
+                        }
+                        String dataResourceId = (String) result.get("dataResourceId");
                         //create Content
                         contentId = delegator.getNextSeqId("Content");
-                        Entity = null;
                         Entity = delegator.makeValue("Content");
                         Entity.set("contentId", contentId);
                         Entity.set("contentName", contentName);
@@ -284,12 +289,15 @@ In order to make this service active add the following to the service definition
                         delegator.create(Entity);
 
                         //Relation Content
-                        Map<String,Object> contentAssoc = new HashMap<String, Object>();
+                        Map<String,Object> contentAssoc = new HashMap<>();
                         contentAssoc.put("contentId", contentId);
                         contentAssoc.put("contentAssocTypeId", "SUB_CONTENT");
                         contentAssoc.put("contentIdTo", rootContent);
                         contentAssoc.put("userLogin", userLogin);
-                        dispatcher.runSync("createContentAssoc", contentAssoc);
+                        result = dispatcher.runSync("createContentAssoc", contentAssoc);
+                        if (ServiceUtil.isError(result)) {
+                            return ServiceUtil.returnError(ServiceUtil.getErrorMessage(result));
+                        }
                     }
                     contentName ="";
                     contentNameInprogress="";
@@ -320,16 +328,17 @@ In order to make this service active add the following to the service definition
                             }
                         }
                     }
-                    contentId = null;
                     if (contentNameMatch == false) {
                         //create DataResource
-                        Map<String,Object> data = new HashMap<String, Object>();
+                        Map<String,Object> data = new HashMap<>();
                         data.put("userLogin", userLogin);
-                        String dataResourceId = dispatcher.runSync("createDataResource",data).get("dataResourceId").toString();
-
+                        result = dispatcher.runSync("createDataResource", data);
+                        if (ServiceUtil.isError(result)) {
+                            return ServiceUtil.returnError(ServiceUtil.getErrorMessage(result));
+                        }
+                        String dataResourceId = (String) result.get("dataResourceId");
                         //create Content
                         contentId = delegator.getNextSeqId("Content");
-                        Entity = null;
                         Entity = delegator.makeValue("Content");
                         Entity.set("contentId", contentId);
                         Entity.set("contentName", contentName);
@@ -345,12 +354,15 @@ In order to make this service active add the following to the service definition
                         delegator.create(Entity);
 
                         //create ContentAssoc
-                        Map<String,Object> contentAssoc = new HashMap<String, Object>();
+                        Map<String,Object> contentAssoc = new HashMap<>();
                         contentAssoc.put("contentId", contentId);
                         contentAssoc.put("contentAssocTypeId", "SUB_CONTENT");
                         contentAssoc.put("contentIdTo", rootContent);
                         contentAssoc.put("userLogin", userLogin);
-                        dispatcher.runSync("createContentAssoc", contentAssoc);
+                        result = dispatcher.runSync("createContentAssoc", contentAssoc);
+                        if (ServiceUtil.isError(result)) {
+                            return ServiceUtil.returnError(ServiceUtil.getErrorMessage(result));
+                        }
                     }
                 }
             }

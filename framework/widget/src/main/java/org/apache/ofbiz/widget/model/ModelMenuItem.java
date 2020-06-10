@@ -273,7 +273,7 @@ public class ModelMenuItem extends ModelWidget {
         visitor.visit(this);
     }
 
-    private void addUpdateMenuItem(ModelMenuItem modelMenuItem, List<ModelMenuItem> menuItemList,
+    private static void addUpdateMenuItem(ModelMenuItem modelMenuItem, List<ModelMenuItem> menuItemList,
             Map<String, ModelMenuItem> menuItemMap) {
         ModelMenuItem existingMenuItem = menuItemMap.get(modelMenuItem.getName());
         if (existingMenuItem != null) {
@@ -410,7 +410,7 @@ public class ModelMenuItem extends ModelWidget {
         if (this.position == null) {
             return 1;
         }
-        return position.intValue();
+        return position;
     }
 
     public String getSelectedStyle() {

@@ -310,7 +310,7 @@ if (product) {
 
                 if (variantTree && imageMap) {
                     jsBuf = new StringBuffer()
-                    jsBuf.append("<script language=\"JavaScript\" type=\"text/javascript\">")
+                    jsBuf.append("<script type=\"application/javascript\">")
                     jsBuf.append("var DET = new Array(" + variantTree.size() + ");")
                     jsBuf.append("var IMG = new Array(" + variantTree.size() + ");")
                     jsBuf.append("var OPT = new Array(" + featureOrder.size() + ");")
@@ -428,7 +428,7 @@ if (product) {
                                                 break
                                             }
                                         }
-                                    } else if (UtilValidate.isNotEmpty(entry.getValue())) { 
+                                    } else if (entry.getValue()) {
                                         if (variant.get("productId").equals(entry.getValue().get(0))) {
                                             variantPriceMap.put("variantName", entry.getKey())
                                             break
@@ -472,7 +472,7 @@ if (product) {
                                                         break
                                                     }
                                                 }
-                                            } else if (UtilValidate.isNotEmpty(entry.getValue())) { 
+                                            } else if (entry.getValue()) {
                                                 if (virtual.get("productId").equals(entry.getValue().get(0))) {
                                                     virtualPriceMap.put("variantName", entry.getKey())
                                                     break
@@ -506,7 +506,7 @@ if (product) {
         if(isAlternativePacking){
             // get alternative product price when product doesn't have any feature 
             jsBuf = new StringBuffer()
-            jsBuf.append("<script language=\"JavaScript\" type=\"text/javascript\">")
+            jsBuf.append("<script type=\"application/javascript\">")
             
             // make a list of variant sku with requireAmount
             virtualVariantsRes = runService('getAssociatedProducts', [productIdTo : productId, type : "ALTERNATIVE_PACKAGE", checkViewAllow : true, prodCatalogId : categoryId])

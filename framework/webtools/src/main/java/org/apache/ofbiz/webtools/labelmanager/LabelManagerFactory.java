@@ -54,9 +54,9 @@ public class LabelManagerFactory {
     protected static Set<String> componentNamesFound = null;
     protected static Map<String, LabelFile> filesFound = null;
 
-    protected Map<String, LabelInfo> labels = new TreeMap<String, LabelInfo>();
-    protected Set<String> localesFound = new TreeSet<String>();
-    protected List<LabelInfo> duplicatedLocalesLabelsList = new LinkedList<LabelInfo>();
+    protected Map<String, LabelInfo> labels = new TreeMap<>();
+    protected Set<String> localesFound = new TreeSet<>();
+    protected List<LabelInfo> duplicatedLocalesLabelsList = new LinkedList<>();
 
     public static synchronized LabelManagerFactory getInstance() throws IOException {
         if (componentNamesFound == null) {
@@ -72,7 +72,7 @@ public class LabelManagerFactory {
     }
 
     protected static void loadComponentNames() {
-        componentNamesFound = new TreeSet<String>();
+        componentNamesFound = new TreeSet<>();
         Collection<ComponentConfig> componentConfigs = ComponentConfig.getAllComponents();
         for (ComponentConfig componentConfig : componentConfigs) {
             componentNamesFound.add(componentConfig.getComponentName());
@@ -80,22 +80,14 @@ public class LabelManagerFactory {
     }
 
     protected static void loadLabelFiles() throws IOException {
-        filesFound = new TreeMap<String, LabelFile>();
+        filesFound = new TreeMap<>();
         List<ClasspathInfo> cpInfos = ComponentConfig.getAllClasspathInfos();
         for (ClasspathInfo cpi : cpInfos) {
-            if ("dir".equals(cpi.type)) {
-                String configRoot = cpi.componentConfig.getRootLocation();
-                configRoot = configRoot.replace('\\', '/');
-                if (!configRoot.endsWith("/")) {
-                    configRoot = configRoot + "/";
-                }
-                String location = cpi.location.replace('\\', '/');
-                if (location.startsWith("/")) {
-                    location = location.substring(1);
-                }
-                List<File> resourceFiles = FileUtil.findXmlFiles(configRoot + location, null, "resource", null);
+            if (ClasspathInfo.Type.DIR == cpi.type()) {
+                List<File> resourceFiles = FileUtil.findXmlFiles(cpi.location().toString(), null, "resource", null);
                 for (File resourceFile : resourceFiles) {
-                    filesFound.put(resourceFile.getName(), new LabelFile(resourceFile, cpi.componentConfig.getComponentName()));
+                    filesFound.put(resourceFile.getName(),
+                            new LabelFile(resourceFile, cpi.componentConfig().getComponentName()));
                 }
             }
         }
@@ -192,7 +184,7 @@ public class LabelManagerFactory {
     }
 
     public Set<String> getLocalesFound() {
-        return new TreeSet<String>(localesFound);
+        return new TreeSet<>(localesFound);
     }
 
     public static Collection<LabelFile> getFilesFound() {
@@ -228,7 +220,7 @@ public class LabelManagerFactory {
                         label = new LabelInfo(key, keyComment, fileName, localeName, localeValue, localeComment);
                         labels.put(key + keySeparator + fileName, label);
                     } catch (Exception e) {
-                        Debug.logError(e, module);;
+                        Debug.logError(e, module);
                     }
                 } else {
                     label.setLabelKeyComment(keyComment);

@@ -27,6 +27,7 @@ import java.io.InputStreamReader;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Locale;
@@ -37,7 +38,6 @@ import org.apache.ofbiz.base.crypto.DesCrypt;
 import org.apache.ofbiz.base.util.Debug;
 import org.apache.ofbiz.base.util.FileUtil;
 import org.apache.ofbiz.base.util.GeneralException;
-import org.apache.ofbiz.base.util.UtilIO;
 import org.apache.ofbiz.base.util.UtilMisc;
 import org.apache.ofbiz.base.util.UtilProperties;
 import org.apache.ofbiz.base.util.UtilURL;
@@ -162,12 +162,12 @@ public class EntityDataServices {
 
         Debug.logInfo("Imported/Updated [" + records + "] from : " + file.getAbsolutePath() + " [" + runTime + "ms]", module);
         Map<String, Object> result = ServiceUtil.returnSuccess();
-        result.put("records", Integer.valueOf(records));
+        result.put("records", records);
         return result;
     }
 
     private static List<File> getFileList(File root) {
-        List<File> fileList = new LinkedList<File>();
+        List<File> fileList = new LinkedList<>();
 
         // check for a file list file
         File listFile = new File(root, "FILELIST.txt");
@@ -175,7 +175,7 @@ public class EntityDataServices {
         if (listFile.exists()) {
             BufferedReader reader = null;
             try {
-                reader = new BufferedReader(new InputStreamReader(new FileInputStream(listFile), UtilIO.getUtf8()));
+                reader = new BufferedReader(new InputStreamReader(new FileInputStream(listFile), StandardCharsets.UTF_8));
             } catch (FileNotFoundException e) {
                 Debug.logError(e, module);
             }
@@ -227,7 +227,7 @@ public class EntityDataServices {
         if (headerFile.exists()) {
             try (
                     BufferedReader reader = new BufferedReader(new InputStreamReader(new FileInputStream(headerFile),
-                            UtilIO.getUtf8()));) {
+                            StandardCharsets.UTF_8));) {
 
                 String firstLine = reader.readLine();
                 if (firstLine != null) {
@@ -250,7 +250,7 @@ public class EntityDataServices {
     private static int readEntityFile(File file, String delimiter, Delegator delegator) throws IOException, GeneralException {
         String entityName = file.getName().substring(0, file.getName().lastIndexOf('.'));
 
-        BufferedReader reader = new BufferedReader(new InputStreamReader(new FileInputStream(file), UtilIO.getUtf8()));
+        BufferedReader reader = new BufferedReader(new InputStreamReader(new FileInputStream(file), StandardCharsets.UTF_8));
         String[] header = readEntityHeader(file, delimiter, reader);
 
         //Debug.logInfo("Opened data file [" + file.getName() + "] now running...", module);
@@ -337,7 +337,7 @@ public class EntityDataServices {
         String groupName = (String) context.get("groupName");
         Boolean fixSizes = (Boolean) context.get("fixColSizes");
         if (fixSizes == null) fixSizes = Boolean.FALSE;
-        List<String> messages = new LinkedList<String>();
+        List<String> messages = new LinkedList<>();
 
         GenericHelperInfo helperInfo = delegator.getGroupHelperInfo(groupName);
         DatabaseUtil dbUtil = new DatabaseUtil(helperInfo);
@@ -374,9 +374,9 @@ public class EntityDataServices {
         }
 
         // step 5 - repair field sizes
-        if (fixSizes.booleanValue()) {
+        if (fixSizes) {
             Debug.logImportant("Updating column field size changes", module);
-            List<String> fieldsWrongSize = new LinkedList<String>();
+            List<String> fieldsWrongSize = new LinkedList<>();
             dbUtil.checkDb(modelEntities, fieldsWrongSize, messages, true, true, true, true);
             if (fieldsWrongSize.size() > 0) {
                 dbUtil.repairColumnSizeChanges(modelEntities, fieldsWrongSize, messages);

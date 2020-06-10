@@ -113,7 +113,7 @@ under the License.
                 <tr><td colspan="3"><hr /></td></tr>
                 <tr align="center">
                     <td>&nbsp;</td>
-                    <td><input type="submit" value="${uiLabelMap.PartyLookupParty}" onclick="javascript:document.lookupparty.submit();"/>
+                    <td><input type="submit" value="${uiLabelMap.PartyLookupParty}"/>
                         <a href="<@ofbizUrl>findEmployees?roleTypeId=EMPLOYEE&amp;hideFields=Y&amp;lookupFlag=Y</@ofbizUrl>" class="smallSubmit">${uiLabelMap.CommonShowAllRecords}</a>
                     </td>
                 </tr>
@@ -123,7 +123,7 @@ under the License.
     </#if>
 </div>
     <#if parameters.hideFields?default("N") != "Y">
-        <script language="JavaScript" type="text/javascript">
+        <script type="application/javascript">
     <!--//
       document.lookupparty.partyId.focus();
     //-->
@@ -213,7 +213,7 @@ under the License.
                     <td>${partyRow.postalCode!}</td>
                 </#if>
                 <td><#if partyType.description??>${partyType.get("description", locale)}<#else>???</#if></td>
-                <td class="button-col align-float">
+                <td class="button-col align-text">
                     <a href="<@ofbizUrl>EmployeeProfile?partyId=${partyRow.partyId}</@ofbizUrl>">${uiLabelMap.CommonDetails}</a>
                 </td>
             </tr>

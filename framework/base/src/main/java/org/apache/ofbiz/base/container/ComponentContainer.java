@@ -1,4 +1,4 @@
-/*******************************************************************************
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,27 +15,25 @@
  * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
- *******************************************************************************/
+ */
 package org.apache.ofbiz.base.container;
 
-import java.io.File;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.net.URLClassLoader;
-import java.util.ArrayList;
-import java.util.Arrays;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.stream.Stream;
 
 import org.apache.ofbiz.base.component.ComponentConfig;
 import org.apache.ofbiz.base.component.ComponentException;
 import org.apache.ofbiz.base.component.ComponentLoaderConfig;
-import org.apache.ofbiz.base.start.Classpath;
+import org.apache.ofbiz.base.component.ComponentLoaderConfig.ComponentDef;
 import org.apache.ofbiz.base.start.Start;
 import org.apache.ofbiz.base.start.StartupCommand;
 import org.apache.ofbiz.base.util.Debug;
-import org.apache.ofbiz.base.util.FileUtil;
 
 /**
  * ComponentContainer - StartupContainer implementation for Components
@@ -53,10 +51,20 @@ public class ComponentContainer implements Container {
 
     private String name;
     private final AtomicBoolean loaded = new AtomicBoolean(false);
-    private final List<Classpath> componentsClassPath = new ArrayList<>();
 
     @Override
     public void init(List<StartupCommand> ofbizCommands, String name, String configFile) throws ContainerException {
+        init(name, Start.getInstance().getConfig().ofbizHome);
+    }
+
+    /**
+     * Loads components found in a directory.
+     *
+     * @param name  the name of this container
+     * @param ofbizHome  the directory where to search for components
+     * @throws ContainerException when components are already loaded or when failing to load them.
+     */
+    void init(String name, Path ofbizHome) throws ContainerException {
         if (!loaded.compareAndSet(false, true)) {
             throw new ContainerException("Components already loaded, cannot start");
         }
@@ -64,63 +72,37 @@ public class ComponentContainer implements Container {
 
         // load the components from framework/base/config/component-load.xml (root components)
         try {
-            for (ComponentLoaderConfig.ComponentDef def: ComponentLoaderConfig.getRootComponents()) {
-                loadComponentFromConfig(Start.getInstance().getConfig().ofbizHome, def);
+            for (ComponentDef def: ComponentLoaderConfig.getRootComponents()) {
+                loadComponent(ofbizHome, def);
             }
+            ComponentConfig.sortDependencies();
         } catch (IOException | ComponentException e) {
             throw new ContainerException(e);
         }
-        loadClassPathForAllComponents(componentsClassPath);
         Debug.logInfo("All components loaded", module);
     }
 
-    /**
-     * @see org.apache.ofbiz.base.container.Container#start()
-     */
-    public boolean start() throws ContainerException {
+    @Override
+    public boolean start() {
         return loaded.get();
     }
 
     /**
-     * Iterate over all the components and load their classpath URLs into the classloader
-     * and set the classloader as the context classloader
+     * Loads any kind of component definition.
      *
-     * @param componentsClassPath a list of classpaths for all components
-     * @throws ContainerException
+     * @param dir  the location where the component should be loaded
+     * @param component  a single component or a component directory definition
+     * @throws IOException when component directory loading fails.
      */
-    private void loadClassPathForAllComponents(List<Classpath> componentsClassPath) throws ContainerException {
-        List<URL> allComponentUrls = new ArrayList<>();
-        for(Classpath classPath : componentsClassPath) {
-            try {
-                allComponentUrls.addAll(Arrays.asList(classPath.getUrls()));
-            } catch (MalformedURLException e) {
-                Debug.logError("Unable to load component classpath" + classPath.toString(), module);
-                Debug.logError(e.getMessage(), module);
-            }
-        }
-        URL[] componentURLs = allComponentUrls.toArray(new URL[allComponentUrls.size()]);
-        URLClassLoader classLoader = new URLClassLoader(componentURLs, Thread.currentThread().getContextClassLoader());
-        Thread.currentThread().setContextClassLoader(classLoader);
-    }
-
-    /**
-     * Checks if <code>ComponentDef.type</code> is a directory or a single component.
-     * If it is a directory, load the directory, otherwise load a single component
-     *
-     * @param parentPath the parent path of what is being loaded
-     * @param def the component or directory loader definition
-     * @throws IOException
-     */
-    private void loadComponentFromConfig(String parentPath, ComponentLoaderConfig.ComponentDef def) throws IOException {
-        String location = def.location.startsWith("/") ? def.location : parentPath + "/" + def.location;
-
-        if (def.type.equals(ComponentLoaderConfig.ComponentType.COMPONENT_DIRECTORY)) {
+    private void loadComponent(Path dir, ComponentDef component) throws IOException {
+        Path location = component.location.isAbsolute() ? component.location : dir.resolve(component.location);
+        switch (component.type) {
+        case COMPONENT_DIRECTORY:
             loadComponentDirectory(location);
-        } else if (def.type.equals(ComponentLoaderConfig.ComponentType.SINGLE_COMPONENT)) {
-            ComponentConfig config = retrieveComponentConfig(def.name, location);
-            if (config != null) {
-                loadComponent(config);
-            }
+            break;
+        case SINGLE_COMPONENT:
+            retrieveComponentConfig(location);
+            break;
         }
     }
 
@@ -131,16 +113,15 @@ public class ComponentContainer implements Container {
      * @param directoryName the name of component directory to load
      * @throws IOException
      */
-    private void loadComponentDirectory(String directoryName) throws IOException {
+    private void loadComponentDirectory(Path directoryName) throws IOException {
         Debug.logInfo("Auto-Loading component directory : [" + directoryName + "]", module);
+        if (Files.exists(directoryName) && Files.isDirectory(directoryName)) {
+            Path componentLoad = directoryName.resolve(ComponentLoaderConfig.COMPONENT_LOAD_XML_FILENAME);
 
-        File directoryPath = FileUtil.getFile(directoryName);
-        if (directoryPath.exists() && directoryPath.isDirectory()) {
-            File componentLoadFile = new File(directoryPath, ComponentLoaderConfig.COMPONENT_LOAD_XML_FILENAME);
-            if (componentLoadFile.exists()) {
-                loadComponentsInDirectoryUsingLoadFile(directoryPath, componentLoadFile);
+            if (Files.exists(componentLoad)) {
+                loadComponentsInDirectoryUsingLoadFile(directoryName, componentLoad);
             } else {
-                loadComponentsInDirectory(directoryPath);
+                loadComponentsInDirectory(directoryName);
             }
         } else {
             Debug.logError("Auto-Load Component directory not found : " + directoryName, module);
@@ -157,16 +138,16 @@ public class ComponentContainer implements Container {
      * @param componentLoadFile the name of the load file (i.e. component-load.xml)
      * @throws IOException
      */
-    private void loadComponentsInDirectoryUsingLoadFile(File directoryPath, File componentLoadFile) throws IOException {
+    private void loadComponentsInDirectoryUsingLoadFile(Path directoryPath, Path componentLoadFile) throws IOException {
         URL configUrl = null;
         try {
-            configUrl = componentLoadFile.toURI().toURL();
-            List<ComponentLoaderConfig.ComponentDef> componentsToLoad = ComponentLoaderConfig.getComponentsFromConfig(configUrl);
-            for (ComponentLoaderConfig.ComponentDef def: componentsToLoad) {
-                loadComponentFromConfig(directoryPath.toString(), def);
+            configUrl = componentLoadFile.toUri().toURL();
+            List<ComponentDef> componentsToLoad = ComponentLoaderConfig.getComponentsFromConfig(configUrl);
+            for (ComponentDef def: componentsToLoad) {
+                loadComponent(directoryPath, def);
             }
         } catch (MalformedURLException e) {
-            Debug.logError(e, "Unable to locate URL for component loading file: " + componentLoadFile.getAbsolutePath(), module);
+            Debug.logError(e, "Unable to locate URL for component loading file: " + componentLoadFile.toAbsolutePath(), module);
         } catch (ComponentException e) {
             Debug.logError(e, "Unable to load components from URL: " + configUrl.toExternalForm(), module);
         }
@@ -177,111 +158,44 @@ public class ComponentContainer implements Container {
      * a load-components.xml file. The components are sorted alphabetically
      * for loading purposes
      *
-     * @param directoryPath the absolute path of the directory
-     * @throws IOException
+     * @param directoryPath a valid absolute path of a component directory
+     * @throws IOException if an I/O error occurs when opening the directory
      */
-    private void loadComponentsInDirectory(File directoryPath) throws IOException {
-        String[] sortedComponentNames = directoryPath.list();
-        if (sortedComponentNames == null) {
-            throw new IllegalArgumentException("sortedComponentNames is null, directory path is invalid " + directoryPath.getPath());
-        }
-        Arrays.sort(sortedComponentNames);
-
-        for (String componentName: sortedComponentNames) {
-            File componentPath = FileUtil.getFile(directoryPath.getCanonicalPath() + File.separator + componentName);
-            String componentLocation = componentPath.getCanonicalPath();
-            File configFile = FileUtil.getFile(componentLocation.concat(File.separator).concat(ComponentConfig.OFBIZ_COMPONENT_XML_FILENAME));
-
-            if (componentPath.isDirectory() && !componentName.startsWith(".") && configFile.exists()) {
-                ComponentConfig config = retrieveComponentConfig(null, componentLocation);
-                if (config != null) {
-                    loadComponent(config);
-                }
-            }
+    private static void loadComponentsInDirectory(Path directoryPath) throws IOException {
+        try (Stream<Path> paths = Files.list(directoryPath)) {
+            paths.sorted()
+                    .map(cmpnt -> directoryPath.resolve(cmpnt).toAbsolutePath().normalize())
+                    .filter(Files::isDirectory)
+                    .filter(dir -> Files.exists(dir.resolve(ComponentConfig.OFBIZ_COMPONENT_XML_FILENAME)))
+                    .forEach(componentDir -> retrieveComponentConfig(componentDir));
         }
     }
 
     /**
      * Fetch the <code>ComponentConfig</code> for a certain component
      *
-     * @param name component name
-     * @param location directory location of the component
+     * @param location directory location of the component which cannot be {@code null}
      * @return The component configuration
      */
-    private ComponentConfig retrieveComponentConfig(String name, String location) {
+    private static ComponentConfig retrieveComponentConfig(Path location) {
         ComponentConfig config = null;
         try {
-            config = ComponentConfig.getComponentConfig(name, location);
+            config = ComponentConfig.getComponentConfig(null, location.toString());
         } catch (ComponentException e) {
-            Debug.logError("Cannot load component : " + name + " @ " + location + " : " + e.getMessage(), module);
+            Debug.logError("Cannot load component: " + location + " : " + e.getMessage(), module);
         }
         if (config == null) {
-            Debug.logError("Cannot load component : " + name + " @ " + location, module);
+            Debug.logError("Cannot load component: " + location, module);
         }
         return config;
     }
 
-    /**
-     * Load a single component by adding all its classpath entries to
-     * the list of classpaths to be loaded
-     *
-     * @param config the component configuration
-     * @throws IOException
-     */
-    private void loadComponent(ComponentConfig config) throws IOException {
-        if (config.enabled()) {
-            Classpath classpath = buildClasspathFromComponentConfig(config);
-            componentsClassPath.add(classpath);
-            Debug.logInfo("Added class path for component : [" + config.getComponentName() + "]", module);
-        } else {
-            Debug.logInfo("Not loading component [" + config.getComponentName() + "] because it is disabled", module);
-        }
+    @Override
+    public void stop() {
     }
 
-    /**
-     * Construct a <code>Classpath</code> object for a certain component based
-     * on its configuration defined in <code>ComponentConfig</code>
-     *
-     * @param config the component configuration
-     * @return the constructed classpath
-     * @throws IOException
-     */
-    private Classpath buildClasspathFromComponentConfig(ComponentConfig config) throws IOException {
-        Classpath classPath = new Classpath();
-        String configRoot = config.getRootLocation().replace('\\', '/');
-        configRoot = configRoot.endsWith("/") ? configRoot : configRoot + "/";
-        List<ComponentConfig.ClasspathInfo> classpathInfos = config.getClasspathInfos();
-
-        for (ComponentConfig.ClasspathInfo cp: classpathInfos) {
-            String location = cp.location.replace('\\', '/');
-            if (!"jar".equals(cp.type) && !"dir".equals(cp.type)) {
-                Debug.logError("Classpath type '" + cp.type + "' is not supported; '" + location + "' not loaded", module);
-                continue;
-            }
-
-            location = location.startsWith("/") ? location.substring(1) : location;
-            String dirLoc = location.endsWith("/*") ? location.substring(0, location.length() - 2) : location;
-            File path = FileUtil.getFile(configRoot + dirLoc);
-
-            if (path.exists()) {
-                classPath.addComponent(configRoot + location);
-                if (path.isDirectory() && "dir".equals(cp.type)) {
-                    classPath.addFilesFromPath(path);
-                }
-            } else {
-                Debug.logWarning("Location '" + configRoot + dirLoc + "' does not exist", module);
-            }
-        }
-        return classPath;
-    }
-    /**
-     * @see org.apache.ofbiz.base.container.Container#stop()
-     */
-    public void stop() throws ContainerException {
-    }
-
+    @Override
     public String getName() {
         return name;
     }
-
 }

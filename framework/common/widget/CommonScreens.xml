@@ -133,6 +133,8 @@ under the License.
                 <script location="component://common/groovyScripts/InitTheme.groovy"/>
                 <set field="commonDecoratorLocation" from-field="layoutSettings.VT_COMMON_DECO_LOC" default-value="component://common-theme/widget/CommonScreens.xml" global="true"/>
                 <set field="initialLocaleComplete" type="String" value="${groovy:parameters?.userLogin?.lastLocale}" default-value="${groovy:locale.toString()}" global="true"/>
+                <!-- FIXME this is only temporary a more elaborate solution would be preferred, see OFBIZ-9241 -->
+                <set field="isEcommercePresent" value="${groovy:null != org.apache.ofbiz.base.util.UtilURL.fromOfbizHomePath('plugins/ecommerce/ofbiz-component.xml')}" type="Boolean" global="true"/>
             </actions>
             <widgets />
         </section>
@@ -229,6 +231,18 @@ under the License.
         </section>
     </screen>
 
+    <screen name="impersonated">
+        <section>
+            <actions>
+                <set field="titleProperty" value="PageTitleImpersonated" />
+            </actions>
+            <widgets>
+                <include-screen name="MinimalActions" />
+                <include-screen name="impersonated" location="${groovy:commonScreenLocations.impersonated?commonScreenLocations.impersonated:commonDecoratorLocation}"/>
+            </widgets>
+        </section>
+    </screen>
+
     <screen name="ajaxNotLoggedIn">
         <section>
             <widgets>
@@ -242,45 +256,10 @@ under the License.
         <section>
             <actions>
                 <set field="userLoginId" from-field="parameters.USERNAME"/>
-                <entity-and entity-name="UserLoginSecurityQuestion" list="securityQuestions">
-                    <field-map field-name="userLoginId" />
-                </entity-and>
-                <set field="questionEnumId" from-field="securityQuestions[0].questionEnumId" />
-                <entity-one entity-name="Enumeration" value-field="securityQuestion">
-                    <field-map field-name="enumId" from-field="questionEnumId" />
-                </entity-one>
             </actions>
             <widgets>
                 <include-screen name="MinimalActions" />
                 <include-screen name="requirePasswordChange" location="${groovy:commonScreenLocations.requirePasswordChange?commonScreenLocations.requirePasswordChange:commonDecoratorLocation}"/>
-            </widgets>
-        </section>
-    </screen>
-
-    <screen name="forgotPassword_step1">
-        <section>
-            <widgets>
-                <include-screen name="MinimalActions" />
-                <include-screen name="forgotPassword_step1" location="${groovy:commonScreenLocations.forgotPassword_step1?commonScreenLocations.forgotPassword_step1:commonDecoratorLocation}"/>
-            </widgets>
-        </section>
-    </screen>
-
-    <screen name="forgotPassword_step2">
-        <section>
-            <actions>
-                <set field="userLoginId" from-field="parameters.USERNAME"/>
-                <entity-and entity-name="UserLoginSecurityQuestion" list="securityQuestions">
-                    <field-map field-name="userLoginId" />
-                </entity-and>
-                <set field="questionEnumId" from-field="securityQuestions[0].questionEnumId" />
-                <entity-one entity-name="Enumeration" value-field="securityQuestion">
-                    <field-map field-name="enumId" from-field="questionEnumId"/>
-                </entity-one>
-            </actions>
-            <widgets>
-                <include-screen name="MinimalActions" />
-                <include-screen name="forgotPassword_step2" location="${groovy:commonScreenLocations.forgotPassword_step2?commonScreenLocations.forgotPassword_step2:commonDecoratorLocation}"/>
             </widgets>
         </section>
     </screen>

@@ -26,6 +26,7 @@ import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
 import java.util.List;
 
+import org.apache.ofbiz.base.container.ContainerConfig.Configuration;
 import org.apache.ofbiz.base.start.Start;
 import org.apache.ofbiz.base.start.StartupCommand;
 import org.apache.ofbiz.base.util.RMIExtendedSocketFactory;
@@ -49,27 +50,28 @@ public class NamingServiceContainer implements Container {
 
     private String name;
 
+    @Override
     public void init(List<StartupCommand> ofbizCommands, String name, String configFile) throws ContainerException {
         this.name =name;
         this.configFileLocation = configFile;
 
-        ContainerConfig.Configuration cfg = ContainerConfig.getConfiguration(name, configFileLocation);
+        Configuration cfg = ContainerConfig.getConfiguration(name);
 
         // get the naming (JNDI) port
 
-        ContainerConfig.Configuration.Property port = cfg.getProperty("port");
-        if (port.value != null) {
+        Configuration.Property port = cfg.getProperty("port");
+        if (port.value() != null) {
             try {
-                this.namingPort = Integer.parseInt(port.value) + Start.getInstance().getConfig().portOffset;
+                this.namingPort = Integer.parseInt(port.value()) + Start.getInstance().getConfig().portOffset;
             } catch (Exception e) {
                 throw new ContainerException("Invalid port defined in container [naming-container] configuration or as portOffset; not a valid int");
             }
         }
 
         // get the naming (JNDI) server
-        ContainerConfig.Configuration.Property host = cfg.getProperty("host");
-        if (host != null && host.value != null) {
-            this.namingHost =  host.value ;
+        Configuration.Property host = cfg.getProperty("host");
+        if (host != null && host.value() != null) {
+            this.namingHost =  host.value() ;
         }
 
         try {
@@ -80,6 +82,7 @@ public class NamingServiceContainer implements Container {
 
     }
 
+    @Override
     public boolean start() throws ContainerException {
         try {
             registry = LocateRegistry.createRegistry(namingPort, rmiSocketFactory, rmiSocketFactory);
@@ -91,6 +94,7 @@ public class NamingServiceContainer implements Container {
         return isRunning;
     }
 
+    @Override
     public void stop() throws ContainerException {
         if (isRunning) {
             try {
@@ -101,6 +105,7 @@ public class NamingServiceContainer implements Container {
         }
     }
 
+    @Override
     public String getName() {
         return name;
     }

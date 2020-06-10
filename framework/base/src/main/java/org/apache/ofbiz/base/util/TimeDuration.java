@@ -19,6 +19,7 @@
 package org.apache.ofbiz.base.util;
 
 import java.io.Serializable;
+import java.util.Objects;
 
 import org.apache.ofbiz.base.lang.SourceMonitored;
 import org.apache.ofbiz.base.lang.ThreadSafe;
@@ -31,6 +32,7 @@ import com.ibm.icu.util.Calendar;
 @SuppressWarnings("serial")
 public class TimeDuration implements Serializable, Comparable<TimeDuration> {
     /** A <code>TimeDuration</code> instance that represents a zero time duration. */
+    private static final String module = TimeDuration.class.getName();
     public static final TimeDuration ZeroTimeDuration = new NullDuration();
 
     protected final int milliseconds;
@@ -183,7 +185,10 @@ public class TimeDuration implements Serializable, Comparable<TimeDuration> {
                     && this.minutes == that.minutes
                     && this.seconds == that.seconds
                     && this.milliseconds == that.milliseconds;
-        } catch (Exception e) {}
+        } catch (Exception e) {
+            Debug.logError(e, module);
+        }
+
         return false;
     }
 
@@ -294,6 +299,11 @@ public class TimeDuration implements Serializable, Comparable<TimeDuration> {
         cal.add(Calendar.MONTH, this.months);
         cal.add(Calendar.YEAR, this.years);
         return cal;
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(milliseconds, seconds, minutes, hours, days, months, years);
     }
 
     /** Returns a <code>TimeDuration</code> instance derived from an encoded

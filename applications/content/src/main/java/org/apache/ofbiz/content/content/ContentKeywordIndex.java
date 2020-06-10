@@ -66,11 +66,11 @@ public class ContentKeywordIndex {
         boolean removeStems = KeywordSearchUtil.getRemoveStems();
         Set<String> stemSet = KeywordSearchUtil.getStemSet();
 
-        Map<String, Long> keywords = new TreeMap<String, Long>();
-        List<String> strings = new LinkedList<String>();
+        Map<String, Long> keywords = new TreeMap<>();
+        List<String> strings = new LinkedList<>();
 
         int pidWeight = 1;
-        keywords.put(content.getString("contentId").toLowerCase(Locale.getDefault()), Long.valueOf(pidWeight));
+        keywords.put(content.getString("contentId").toLowerCase(Locale.getDefault()), (long) pidWeight);
 
         addWeightedKeywordSourceString(content, "dataResourceId", strings);
         addWeightedKeywordSourceString(content, "contentName", strings);
@@ -186,8 +186,8 @@ public class ContentKeywordIndex {
             }
         }
 
-        List<GenericValue> toBeStored = new LinkedList<GenericValue>();
-        int keywordMaxLength = EntityUtilProperties.getPropertyAsInteger("contentsearch", "content.keyword.max.length", 0).intValue();
+        List<GenericValue> toBeStored = new LinkedList<>();
+        int keywordMaxLength = EntityUtilProperties.getPropertyAsInteger("contentsearch", "content.keyword.max.length", 0);
         for (Map.Entry<String, Long> entry: keywords.entrySet()) {
             if (entry.getKey().length() <= keywordMaxLength) {
                 GenericValue contentKeyword = delegator.makeValue("ContentKeyword", UtilMisc.toMap("contentId", content.getString("contentId"), "keyword", entry.getKey(), "relevancyWeight", entry.getValue()));

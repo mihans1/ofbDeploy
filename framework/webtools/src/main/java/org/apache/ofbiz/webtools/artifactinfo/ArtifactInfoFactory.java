@@ -57,6 +57,7 @@ import org.apache.ofbiz.widget.model.FormFactory;
 import org.apache.ofbiz.widget.model.ModelForm;
 import org.apache.ofbiz.widget.model.ModelScreen;
 import org.apache.ofbiz.widget.model.ScreenFactory;
+import org.apache.ofbiz.widget.model.ThemeFactory;
 import org.xml.sax.SAXException;
 
 public class ArtifactInfoFactory {
@@ -77,40 +78,40 @@ public class ArtifactInfoFactory {
     protected final ModelReader entityModelReader;
     protected final DispatchContext dispatchContext;
 
-    public Map<String, EntityArtifactInfo> allEntityInfos = new ConcurrentHashMap<String, EntityArtifactInfo>();
-    public Map<String, ServiceArtifactInfo> allServiceInfos = new ConcurrentHashMap<String, ServiceArtifactInfo>();
-    public Map<ServiceEcaRule, ServiceEcaArtifactInfo> allServiceEcaInfos = new ConcurrentHashMap<ServiceEcaRule, ServiceEcaArtifactInfo>();
-    public Map<String, FormWidgetArtifactInfo> allFormInfos = new ConcurrentHashMap<String, FormWidgetArtifactInfo>();
-    public Map<String, ScreenWidgetArtifactInfo> allScreenInfos = new ConcurrentHashMap<String, ScreenWidgetArtifactInfo>();
-    public Map<String, ControllerRequestArtifactInfo> allControllerRequestInfos = new ConcurrentHashMap<String, ControllerRequestArtifactInfo>();
-    public Map<String, ControllerViewArtifactInfo> allControllerViewInfos = new ConcurrentHashMap<String, ControllerViewArtifactInfo>();
+    public Map<String, EntityArtifactInfo> allEntityInfos = new ConcurrentHashMap<>();
+    public Map<String, ServiceArtifactInfo> allServiceInfos = new ConcurrentHashMap<>();
+    public Map<ServiceEcaRule, ServiceEcaArtifactInfo> allServiceEcaInfos = new ConcurrentHashMap<>();
+    public Map<String, FormWidgetArtifactInfo> allFormInfos = new ConcurrentHashMap<>();
+    public Map<String, ScreenWidgetArtifactInfo> allScreenInfos = new ConcurrentHashMap<>();
+    public Map<String, ControllerRequestArtifactInfo> allControllerRequestInfos = new ConcurrentHashMap<>();
+    public Map<String, ControllerViewArtifactInfo> allControllerViewInfos = new ConcurrentHashMap<>();
 
     // reverse-associative caches for walking backward in the diagram
-    public Map<String, Set<ServiceEcaArtifactInfo>> allServiceEcaInfosReferringToServiceName = new ConcurrentHashMap<String, Set<ServiceEcaArtifactInfo>>();
-    public Map<String, Set<ServiceArtifactInfo>> allServiceInfosReferringToServiceName = new ConcurrentHashMap<String, Set<ServiceArtifactInfo>>();
-    public Map<String, Set<FormWidgetArtifactInfo>> allFormInfosReferringToServiceName = new ConcurrentHashMap<String, Set<FormWidgetArtifactInfo>>();
-    public Map<String, Set<FormWidgetArtifactInfo>> allFormInfosBasedOnServiceName = new ConcurrentHashMap<String, Set<FormWidgetArtifactInfo>>();
-    public Map<String, Set<ScreenWidgetArtifactInfo>> allScreenInfosReferringToServiceName = new ConcurrentHashMap<String, Set<ScreenWidgetArtifactInfo>>();
-    public Map<String, Set<ControllerRequestArtifactInfo>> allRequestInfosReferringToServiceName = new ConcurrentHashMap<String, Set<ControllerRequestArtifactInfo>>();
+    public Map<String, Set<ServiceEcaArtifactInfo>> allServiceEcaInfosReferringToServiceName = new ConcurrentHashMap<>();
+    public Map<String, Set<ServiceArtifactInfo>> allServiceInfosReferringToServiceName = new ConcurrentHashMap<>();
+    public Map<String, Set<FormWidgetArtifactInfo>> allFormInfosReferringToServiceName = new ConcurrentHashMap<>();
+    public Map<String, Set<FormWidgetArtifactInfo>> allFormInfosBasedOnServiceName = new ConcurrentHashMap<>();
+    public Map<String, Set<ScreenWidgetArtifactInfo>> allScreenInfosReferringToServiceName = new ConcurrentHashMap<>();
+    public Map<String, Set<ControllerRequestArtifactInfo>> allRequestInfosReferringToServiceName = new ConcurrentHashMap<>();
 
-    public Map<String, Set<ServiceArtifactInfo>> allServiceInfosReferringToEntityName = new ConcurrentHashMap<String, Set<ServiceArtifactInfo>>();
-    public Map<String, Set<FormWidgetArtifactInfo>> allFormInfosReferringToEntityName = new ConcurrentHashMap<String, Set<FormWidgetArtifactInfo>>();
-    public Map<String, Set<ScreenWidgetArtifactInfo>> allScreenInfosReferringToEntityName = new ConcurrentHashMap<String, Set<ScreenWidgetArtifactInfo>>();
+    public Map<String, Set<ServiceArtifactInfo>> allServiceInfosReferringToEntityName = new ConcurrentHashMap<>();
+    public Map<String, Set<FormWidgetArtifactInfo>> allFormInfosReferringToEntityName = new ConcurrentHashMap<>();
+    public Map<String, Set<ScreenWidgetArtifactInfo>> allScreenInfosReferringToEntityName = new ConcurrentHashMap<>();
 
-    public Map<ServiceEcaRule, Set<ServiceArtifactInfo>> allServiceInfosReferringToServiceEcaRule = new ConcurrentHashMap<ServiceEcaRule, Set<ServiceArtifactInfo>>();
+    public Map<ServiceEcaRule, Set<ServiceArtifactInfo>> allServiceInfosReferringToServiceEcaRule = new ConcurrentHashMap<>();
 
-    public Map<String, Set<FormWidgetArtifactInfo>> allFormInfosExtendingForm = new ConcurrentHashMap<String, Set<FormWidgetArtifactInfo>>();
-    public Map<String, Set<ScreenWidgetArtifactInfo>> allScreenInfosReferringToForm = new ConcurrentHashMap<String, Set<ScreenWidgetArtifactInfo>>();
+    public Map<String, Set<FormWidgetArtifactInfo>> allFormInfosExtendingForm = new ConcurrentHashMap<>();
+    public Map<String, Set<ScreenWidgetArtifactInfo>> allScreenInfosReferringToForm = new ConcurrentHashMap<>();
 
-    public Map<String, Set<ScreenWidgetArtifactInfo>> allScreenInfosReferringToScreen = new ConcurrentHashMap<String, Set<ScreenWidgetArtifactInfo>>();
-    public Map<String, Set<ControllerViewArtifactInfo>> allViewInfosReferringToScreen = new ConcurrentHashMap<String, Set<ControllerViewArtifactInfo>>();
+    public Map<String, Set<ScreenWidgetArtifactInfo>> allScreenInfosReferringToScreen = new ConcurrentHashMap<>();
+    public Map<String, Set<ControllerViewArtifactInfo>> allViewInfosReferringToScreen = new ConcurrentHashMap<>();
 
-    public Map<String, Set<ControllerRequestArtifactInfo>> allRequestInfosReferringToView = new ConcurrentHashMap<String, Set<ControllerRequestArtifactInfo>>();
+    public Map<String, Set<ControllerRequestArtifactInfo>> allRequestInfosReferringToView = new ConcurrentHashMap<>();
 
-    public Map<String, Set<FormWidgetArtifactInfo>> allFormInfosTargetingRequest = new ConcurrentHashMap<String, Set<FormWidgetArtifactInfo>>();
-    public Map<String, Set<FormWidgetArtifactInfo>> allFormInfosReferringToRequest = new ConcurrentHashMap<String, Set<FormWidgetArtifactInfo>>();
-    public Map<String, Set<ScreenWidgetArtifactInfo>> allScreenInfosReferringToRequest = new ConcurrentHashMap<String, Set<ScreenWidgetArtifactInfo>>();
-    public Map<String, Set<ControllerRequestArtifactInfo>> allRequestInfosReferringToRequest = new ConcurrentHashMap<String, Set<ControllerRequestArtifactInfo>>();
+    public Map<String, Set<FormWidgetArtifactInfo>> allFormInfosTargetingRequest = new ConcurrentHashMap<>();
+    public Map<String, Set<FormWidgetArtifactInfo>> allFormInfosReferringToRequest = new ConcurrentHashMap<>();
+    public Map<String, Set<ScreenWidgetArtifactInfo>> allScreenInfosReferringToRequest = new ConcurrentHashMap<>();
+    public Map<String, Set<ControllerRequestArtifactInfo>> allRequestInfosReferringToRequest = new ConcurrentHashMap<>();
 
     public static ArtifactInfoFactory getArtifactInfoFactory(String delegatorName) throws GeneralException {
         if (UtilValidate.isEmpty(delegatorName)) {
@@ -143,7 +144,7 @@ public class ArtifactInfoFactory {
 
     public void prepareAll() throws GeneralException {
         Debug.logInfo("Loading artifact info objects...", module);
-        List<Future<Void>> futures = new ArrayList<Future<Void>>();
+        List<Future<Void>> futures = new ArrayList<>();
         Set<String> entityNames = this.getEntityModelReader().getEntityNames();
         for (String entityName: entityNames) {
             this.getEntityArtifactInfo(entityName);
@@ -157,7 +158,7 @@ public class ArtifactInfoFactory {
 
         Collection<ComponentConfig> componentConfigs = ComponentConfig.getAllComponents();
         ExecutionPool.getAllFutures(futures);
-        futures = new ArrayList<Future<Void>>();
+        futures = new ArrayList<>();
         for (ComponentConfig componentConfig: componentConfigs) {
             futures.add(ExecutionPool.GLOBAL_FORK_JOIN.submit(prepareTaskForComponentAnalysis(componentConfig)));
         }
@@ -185,7 +186,8 @@ public class ArtifactInfoFactory {
         return getModelForm(formNameAndLocation.substring(formNameAndLocation.indexOf("#") + 1), formNameAndLocation.substring(0, formNameAndLocation.indexOf("#")));
     }
     public ModelForm getModelForm(String formName, String formLocation) throws ParserConfigurationException, SAXException, IOException {
-        return FormFactory.getFormFromLocation(formLocation, formName, this.entityModelReader, this.dispatchContext);
+        return FormFactory.getFormFromLocation(formLocation, formName, this.entityModelReader,
+                ThemeFactory.getVisualThemeFromId("COMMON"), this.dispatchContext);
     }
 
     public ModelScreen getModelScreen(String screenName, String screenLocation) throws ParserConfigurationException, SAXException, IOException {
@@ -328,7 +330,7 @@ public class ArtifactInfoFactory {
     }
 
     public Set<ArtifactInfoBase> getAllArtifactInfosByNamePartial(String artifactNamePartial, String type) {
-        Set<ArtifactInfoBase> aiBaseSet = new HashSet<ArtifactInfoBase>();
+        Set<ArtifactInfoBase> aiBaseSet = new HashSet<>();
 
         if (UtilValidate.isEmpty(artifactNamePartial)) {
             return aiBaseSet;
@@ -382,103 +384,98 @@ public class ArtifactInfoFactory {
 
     // private methods
     private Callable<Void> prepareTaskForServiceAnalysis(final String serviceName) {
-        return new Callable<Void>() {
-            @Override
-            public Void call() throws Exception {
-                try {
-                    getServiceArtifactInfo(serviceName);
-                } catch(Exception exc) {
-                    Debug.logWarning(exc, "Error processing service: " + serviceName, module);
-                }
-                return null;
+        return () -> {
+            try {
+                getServiceArtifactInfo(serviceName);
+            } catch(Exception exc) {
+                Debug.logWarning(exc, "Error processing service: " + serviceName, module);
             }
+            return null;
         };
     }
 
     private Callable<Void> prepareTaskForComponentAnalysis(final ComponentConfig componentConfig) {
-        return new Callable<Void>() {
-            @Override
-            public Void call() throws Exception {
-                String componentName = componentConfig.getGlobalName();
-                String rootComponentPath = componentConfig.getRootLocation();
-                List<File> screenFiles = new ArrayList<File>();
-                List<File> formFiles = new ArrayList<File>();
-                List<File> controllerFiles = new ArrayList<File>();
-                try {
-                    screenFiles = FileUtil.findXmlFiles(rootComponentPath, null, "screens", "widget-screen.xsd");
-                } catch (IOException ioe) {
-                    Debug.logWarning(ioe.getMessage(), module);
-                }
-                try {
-                    formFiles = FileUtil.findXmlFiles(rootComponentPath, null, "forms", "widget-form.xsd");
-                } catch (IOException ioe) {
-                    Debug.logWarning(ioe.getMessage(), module);
-                }
-                try {
-                    controllerFiles = FileUtil.findXmlFiles(rootComponentPath, null, "site-conf", "site-conf.xsd");
-                } catch (IOException ioe) {
-                    Debug.logWarning(ioe.getMessage(), module);
-                }
-                for (File screenFile: screenFiles) {
-                    String screenFilePath = screenFile.getAbsolutePath();
-                    screenFilePath = screenFilePath.replace('\\', '/');
-                    String screenFileRelativePath = screenFilePath.substring(rootComponentPath.length());
-                    String screenLocation = "component://" + componentName + "/" + screenFileRelativePath;
-                    Map<String, ModelScreen> modelScreenMap = null;
-                    try {
-                        modelScreenMap = ScreenFactory.getScreensFromLocation(screenLocation);
-                    } catch (Exception exc) {
-                        Debug.logWarning(exc.getMessage(), module);
-                    }
-                    for (String screenName : modelScreenMap.keySet()) {
-                        getScreenWidgetArtifactInfo(screenName, screenLocation);
-                    }
-                }
-                for (File formFile: formFiles) {
-                    String formFilePath = formFile.getAbsolutePath();
-                    formFilePath = formFilePath.replace('\\', '/');
-                    String formFileRelativePath = formFilePath.substring(rootComponentPath.length());
-                    String formLocation = "component://" + componentName + "/" + formFileRelativePath;
-                    Map<String, ModelForm> modelFormMap = null;
-                    try {
-                        modelFormMap = FormFactory.getFormsFromLocation(formLocation, getEntityModelReader(), getDispatchContext());
-                    } catch (Exception exc) {
-                        Debug.logWarning(exc.getMessage(), module);
-                    }
-                    for (String formName : modelFormMap.keySet()) {
-                        try {
-                            getFormWidgetArtifactInfo(formName, formLocation);
-                        } catch (GeneralException ge) {
-                            Debug.logWarning(ge.getMessage(), module);
-                        }
-                    }
-                }
-                for (File controllerFile: controllerFiles) {
-                    URL controllerUrl = null;
-                    try {
-                        controllerUrl = controllerFile.toURI().toURL();
-                    } catch (MalformedURLException mue) {
-                        Debug.logWarning(mue.getMessage(), module);
-                    }
-                    if (controllerUrl == null) continue;
-                    ControllerConfig cc = ConfigXMLReader.getControllerConfig(controllerUrl);
-                    for (String requestUri: cc.getRequestMapMap().keySet()) {
-                        try {
-                            getControllerRequestArtifactInfo(controllerUrl, requestUri);
-                        } catch (GeneralException e) {
-                            Debug.logWarning(e.getMessage(), module);
-                        }
-                    }
-                    for (String viewUri: cc.getViewMapMap().keySet()) {
-                        try {
-                            getControllerViewArtifactInfo(controllerUrl, viewUri);
-                        } catch (GeneralException e) {
-                            Debug.logWarning(e.getMessage(), module);
-                        }
-                    }
-                }
-                return null;
+        return () -> {
+            String componentName = componentConfig.getGlobalName();
+            String rootComponentPath = componentConfig.rootLocation().toString();
+            List<File> screenFiles = new ArrayList<>();
+            List<File> formFiles = new ArrayList<>();
+            List<File> controllerFiles = new ArrayList<>();
+            try {
+                screenFiles = FileUtil.findXmlFiles(rootComponentPath, null, "screens", "widget-screen.xsd");
+            } catch (IOException ioe) {
+                Debug.logWarning(ioe.getMessage(), module);
             }
+            try {
+                formFiles = FileUtil.findXmlFiles(rootComponentPath, null, "forms", "widget-form.xsd");
+            } catch (IOException ioe) {
+                Debug.logWarning(ioe.getMessage(), module);
+            }
+            try {
+                controllerFiles = FileUtil.findXmlFiles(rootComponentPath, null, "site-conf", "site-conf.xsd");
+            } catch (IOException ioe) {
+                Debug.logWarning(ioe.getMessage(), module);
+            }
+            for (File screenFile: screenFiles) {
+                String screenFilePath = screenFile.getAbsolutePath();
+                screenFilePath = screenFilePath.replace('\\', '/');
+                String screenFileRelativePath = screenFilePath.substring(rootComponentPath.length());
+                String screenLocation = "component://" + componentName + "/" + screenFileRelativePath;
+                Map<String, ModelScreen> modelScreenMap = null;
+                try {
+                    modelScreenMap = ScreenFactory.getScreensFromLocation(screenLocation);
+                } catch (Exception exc) {
+                    Debug.logWarning(exc.getMessage(), module);
+                }
+                for (String screenName : modelScreenMap.keySet()) {
+                    getScreenWidgetArtifactInfo(screenName, screenLocation);
+                }
+            }
+            for (File formFile: formFiles) {
+                String formFilePath = formFile.getAbsolutePath();
+                formFilePath = formFilePath.replace('\\', '/');
+                String formFileRelativePath = formFilePath.substring(rootComponentPath.length());
+                String formLocation = "component://" + componentName + "/" + formFileRelativePath;
+                Map<String, ModelForm> modelFormMap = null;
+                try {
+                    modelFormMap = FormFactory.getFormsFromLocation(formLocation, getEntityModelReader(),
+                            ThemeFactory.getVisualThemeFromId("COMMON"), getDispatchContext());
+                } catch (Exception exc) {
+                    Debug.logWarning(exc.getMessage(), module);
+                }
+                for (String formName : modelFormMap.keySet()) {
+                    try {
+                        getFormWidgetArtifactInfo(formName, formLocation);
+                    } catch (GeneralException ge) {
+                        Debug.logWarning(ge.getMessage(), module);
+                    }
+                }
+            }
+            for (File controllerFile: controllerFiles) {
+                URL controllerUrl = null;
+                try {
+                    controllerUrl = controllerFile.toURI().toURL();
+                } catch (MalformedURLException mue) {
+                    Debug.logWarning(mue.getMessage(), module);
+                }
+                if (controllerUrl == null) continue;
+                ControllerConfig cc = ConfigXMLReader.getControllerConfig(controllerUrl);
+                for (String requestUri: cc.getRequestMapMap().keySet()) {
+                    try {
+                        getControllerRequestArtifactInfo(controllerUrl, requestUri);
+                    } catch (GeneralException e) {
+                        Debug.logWarning(e.getMessage(), module);
+                    }
+                }
+                for (String viewUri: cc.getViewMapMap().keySet()) {
+                    try {
+                        getControllerViewArtifactInfo(controllerUrl, viewUri);
+                    } catch (GeneralException e) {
+                        Debug.logWarning(e.getMessage(), module);
+                    }
+                }
+            }
+            return null;
         };
     }
 

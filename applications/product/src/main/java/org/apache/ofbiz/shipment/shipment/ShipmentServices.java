@@ -19,6 +19,7 @@
 package org.apache.ofbiz.shipment.shipment;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -60,14 +61,14 @@ public class ShipmentServices {
     public static final String resource = "ProductUiLabels";
     public static final String resource_error = "OrderErrorUiLabels";
     public static final int decimals = UtilNumber.getBigDecimalScale("order.decimals");
-    public static final int rounding = UtilNumber.getBigDecimalRoundingMode("order.rounding");
+    public static final RoundingMode rounding = UtilNumber.getRoundingMode("order.rounding");
     public static final BigDecimal ZERO = BigDecimal.ZERO.setScale(decimals, rounding);
 
     public static Map<String, Object> createShipmentEstimate(DispatchContext dctx, Map<String, ? extends Object> context) {
-        Map<String, Object> result = new HashMap<String, Object>();
+        Map<String, Object> result = new HashMap<>();
         Delegator delegator = dctx.getDelegator();
         Locale locale = (Locale) context.get("locale");
-        List<GenericValue> storeAll = new LinkedList<GenericValue>();
+        List<GenericValue> storeAll = new LinkedList<>();
         String productStoreShipMethId = (String)context.get("productStoreShipMethId");
 
         GenericValue productStoreShipMeth = null;
@@ -211,7 +212,7 @@ public class ShipmentServices {
         String shippingPostalCode = (String) context.get("shippingPostalCode");
         String shippingCountryCode = (String) context.get("shippingCountryCode");
 
-        List<Map<String, Object>> shippableItemInfo = UtilGenerics.checkList(context.get("shippableItemInfo"));
+        List<Map<String, Object>> shippableItemInfo = UtilGenerics.cast(context.get("shippableItemInfo"));
         BigDecimal shippableTotal = (BigDecimal) context.get("shippableTotal");
         BigDecimal shippableQuantity = (BigDecimal) context.get("shippableQuantity");
         BigDecimal shippableWeight = (BigDecimal) context.get("shippableWeight");
@@ -291,7 +292,7 @@ public class ShipmentServices {
             shipAddress.set("postalCodeGeoId", shippingPostalCode);
         }
         // Get the possible estimates.
-        List<GenericValue> estimateList = new LinkedList<GenericValue>();
+        List<GenericValue> estimateList = new LinkedList<>();
 
         for (GenericValue thisEstimate: estimates) {
             try {
@@ -369,8 +370,8 @@ public class ShipmentServices {
         }
 
         // make the shippable item size/feature objects
-        List<BigDecimal> shippableItemSizes = new LinkedList<BigDecimal>();
-        Map<String, BigDecimal> shippableFeatureMap = new HashMap<String, BigDecimal>();
+        List<BigDecimal> shippableItemSizes = new LinkedList<>();
+        Map<String, BigDecimal> shippableFeatureMap = new HashMap<>();
         if (shippableItemInfo != null) {
             for (Map<String, Object> itemMap: shippableItemInfo) {
                 // add the item sizes
@@ -384,7 +385,7 @@ public class ShipmentServices {
                 // add the feature quantities
                 BigDecimal quantity = (BigDecimal) itemMap.get("quantity");
                 if (itemMap.containsKey("featureSet")) {
-                    Set<String> featureSet = UtilGenerics.checkSet(itemMap.get("featureSet"));
+                    Set<String> featureSet = UtilGenerics.cast(itemMap.get("featureSet"));
                     if (UtilValidate.isNotEmpty(featureSet)) {
                         for (String featureId: featureSet) {
                             BigDecimal featureQuantity = shippableFeatureMap.get(featureId);
@@ -411,7 +412,7 @@ public class ShipmentServices {
         int estimateIndex = 0;
 
         if (estimateList.size() > 1) {
-            TreeMap<Integer, GenericValue> estimatePriority = new TreeMap<Integer, GenericValue>();
+            TreeMap<Integer, GenericValue> estimatePriority = new TreeMap<>();
 
             for (GenericValue currentEstimate: estimateList) {
                 int prioritySum = 0;
@@ -435,7 +436,7 @@ public class ShipmentServices {
                 }
 
                 // there will be only one of each priority; latest will replace
-                estimatePriority.put(Integer.valueOf(prioritySum), currentEstimate);
+                estimatePriority.put(prioritySum, currentEstimate);
             }
 
             // locate the highest priority estimate; or the latest entered
@@ -614,7 +615,7 @@ public class ShipmentServices {
             GenericValue routeSeg = EntityUtil.getFirst(routeSegs);
 
             // to store list
-            List<GenericValue> toStore = new LinkedList<GenericValue>();
+            List<GenericValue> toStore = new LinkedList<>();
 
             // make the staging records
             GenericValue stageShip = delegator.makeValue("OdbcShipmentOut");
@@ -632,7 +633,7 @@ public class ShipmentServices {
             stageShip.set("postalCodeExt", address.get("postalCodeExt"));
             stageShip.set("countryGeoId", address.get("countryGeoId"));
             stageShip.set("stateProvinceGeoId", address.get("stateProvinceGeoId"));
-            stageShip.set("numberOfPackages", Long.valueOf(packages.size()));
+            stageShip.set("numberOfPackages", (long) packages.size());
             stageShip.set("handlingInstructions", shipment.get("handlingInstructions"));
             toStore.add(stageShip);
 
@@ -666,7 +667,7 @@ public class ShipmentServices {
         Delegator delegator = dctx.getDelegator();
         GenericValue userLogin = (GenericValue) context.get("userLogin");
         Locale locale = (Locale) context.get("locale");
-        Map<String, String> shipmentMap = new HashMap<String, String>();
+        Map<String, String> shipmentMap = new HashMap<>();
 
         EntityQuery eq = EntityQuery.use(delegator)
                 .from("OdbcPackageIn")
@@ -703,7 +704,7 @@ public class ShipmentServices {
                             delegator.store(rtSeg);
                     }
 
-                    Map<String, Object> pkgCtx = new HashMap<String, Object>();
+                    Map<String, Object> pkgCtx = new HashMap<>();
                     pkgCtx.put("shipmentId", shipmentId);
                     pkgCtx.put("shipmentPackageSeqId", packageSeqId);
 
@@ -754,7 +755,7 @@ public class ShipmentServices {
         for (Map.Entry<String, String> entry: shipmentMap.entrySet()) {
             String shipmentId = entry.getKey();
             String voidInd = entry.getValue();
-            Map<String, Object> shipCtx = new HashMap<String, Object>();
+            Map<String, Object> shipCtx = new HashMap<>();
             shipCtx.put("shipmentId", shipmentId);
             if ("Y".equals(voidInd)) {
                 shipCtx.put("statusId", "SHIPMENT_CANCELLED");
@@ -835,7 +836,7 @@ public class ShipmentServices {
             }
 
             // store the quantity of each product shipped in a hashmap keyed to productId
-            Map<String, BigDecimal> shippedCountMap = new HashMap<String, BigDecimal>();
+            Map<String, BigDecimal> shippedCountMap = new HashMap<>();
             for (GenericValue item: shipmentAndItems) {
                 BigDecimal shippedQuantity = item.getBigDecimal("quantity");
                 BigDecimal quantity = shippedCountMap.get(item.getString("productId"));
@@ -844,7 +845,7 @@ public class ShipmentServices {
             }
 
             // store the quantity of each product received in a hashmap keyed to productId
-            Map<String, BigDecimal> receivedCountMap = new HashMap<String, BigDecimal>();
+            Map<String, BigDecimal> receivedCountMap = new HashMap<>();
             for (GenericValue item: shipmentReceipts) {
                 BigDecimal receivedQuantity = item.getBigDecimal("quantityAccepted");
                 BigDecimal quantity = receivedCountMap.get(item.getString("productId"));
@@ -858,7 +859,10 @@ public class ShipmentServices {
             }
 
             // now update the shipment
-            dispatcher.runSync("updateShipment", UtilMisc.<String, Object>toMap("shipmentId", shipmentId, "statusId", "PURCH_SHIP_RECEIVED", "userLogin", userLogin));
+            Map<String, Object> serviceResult = dispatcher.runSync("updateShipment", UtilMisc.<String, Object>toMap("shipmentId", shipmentId, "statusId", "PURCH_SHIP_RECEIVED", "userLogin", userLogin));
+            if (ServiceUtil.isError(serviceResult)) {
+                return ServiceUtil.returnError(ServiceUtil.getErrorMessage(serviceResult));
+            }
         } catch (GenericEntityException e) {
             Debug.logError(e, module);
             return ServiceUtil.returnError(e.getMessage());
@@ -900,7 +904,7 @@ public class ShipmentServices {
 
             Map<String, Object> tmpResult = dispatcher.runSync("createShipmentRouteSegment", params);
             if (ServiceUtil.isError(tmpResult)) {
-                return tmpResult;
+                    return ServiceUtil.returnError(ServiceUtil.getErrorMessage(tmpResult));
             } else {
                 results.put("newShipmentRouteSegmentId", tmpResult.get("shipmentRouteSegmentId"));
                 return results;
@@ -999,7 +1003,9 @@ public class ShipmentServices {
 
                 // Get the value of the orderItem by calling the getOrderItemInvoicedAmountAndQuantity service
                 Map<String, Object> getOrderItemValueResult = dispatcher.runSync("getOrderItemInvoicedAmountAndQuantity", UtilMisc.toMap("orderId", orderId, "orderItemSeqId", orderItemSeqId, "userLogin", userLogin, "locale", locale));
-                if (ServiceUtil.isError(getOrderItemValueResult)) return getOrderItemValueResult;
+                if (ServiceUtil.isError(getOrderItemValueResult)){
+                    return ServiceUtil.returnError(ServiceUtil.getErrorMessage(getOrderItemValueResult));
+                }
                 BigDecimal invoicedAmount = (BigDecimal) getOrderItemValueResult.get("invoicedAmount");
                 BigDecimal invoicedQuantity = (BigDecimal) getOrderItemValueResult.get("invoicedQuantity");
 
@@ -1014,7 +1020,7 @@ public class ShipmentServices {
                 GenericValue orderHeader = packageContent.getRelatedOne("OrderHeader", false);
                 Map<String, Object> convertUomResult = dispatcher.runSync("convertUom", UtilMisc.<String, Object>toMap("uomId", orderHeader.getString("currencyUom"), "uomIdTo", currencyUomId, "originalValue", packageContentValue));
                 if (ServiceUtil.isError(convertUomResult)) {
-                    return convertUomResult;
+                    return ServiceUtil.returnError(ServiceUtil.getErrorMessage(convertUomResult));
                 }
                 if (convertUomResult.containsKey("convertedValue")) {
                     packageContentValue = ((BigDecimal) convertUomResult.get("convertedValue")).setScale(decimals, rounding);
@@ -1046,7 +1052,7 @@ public class ShipmentServices {
         Locale localePar = (Locale) context.get("locale");
         
         // prepare the shipment information
-        Map<String, Object> sendMap = new HashMap<String, Object>();
+        Map<String, Object> sendMap = new HashMap<>();
         GenericValue shipment = null ;
         GenericValue orderHeader = null;
         try {

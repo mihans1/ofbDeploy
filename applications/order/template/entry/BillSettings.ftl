@@ -17,7 +17,7 @@ specific language governing permissions and limitations
 under the License.
 -->
 
-<script type="text/javascript">
+<script type="application/javascript">
 //<![CDATA[
 function shipBillAddr() {
     if (document.checkoutsetupform.useShipAddr.checked) {
@@ -43,7 +43,7 @@ function makeExpDate() {
             <table width="100%" cellpadding="1" cellspacing="0" border="0">
               <tr>
                 <td colspan="2">
-                  <a href="<@ofbizUrl>setBilling?createNew=Y</@ofbizUrl>" class="buttontext">${uiLabelMap.CommonCreateNew}</a>
+                  <a href="<@ofbizUrl>setBilling?createNew=Y</@ofbizUrl>" class="buttontext">${uiLabelMap.CommonCreate}</a>
                 </td>
               </tr>
               <tr><td colspan="3"><hr /></td></tr>
@@ -106,7 +106,7 @@ function makeExpDate() {
                           ${uiLabelMap.OrderCardSecurityCode}&nbsp;<input type="text" size="5" maxlength="10" name="securityCode_${paymentMethod.paymentMethodId}" value=""/>
                         </span>
                       </td>
-                      <td align="right"><a href="/partymgr/control/editcreditcard?party_id=${orderParty.partyId}&amp;paymentMethodId=${paymentMethod.paymentMethodId}" target="_blank" class="buttontext">${uiLabelMap.CommonUpdate}</a></td>
+                      <td align="right"><a href="<@ofbizUrl controlPath="/partymgr/control">editcreditcard?party_id=${orderParty.partyId}&amp;paymentMethodId=${paymentMethod.paymentMethodId}</@ofbizUrl>" target="_blank" class="buttontext">${uiLabelMap.CommonUpdate}</a></td>
                     </tr>
                   <#elseif "EFT_ACCOUNT" == paymentMethod.paymentMethodTypeId>
                     <#assign eftAccount = paymentMethod.getRelatedOne("EftAccount", false)>
@@ -118,7 +118,7 @@ function makeExpDate() {
                           <#if paymentMethod.description?has_content>(${paymentMethod.description})</#if>
                         </label>
                       </td>
-                      <td align="right"><a href="/partymgr/control/editeftaccount?party_id=${orderParty.partyId}&amp;paymentMethodId=${paymentMethod.paymentMethodId}" target="_blank" class="buttontext">${uiLabelMap.CommonUpdate}</a></td>
+                      <td align="right"><a href="<@ofbizUrl controlPath="/partymgr/control">editeftaccount?party_id=${orderParty.partyId}&amp;paymentMethodId=${paymentMethod.paymentMethodId}</@ofbizUrl>" target="_blank" class="buttontext">${uiLabelMap.CommonUpdate}</a></td>
                     </tr>
                     <tr><td colspan="2"><hr /></td></tr>
                   </#if>
@@ -452,7 +452,7 @@ function makeExpDate() {
         <#else>
           <#-- initial screen show a list of options -->
 
-          <script type="text/javascript">
+          <script type="application/javascript">
 
               function setCheckoutPaymentId( selectedValue ) {
                   checkoutForm = document.getElementById('checkoutsetupform');

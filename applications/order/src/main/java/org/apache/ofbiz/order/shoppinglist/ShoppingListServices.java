@@ -82,15 +82,15 @@ public class ShoppingListServices {
         }
 
         if (startDate == null) {
-            switch (frequency.intValue()) {
+            switch (frequency) {
                 case 5:
-                    startDate = UtilDateTime.getWeekStart(UtilDateTime.nowTimestamp(), 0, interval.intValue());
+                    startDate = UtilDateTime.getWeekStart(UtilDateTime.nowTimestamp(), 0, interval);
                     break;
                 case 6:
-                    startDate = UtilDateTime.getMonthStart(UtilDateTime.nowTimestamp(), 0, interval.intValue());
+                    startDate = UtilDateTime.getMonthStart(UtilDateTime.nowTimestamp(), 0, interval);
                     break;
                 case 7:
-                    startDate = UtilDateTime.getYearStart(UtilDateTime.nowTimestamp(), 0, interval.intValue());
+                    startDate = UtilDateTime.getYearStart(UtilDateTime.nowTimestamp(), 0, interval);
                     break;
                 default:
                     return ServiceUtil.returnError(UtilProperties.getMessage(resource_error,"OrderInvalidFrequencyForShoppingListRecurrence",locale));
@@ -105,7 +105,7 @@ public class ShoppingListServices {
 
         RecurrenceInfo recInfo = null;
         try {
-            recInfo = RecurrenceInfo.makeInfo(delegator, startTime, frequency.intValue(), interval.intValue(), -1, endTime);
+            recInfo = RecurrenceInfo.makeInfo(delegator, startTime, frequency, interval, -1, endTime);
         } catch (RecurrenceInfoException e) {
             Debug.logError(e, module);
             return ServiceUtil.returnError(UtilProperties.getMessage(resource_error,"OrderUnableToCreateShoppingListRecurrenceInformation",locale));
@@ -171,7 +171,7 @@ public class ShoppingListServices {
 
                     // store the order
                     Map<String, Object> createResp = helper.createOrder(userLogin);
-                    if (createResp == null || (createResp != null && ServiceUtil.isError(createResp))) {
+                    if (createResp == null || ServiceUtil.isError(createResp)) {
                         Debug.logError("Cannot create order for shopping list - " + shoppingList, module);
                     } else {
 
@@ -581,6 +581,7 @@ public class ShoppingListServices {
         LocalDispatcher dispatcher = dctx.getDispatcher();
         GenericValue userLogin = (GenericValue) context.get("userLogin");
         List<GenericValue> shoppingList = null;
+        Map<String, Object> result = new HashMap<>();
         try {
             shoppingList = EntityQuery.use(delegator).from("ShoppingList").where("partyId", null, "shoppingListTypeId", "SLT_SPEC_PURP").queryList();
         } catch (GenericEntityException e) {
@@ -613,15 +614,21 @@ public class ShoppingListServices {
                     }
                     for (GenericValue sli : shoppingListItems) {
                         try {
-                            dispatcher.runSync("removeShoppingListItem", UtilMisc.toMap("shoppingListId", sl.getString("shoppingListId"),
+                            result = dispatcher.runSync("removeShoppingListItem", UtilMisc.toMap("shoppingListId", sl.getString("shoppingListId"),
                                     "shoppingListItemSeqId", sli.getString("shoppingListItemSeqId"),
                                     "userLogin", userLogin));
+                            if (ServiceUtil.isError(result)) {
+                                return ServiceUtil.returnError(ServiceUtil.getErrorMessage(result));
+                            }
                         } catch (GenericServiceException e) {
                             Debug.logError(e.getMessage(), module);
                         }
                     }
                     try {
-                        dispatcher.runSync("removeShoppingList", UtilMisc.toMap("shoppingListId", sl.getString("shoppingListId"), "userLogin", userLogin));
+                        result = dispatcher.runSync("removeShoppingList", UtilMisc.toMap("shoppingListId", sl.getString("shoppingListId"), "userLogin", userLogin));
+                        if (ServiceUtil.isError(result)) {
+                            return ServiceUtil.returnError(ServiceUtil.getErrorMessage(result));
+                        }
                     } catch (GenericServiceException e) {
                         Debug.logError(e.getMessage(), module);
                     }

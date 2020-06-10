@@ -18,17 +18,17 @@ under the License.
 -->
 
 <#macro maskSensitiveNumber cardNumber>
-  <#assign cardNumberDisplay = "">
+  <#local cardNumberDisplay = "">
   <#if cardNumber?has_content>
-    <#assign size = cardNumber?length - 4>
+    <#local size = cardNumber?length - 4>
     <#if (size > 0)>
       <#list 0 .. size-1 as foo>
-        <#assign cardNumberDisplay = cardNumberDisplay + "*">
+        <#local cardNumberDisplay = cardNumberDisplay + "*">
       </#list>
-      <#assign cardNumberDisplay = cardNumberDisplay + cardNumber[size .. size + 3]>
+      <#local cardNumberDisplay = cardNumberDisplay + cardNumber[size .. size + 3]>
     <#else>
       <#-- but if the card number has less than four digits (ie, it was entered incorrectly), display it in full -->
-      <#assign cardNumberDisplay = cardNumber>
+      <#local cardNumberDisplay = cardNumber>
     </#if>
   </#if>
   ${cardNumberDisplay!}
@@ -82,7 +82,7 @@ under the License.
                 </td>
                 <td class="button-col">
                   <#if security.hasEntityPermission("MANUAL", "_PAYMENT", session)>
-                    <a href="/accounting/control/manualETx?paymentMethodId=${paymentMethod.paymentMethodId}${StringUtil.wrapString(externalKeyParam)}">${uiLabelMap.PartyManualTx}</a>
+                    <a href="<@ofbizUrl controlPath="/accounting/control">manualETx?paymentMethodId=${paymentMethod.paymentMethodId}${StringUtil.wrapString(externalKeyParam)}</@ofbizUrl>">${uiLabelMap.PartyManualTx}</a>
                   </#if>
                   <#if security.hasEntityPermission("PAY_INFO", "_UPDATE", session) || security.hasEntityPermission("ACCOUNTING", "_UPDATE", session)>
                     <a href="<@ofbizUrl>editcreditcard?partyId=${partyId}&amp;paymentMethodId=${paymentMethod.paymentMethodId}</@ofbizUrl>">${uiLabelMap.CommonUpdate}</a>
@@ -192,11 +192,7 @@ under the License.
                   &nbsp;
               </#if>
               <#if security.hasEntityPermission("PAY_INFO", "_DELETE", session) || security.hasEntityPermission("ACCOUNTING", "_DELETE", session)>
-                <form name="deletePaymentMethod_${paymentMethod.paymentMethodId}" method="post" action="<@ofbizUrl>deletePaymentMethod</@ofbizUrl>">
-                  <input type="hidden" name="partyId" value="${partyId}" />
-                  <input type="hidden" name="paymentMethodId" value="${paymentMethod.paymentMethodId}" />
-                  <input type="submit" value="${uiLabelMap.CommonExpire}"/>
-                </form>
+                <a href="<@ofbizUrl>deletePaymentMethod/viewprofile?partyId=${partyId}&amp;paymentMethodId=${paymentMethod.paymentMethodId}</@ofbizUrl>">${uiLabelMap.CommonExpire}</a>
               <#else>
                 &nbsp;
               </#if>

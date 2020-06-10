@@ -37,13 +37,13 @@
         <simple-method-test location="component://accounting/minilang/test/AutoAcctgTransTestsPurchase.xml"/>
     </test-case>
     <test-case case-name="auto-accounting-admin-tests">
-        <simple-method-test location="component://accounting/minilang/test/AutoAcctgAdminTests.xml"/>
+        <junit-test-suite class-name="org.apache.ofbiz.accounting.AutoAcctgAdminTests"/>
     </test-case>
     <test-case case-name="auto-accounting-agreement-tests">
-        <simple-method-test location="component://accounting/minilang/test/AutoAcctgAgreementTests.xml"/>
+        <junit-test-suite class-name="org.apache.ofbiz.accounting.AutoAcctgAgreementTests"/>
     </test-case>
     <test-case case-name="auto-accounting-budget-tests">
-        <groovy-test-suite location="component://accounting/groovyScripts/test/AutoAcctgBudgetTests.groovy"/>
+        <junit-test-suite class-name="org.apache.ofbiz.accounting.AutoAcctgBudgetTests"/>
     </test-case>
     <test-case case-name="auto-accounting-cost-tests">
         <simple-method-test location="component://accounting/minilang/test/AutoAcctgCostTests.xml"/>
@@ -55,6 +55,15 @@
         <simple-method-test location="component://accounting/minilang/test/AutoAcctgFixedAssetTests.xml"/>
     </test-case>
     <test-case case-name="auto-accounting-invoice-tests">
-        <simple-method-test location="component://accounting/minilang/test/AutoAcctgInvoiceTests.xml"/>
+        <junit-test-suite class-name="org.apache.ofbiz.accounting.AutoAcctgInvoiceTests"/>
+    </test-case>
+    <test-case case-name="auto-accounting-payment-tests">
+        <junit-test-suite class-name="org.apache.ofbiz.accounting.AutoAcctgPaymentTests"/>
+    </test-case>
+    <test-case case-name="auto-accounting-paymentgateway-tests">
+        <junit-test-suite class-name="org.apache.ofbiz.accounting.AutoAcctgPaymentGatewayTests"/>
+    </test-case>
+    <test-case case-name="auto-accounting-ledger-tests">
+        <junit-test-suite class-name="org.apache.ofbiz.accounting.AutoAcctgLedgerTests"/>
     </test-case>
 </test-suite>

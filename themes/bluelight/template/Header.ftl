@@ -43,7 +43,7 @@ under the License.
     </#if>
     <#if layoutSettings.VT_HDR_JAVASCRIPT?has_content>
         <#list layoutSettings.VT_HDR_JAVASCRIPT as javaScript>
-            <script src="<@ofbizContentUrl>${StringUtil.wrapString(javaScript)}</@ofbizContentUrl>" type="text/javascript"></script>
+            <script src="<@ofbizContentUrl>${StringUtil.wrapString(javaScript)}</@ofbizContentUrl>" type="application/javascript"></script>
         </#list>
     </#if>
     <#if layoutSettings.javaScripts?has_content>
@@ -53,7 +53,7 @@ under the License.
       <#list layoutSettings.javaScripts as javaScript>
         <#if javaScriptsSet.contains(javaScript)>
           <#assign nothing = javaScriptsSet.remove(javaScript)/>
-          <script src="<@ofbizContentUrl>${StringUtil.wrapString(javaScript)}</@ofbizContentUrl>" type="text/javascript"></script>
+          <script src="<@ofbizContentUrl>${StringUtil.wrapString(javaScript)}</@ofbizContentUrl>" type="application/javascript"></script>
         </#if>
       </#list>
     </#if>
@@ -86,7 +86,7 @@ under the License.
         </#list>
     </#if>
     <#if layoutSettings.WEB_ANALYTICS?has_content>
-      <script language="JavaScript" type="text/javascript">
+      <script type="application/javascript">
         <#list layoutSettings.WEB_ANALYTICS as webAnalyticsConfig>
           ${StringUtil.wrapString(webAnalyticsConfig.webAnalyticsCode!)}
         </#list>
@@ -117,6 +117,7 @@ under the License.
 </#if>
 
 <body>
+  <#include "component://common-theme/template/ImpersonateBanner.ftl"/>
   <div id="wait-spinner" style="display:none">
     <div id="wait-spinner-image"></div>
   </div>
@@ -175,11 +176,11 @@ under the License.
                         </li>
                     </#if>
                 </#if>
-                <li class="user"><a href="/partymgr/control/viewprofile?partyId=${userLogin.partyId}${externalKeyParam!}">${userName}</a></li>
+                <li class="user"><a href="<@ofbizUrl controlPath="/partymgr/control">viewprofile?partyId=${userLogin.partyId}${externalKeyParam!}</@ofbizUrl>">${userName}</a></li>
               <#else>
                 <li class="user">${userName}</li>
               </#if>
-              <#if orgName?has_content>              
+              <#if orgName?has_content>
                 <li class="org">${orgName}</li>
               </#if>
             </#if>

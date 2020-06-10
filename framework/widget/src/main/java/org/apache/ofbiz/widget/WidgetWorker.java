@@ -27,7 +27,6 @@ import javax.servlet.ServletContext;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import org.apache.ofbiz.base.util.Debug;
 import org.apache.ofbiz.base.util.UtilCodec;
 import org.apache.ofbiz.base.util.UtilGenerics;
 import org.apache.ofbiz.base.util.UtilHttp;
@@ -36,7 +35,6 @@ import org.apache.ofbiz.entity.Delegator;
 import org.apache.ofbiz.service.LocalDispatcher;
 import org.apache.ofbiz.webapp.control.ConfigXMLReader;
 import org.apache.ofbiz.webapp.control.RequestHandler;
-import org.apache.ofbiz.webapp.control.WebAppConfigurationException;
 import org.apache.ofbiz.webapp.taglib.ContentUrlTag;
 import org.apache.ofbiz.widget.model.ModelForm;
 import org.apache.ofbiz.widget.model.ModelFormField;
@@ -98,25 +96,7 @@ public final class WidgetWorker {
             }
 
             for (Map.Entry<String, String> parameter: parameterMap.entrySet()) {
-                String parameterValue = null;
-                if (parameter.getValue() instanceof String) {
-                    parameterValue = parameter.getValue();
-                } else {
-                    Object parameterObject = parameter.getValue();
-
-                    // skip null values
-                    if (parameterObject == null) continue;
-
-                    if (parameterObject instanceof String[]) {
-                        // it's probably a String[], just get the first value
-                        String[] parameterArray = (String[]) parameterObject;
-                        parameterValue = parameterArray[0];
-                        Debug.logInfo("Found String array value for parameter [" + parameter.getKey() + "], using first value: " + parameterValue, module);
-                    } else {
-                        // not a String, and not a String[], just use toString
-                        parameterValue = parameterObject.toString();
-                    }
-                }
+                String parameterValue = parameter.getValue();
 
                 if (needsAmp) {
                     externalWriter.append("&amp;");
@@ -155,7 +135,7 @@ public final class WidgetWorker {
                 WidgetWorker.makeHiddenFormLinkAnchor(writer, linkStyle, description, confirmation, modelFormField, request, response, context);
 
                 // this is a bit trickier, since we can't do a nested form we'll have to put the link to submit the form in place, but put the actual form def elsewhere, ie after the big form is closed
-                Map<String, Object> wholeFormContext = UtilGenerics.checkMap(context.get("wholeFormContext"));
+                Map<String, Object> wholeFormContext = UtilGenerics.cast(context.get("wholeFormContext"));
                 Appendable postMultiFormWriter = wholeFormContext != null ? (Appendable) wholeFormContext.get("postMultiFormWriter") : null;
                 if (postMultiFormWriter == null) {
                     postMultiFormWriter = new StringWriter();
@@ -308,7 +288,7 @@ public final class WidgetWorker {
             formUniqueId = (String) context.get("formUniqueId");
         }
         if (itemIndex != null) {
-            return formName + modelForm.getItemIndexSeparator() + itemIndex.intValue() + iterateId + formUniqueId + modelForm.getItemIndexSeparator() + modelFormField.getName();
+            return formName + modelForm.getItemIndexSeparator() + itemIndex + iterateId + formUniqueId + modelForm.getItemIndexSeparator() + modelFormField.getName();
         }
         return formName + modelForm.getItemIndexSeparator() + modelFormField.getName();
     }
@@ -318,12 +298,7 @@ public final class WidgetWorker {
                 String requestUri = (target.indexOf('?') > -1) ? target.substring(0, target.indexOf('?')) : target;
                 ServletContext servletContext = request.getSession().getServletContext();
                 RequestHandler rh = (RequestHandler) servletContext.getAttribute("_REQUEST_HANDLER_");
-                ConfigXMLReader.RequestMap requestMap = null;
-                try {
-                    requestMap = rh.getControllerConfig().getRequestMapMap().get(requestUri);
-                } catch (WebAppConfigurationException e) {
-                    Debug.logError(e, "Exception thrown while parsing controller.xml file: ", module);
-                }
+                ConfigXMLReader.RequestMap requestMap = rh.getControllerConfig().getRequestMapMap().get(requestUri);
                 if (requestMap != null && requestMap.event != null) {
                     return "hidden-form";
                 }
@@ -367,20 +342,20 @@ public final class WidgetWorker {
         if (context != null) {
             Integer paginateNumberInt= (Integer)context.get("PAGINATOR_NUMBER");
             if (paginateNumberInt == null) {
-                paginateNumberInt = Integer.valueOf(0);
+                paginateNumberInt = 0;
                 context.put("PAGINATOR_NUMBER", paginateNumberInt);
-                Map<String, Object> globalCtx = UtilGenerics.checkMap(context.get("globalContext"));
+                Map<String, Object> globalCtx = UtilGenerics.cast(context.get("globalContext"));
                 if (globalCtx != null) {
                     globalCtx.put("PAGINATOR_NUMBER", paginateNumberInt);
                 }
             }
-            paginator_number = paginateNumberInt.intValue();
+            paginator_number = paginateNumberInt;
         }
         return paginator_number;
     }
 
     public static void incrementPaginatorNumber(Map<String, Object> context) {
-        Map<String, Object> globalCtx = UtilGenerics.checkMap(context.get("globalContext"));
+        Map<String, Object> globalCtx = UtilGenerics.cast(context.get("globalContext"));
         if (globalCtx != null) {
             Boolean NO_PAGINATOR = (Boolean) globalCtx.get("NO_PAGINATOR");
             if (UtilValidate.isNotEmpty(NO_PAGINATOR)) {
@@ -388,9 +363,9 @@ public final class WidgetWorker {
             } else {
                 Integer paginateNumberInt= (Integer)globalCtx.get("PAGINATOR_NUMBER");
                 if (paginateNumberInt == null) {
-                    paginateNumberInt = Integer.valueOf(0);
+                    paginateNumberInt = 0;
                 }
-                paginateNumberInt = Integer.valueOf(paginateNumberInt.intValue() + 1);
+                paginateNumberInt = paginateNumberInt + 1;
                 globalCtx.put("PAGINATOR_NUMBER", paginateNumberInt);
                 context.put("PAGINATOR_NUMBER", paginateNumberInt);
             }

@@ -53,8 +53,8 @@ import org.w3c.dom.Element;
  */
 public final class CallService extends MethodOperation {
 
-    public static final String module = CallService.class.getName();
-    public static final String resource = "MiniLangErrorUiLabels";
+    private static final String MODULE = CallService.class.getName();
+    public static final String RESOURCE = "MiniLangErrorUiLabels";
 
     private final boolean breakOnError;
     private final FlexibleMessage defaultMessage;
@@ -113,7 +113,7 @@ public final class CallService extends MethodOperation {
         defaultMessage = new FlexibleMessage(UtilXml.firstChildElement(element, "default-message"), null);// "service.default.message"
         List<? extends Element> resultsToMapElements = UtilXml.childElementList(element, "results-to-map");
         if (UtilValidate.isNotEmpty(resultsToMapElements)) {
-            List<String> resultsToMapList = new ArrayList<String>(resultsToMapElements.size());
+            List<String> resultsToMapList = new ArrayList<>(resultsToMapElements.size());
             for (Element resultsToMapElement : resultsToMapElements) {
                 resultsToMapList.add(resultsToMapElement.getAttribute("map-name"));
             }
@@ -123,7 +123,7 @@ public final class CallService extends MethodOperation {
         }
         List<? extends Element> resultToFieldElements = UtilXml.childElementList(element, "result-to-field");
         if (UtilValidate.isNotEmpty(resultToFieldElements)) {
-            List<ResultToField> resultToFieldList = new ArrayList<ResultToField>(resultToFieldElements.size());
+            List<ResultToField> resultToFieldList = new ArrayList<>(resultToFieldElements.size());
             for (Element resultToFieldElement : resultToFieldElements) {
                 resultToFieldList.add(new ResultToField(resultToFieldElement));
             }
@@ -133,7 +133,7 @@ public final class CallService extends MethodOperation {
         }
         List<? extends Element> resultToRequestElements = UtilXml.childElementList(element, "result-to-request");
         if (UtilValidate.isNotEmpty(resultToRequestElements)) {
-            List<ResultToRequest> resultToRequestList = new ArrayList<ResultToRequest>(resultToRequestElements.size());
+            List<ResultToRequest> resultToRequestList = new ArrayList<>(resultToRequestElements.size());
             for (Element resultToRequestElement : resultToRequestElements) {
                 resultToRequestList.add(new ResultToRequest(resultToRequestElement));
             }
@@ -143,7 +143,7 @@ public final class CallService extends MethodOperation {
         }
         List<? extends Element> resultToSessionElements = UtilXml.childElementList(element, "result-to-session");
         if (UtilValidate.isNotEmpty(resultToSessionElements)) {
-            List<ResultToSession> resultToSessionList = new ArrayList<ResultToSession>(resultToSessionElements.size());
+            List<ResultToSession> resultToSessionList = new ArrayList<>(resultToSessionElements.size());
             for (Element resultToSessionElement : resultToSessionElements) {
                 resultToSessionList.add(new ResultToSession(resultToSessionElement));
             }
@@ -153,7 +153,7 @@ public final class CallService extends MethodOperation {
         }
         List<? extends Element> resultToResultElements = UtilXml.childElementList(element, "result-to-result");
         if (UtilValidate.isNotEmpty(resultToResultElements)) {
-            List<ResultToResult> resultToResultList = new ArrayList<ResultToResult>(resultToResultElements.size());
+            List<ResultToResult> resultToResultList = new ArrayList<>(resultToResultElements.size());
             for (Element resultToResultElement : resultToResultElements) {
                 resultToResultList.add(new ResultToResult(resultToResultElement));
             }
@@ -179,7 +179,7 @@ public final class CallService extends MethodOperation {
         }
         Map<String, Object> inMap = inMapFma.get(methodContext.getEnvMap());
         if (inMap == null) {
-            inMap = new HashMap<String, Object>();
+            inMap = new HashMap<>();
         }
         // before invoking the service, clear messages
         if (methodContext.getMethodType() == MethodContext.EVENT) {
@@ -220,7 +220,7 @@ public final class CallService extends MethodOperation {
                 outputTraceMessage(methodContext, "Service engine threw an exception: " + e.getMessage());
             }
             String errMsg = "ERROR: Could not complete the " + simpleMethod.getShortDescription() + " process [problem invoking the [" + serviceName + "] service with the map named [" + inMapFma + "] containing [" + inMap + "]: " + e.getMessage() + "]";
-            Debug.logError(e, errMsg, module);
+            Debug.logError(e, errMsg, MODULE);
             if (breakOnError) {
                 if (methodContext.getMethodType() == MethodContext.EVENT) {
                     methodContext.putEnv(simpleMethod.getEventErrorMessageName(), errMsg);
@@ -294,24 +294,24 @@ public final class CallService extends MethodOperation {
         if (result.containsKey(ModelService.ERROR_MESSAGE)) {
             errorMessage = ServiceUtil.makeErrorMessage(result, messagePrefixStr, messageSuffixStr, errorPrefixStr, errorSuffixStr);
         } else if (result.containsKey(ModelService.ERROR_MESSAGE_LIST)) {
-            errorMessageList = UtilGenerics.checkList(result.get(ModelService.ERROR_MESSAGE_LIST));
+            errorMessageList = UtilGenerics.cast(result.get(ModelService.ERROR_MESSAGE_LIST));
         }
         if ((UtilValidate.isNotEmpty(errorMessage) || UtilValidate.isNotEmpty(errorMessageList)) && breakOnError) {
             if (methodContext.getMethodType() == MethodContext.EVENT) {
                 if (UtilValidate.isNotEmpty(errorMessage)) {
                     if (Debug.verboseOn()) {
-                        errorMessage += UtilProperties.getMessage(resource, "simpleMethod.error_show_service_name", UtilMisc.toMap("serviceName", serviceName, "methodName", simpleMethod.getMethodName()), locale);
+                        errorMessage += UtilProperties.getMessage(RESOURCE, "simpleMethod.error_show_service_name", UtilMisc.toMap("serviceName", serviceName, "methodName", simpleMethod.getMethodName()), locale);
                     }
                     methodContext.putEnv(simpleMethod.getEventErrorMessageName(), errorMessage);
                 } else {
                     if (Debug.verboseOn()) {
-                        errorMessageList.add(UtilProperties.getMessage(resource, "simpleMethod.error_show_service_name", UtilMisc.toMap("serviceName", serviceName, "methodName", simpleMethod.getMethodName()), locale));
+                        errorMessageList.add(UtilProperties.getMessage(RESOURCE, "simpleMethod.error_show_service_name", UtilMisc.toMap("serviceName", serviceName, "methodName", simpleMethod.getMethodName()), locale));
                     }
                     methodContext.putEnv(simpleMethod.getEventErrorMessageListName(), errorMessageList);
                 }
             } else {
                 ServiceUtil.addErrors(UtilMisc.<String, String> getListFromMap(methodContext.getEnvMap(), this.simpleMethod.getServiceErrorMessageListName()), UtilMisc.<String, String, Object> getMapFromMap(methodContext.getEnvMap(), this.simpleMethod.getServiceErrorMessageMapName()), result);
-                Debug.logError(new Exception(errorMessage), module);
+                Debug.logError(new Exception(errorMessage), MODULE);
             }
         }
         String successMessage = ServiceUtil.makeSuccessMessage(result, messagePrefixStr, messageSuffixStr, successPrefixStr, successSuffixStr);
@@ -395,7 +395,7 @@ public final class CallService extends MethodOperation {
         }
     }
 
-    private final class ResultToField {
+    private static final class ResultToField {
         private final FlexibleMapAccessor<Object> fieldFma;
         private final FlexibleMapAccessor<Object> resultFma;
 
@@ -414,12 +414,12 @@ public final class CallService extends MethodOperation {
         }
     }
 
-    private final class ResultToRequest {
+    private static final class ResultToRequest {
         private final FlexibleMapAccessor<Object> resultFma;
         private final FlexibleServletAccessor<Object> requestFsa;
 
         private ResultToRequest(Element element) {
-            requestFsa = new FlexibleServletAccessor<Object>(element.getAttribute("request-name"), element.getAttribute("result-name"));
+            requestFsa = new FlexibleServletAccessor<>(element.getAttribute("request-name"), element.getAttribute("result-name"));
             resultFma =FlexibleMapAccessor.getInstance(element.getAttribute("result-name"));
         }
 
@@ -428,7 +428,7 @@ public final class CallService extends MethodOperation {
         }
     }
 
-    private final class ResultToResult {
+    private static final class ResultToResult {
         private final FlexibleMapAccessor<Object> resultFma;
         private final FlexibleMapAccessor<Object> serviceResultFma;
 
@@ -447,12 +447,12 @@ public final class CallService extends MethodOperation {
         }
     }
 
-    private final class ResultToSession {
+    private static final class ResultToSession {
         private final FlexibleMapAccessor<Object> resultFma;
         private final FlexibleServletAccessor<Object> requestFsa;
 
         private ResultToSession(Element element) {
-            requestFsa = new FlexibleServletAccessor<Object>(element.getAttribute("session-name"), element.getAttribute("result-name"));
+            requestFsa = new FlexibleServletAccessor<>(element.getAttribute("session-name"), element.getAttribute("result-name"));
             resultFma =FlexibleMapAccessor.getInstance(element.getAttribute("result-name"));
         }
 

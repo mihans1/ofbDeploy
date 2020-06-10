@@ -43,6 +43,7 @@ import javax.mail.search.FlagTerm;
 
 import org.apache.ofbiz.base.container.Container;
 import org.apache.ofbiz.base.container.ContainerConfig;
+import org.apache.ofbiz.base.container.ContainerConfig.Configuration;
 import org.apache.ofbiz.base.container.ContainerException;
 import org.apache.ofbiz.base.start.StartupCommand;
 import org.apache.ofbiz.base.util.Debug;
@@ -73,32 +74,18 @@ public class JavaMailContainer implements Container {
     protected String configFile = null;
     protected Map<Store, Session> stores = null;
     private String name;
-    /**
-     * Initialize the container
-     *
-     * @param ofbizCommands command line arguments
-     * @param configFile Location of master OFBiz configuration file
-     * @throws org.apache.ofbiz.base.container.ContainerException
-     *
-     */
+
     @Override
-    public void init(List<StartupCommand> ofbizCommands, String name, String configFile) throws ContainerException {
+    public void init(List<StartupCommand> ofbizCommands, String name, String configFile) {
         this.name = name;
         this.configFile = configFile;
         this.stores = new LinkedHashMap<>();
         this.pollTimer = Executors.newScheduledThreadPool(1);
     }
 
-    /**
-     * Start the container
-     *
-     * @return true if server started
-     * @throws org.apache.ofbiz.base.container.ContainerException
-     *
-     */
     @Override
     public boolean start() throws ContainerException {
-        ContainerConfig.Configuration cfg = ContainerConfig.getConfiguration(name, configFile);
+        ContainerConfig.Configuration cfg = ContainerConfig.getConfiguration(name);
         String dispatcherName = ContainerConfig.getPropertyValue(cfg, "dispatcher-name", "JavaMailDispatcher");
         String delegatorName = ContainerConfig.getPropertyValue(cfg, "delegator-name", "default");
         this.deleteMail = "true".equals(ContainerConfig.getPropertyValue(cfg, "delete-mail", "false"));
@@ -121,8 +108,7 @@ public class JavaMailContainer implements Container {
         ServiceMcaUtil.readConfig();
 
         // load the listeners
-        List<ContainerConfig.Configuration.Property> configs = cfg.getPropertiesWithValue("store-listener");
-        for (ContainerConfig.Configuration.Property prop: configs) {
+        for (Configuration.Property prop: cfg.getPropertiesWithValue("store-listener")) {
             Session session = this.makeSession(prop);
             Store store = this.getStore(session);
             stores.put(store, session);
@@ -139,14 +125,8 @@ public class JavaMailContainer implements Container {
         return true;
     }
 
-    /**
-     * Stop the container
-     *
-     * @throws org.apache.ofbiz.base.container.ContainerException
-     *
-     */
     @Override
-    public void stop() throws ContainerException {
+    public void stop() {
         // stop the poller
         this.pollTimer.shutdown();
         Debug.logWarning("stop JavaMail poller", module);
@@ -158,12 +138,12 @@ public class JavaMailContainer implements Container {
     }
 
     // java-mail methods
-    protected Session makeSession(ContainerConfig.Configuration.Property client) {
+    protected Session makeSession(Configuration.Property client) {
         Properties props = new Properties();
-        Map<String, ContainerConfig.Configuration.Property> clientProps = client.properties;
+        Map<String, Configuration.Property> clientProps = client.properties();
         if (clientProps != null) {
-            for (ContainerConfig.Configuration.Property p: clientProps.values()) {
-                props.setProperty(p.name.toLowerCase(Locale.getDefault()), p.value);
+            for (Configuration.Property p: clientProps.values()) {
+                props.setProperty(p.name().toLowerCase(Locale.getDefault()), p.value());
             }
         }
         return Session.getInstance(props);
@@ -316,7 +296,9 @@ public class JavaMailContainer implements Container {
                     if (store.isConnected()) {
                         try {
                             store.close();
-                        } catch (Exception e) {}
+                        } catch (Exception e) {
+                            Debug.logError(e, module);
+                        }
                     }
                 }
             }

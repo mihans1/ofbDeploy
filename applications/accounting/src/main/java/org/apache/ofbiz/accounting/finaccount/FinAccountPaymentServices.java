@@ -258,7 +258,7 @@ public class FinAccountPaymentServices {
                 if (finAccountSettings != null && finAccountSettings.getLong("authValidDays") != null) {
                     thruDate = UtilDateTime.getDayEnd(UtilDateTime.nowTimestamp(), finAccountSettings.getLong("authValidDays"));
                 } else {
-                    thruDate = UtilDateTime.getDayEnd(UtilDateTime.nowTimestamp(), Long.valueOf(30)); // default 30 days for an auth
+                    thruDate = UtilDateTime.getDayEnd(UtilDateTime.nowTimestamp(), 30L); // default 30 days for an auth
                 }
 
                 Map<String, Object> tmpResult = dispatcher.runSync("createFinAccountAuth", UtilMisc.<String, Object>toMap("finAccountId", finAccountId,
@@ -1040,7 +1040,7 @@ public class FinAccountPaymentServices {
             throw new GeneralException(e);
         }
         if (payResult == null) {
-            throw new GeneralException("Unknow error in creating financial account transaction!");
+            throw new GeneralException("Unknown error in creating financial account transaction!");
         }
         if (ServiceUtil.isError(payResult)) {
             throw new GeneralException(ServiceUtil.getErrorMessage(payResult));

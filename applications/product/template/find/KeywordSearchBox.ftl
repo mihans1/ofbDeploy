@@ -18,7 +18,7 @@ under the License.
 -->
 <#if (requestAttributes.uiLabelMap)??><#assign uiLabelMap = requestAttributes.uiLabelMap></#if>
 
-<script type="text/javascript">
+<script type="application/javascript">
 //<![CDATA[
      function changeCategory() {
          document.forms["keywordsearchform"].elements["SEARCH_CATEGORY_ID"].value=document.forms["advancedsearchform"].elements["DUMMYCAT"].value;
@@ -62,7 +62,7 @@ under the License.
       <@htmlTemplate.lookupField value="${requestParameters.SEARCH_CATEGORY_ID!}" formName="advancedsearchform" name="SEARCH_CATEGORY_ID" id="searchCategoryId" fieldFormName="LookupProductCategory"/>
     </div>
     <div>
-    <a href="javascript:document.getElementById('advancedSearchForm').submit()" class="buttontext">${uiLabelMap.ProductAdvancedSearch}</a>
+    <input type="submit" value="${uiLabelMap.ProductAdvancedSearch}"/>
     </div>
   </fieldset>
 </form>

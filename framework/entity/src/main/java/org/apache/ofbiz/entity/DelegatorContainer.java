@@ -39,13 +39,13 @@ public class DelegatorContainer implements Container {
     public void init(List<StartupCommand> ofbizCommands, String name, String configFile) throws ContainerException {
         this.name = name;
 
-        ContainerConfig.Configuration cc = ContainerConfig.getConfiguration(name, configFile);
+        ContainerConfig.Configuration cc = ContainerConfig.getConfiguration(name);
 
         preloadedDelegatorNames = StringUtil.split(ContainerConfig.getPropertyValue(cc, "preloaded-delegators", "default"), ", ");
     }
 
     @Override
-    public boolean start() throws ContainerException {
+    public boolean start() {
         if (UtilValidate.isEmpty(preloadedDelegatorNames)) {
             return true;
         }
@@ -58,7 +58,7 @@ public class DelegatorContainer implements Container {
     }
 
     @Override
-    public void stop() throws ContainerException {
+    public void stop() {
     }
 
     @Override

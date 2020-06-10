@@ -61,7 +61,7 @@ public class ProductionRunEvents {
         }
 
         Collection<Map<String, Object>> componentRows = UtilHttp.parseMultiFormData(parameters);
-        Map<GenericPK, Object> componentsLocationMap = new HashMap<GenericPK, Object>();
+        Map<GenericPK, Object> componentsLocationMap = new HashMap<>();
         for (Map<String, Object>componentRow : componentRows) {
             Timestamp fromDate = null;
             try {
@@ -92,7 +92,9 @@ public class ProductionRunEvents {
             inputMap.put("userLogin", userLogin);
             Map<String, Object> result = dispatcher.runSync("productionRunDeclareAndProduce", inputMap);
             if (ServiceUtil.isError(result)) {
-                request.setAttribute("_ERROR_MESSAGE_", ServiceUtil.getErrorMessage(result));
+                String errorMessage = ServiceUtil.getErrorMessage(result);
+                request.setAttribute("_ERROR_MESSAGE_", errorMessage);
+                Debug.logError(errorMessage, module);
                 return "error";
             }
         } catch (GenericServiceException e) {

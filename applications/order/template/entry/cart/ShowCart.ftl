@@ -17,7 +17,7 @@ specific language governing permissions and limitations
 under the License.
 -->
 
-<script language="JavaScript" type="text/javascript">
+<script type="application/javascript">
     function showQohAtp() {
         document.qohAtpForm.productId.value = document.quickaddform.add_product_id.value;
         document.qohAtpForm.submit();
@@ -135,6 +135,16 @@ under the License.
                     </div>
                   </td>
                 </tr>
+                <#if "SALES_ORDER" == shoppingCart.getOrderType()>
+                  <tr>
+                    <td align="right"><div>${uiLabelMap.OrderReserveAfterDate} :</div></td>
+                    <td>
+                      <div>
+                        <@htmlTemplate.renderDateTimeField name="reserveAfterDate" value="${shoppingCart.getDefaultReserveAfterDate()!''}" className="" alert="" title="Format: yyyy-MM-dd HH:mm:ss.SSS" size="25" maxlength="30" id="item4" dateType="date" shortDateInput=false timeDropdownParamName="" defaultDateTimeString="" localizedIconTitle="" timeDropdown="" timeHourName="" classString="" hour1="" hour2="" timeMinutesName="" minutes="" isTwelveHour="" ampmName="" amSelected="" pmSelected="" compositeType="" formName=""/>
+                      </div>
+                    </td>
+                  </tr>
+                </#if>
                 <#if "PURCHASE_ORDER" == shoppingCart.getOrderType()>
                 <tr>
                   <td align="right"><div>${uiLabelMap.OrderOrderItemType} :</div></td>
@@ -162,6 +172,21 @@ under the License.
                     </div>
                   </td>
                 </tr>
+                <#if "SALES_ORDER" == shoppingCart.getOrderType()>
+                  <#assign productStore = Static["org.apache.ofbiz.product.store.ProductStoreWorker"].getProductStore(shoppingCart.getProductStoreId(), delegator) />
+                  <#if productStore?has_content && (productStore.allocateInventory)?has_content && (productStore.allocateInventory).equals('Y')>
+                  <tr>
+                    <td align="right"><div>${uiLabelMap.OrderAutoReserve}</div></td>
+                    <td>
+                      <div>
+                        <label>
+                          <input type="checkbox" name="order_item_attr_autoReserve" value="true" <#if autoReserve??>checked="checked"</#if> />
+                        </label>
+                      </div>
+                    </td>
+                  </tr>
+                  </#if>
+                </#if>
                 <tr>
                   <td></td>
                   <td><input type="submit" class="smallSubmit" value="${uiLabelMap.OrderAddToOrder}"/></td>
@@ -194,7 +219,7 @@ under the License.
     </div>
 </div>
 
-<script language="JavaScript" type="text/javascript">
+<script type="application/javascript">
   document.quickaddform.add_product_id.focus();
 </script>
 

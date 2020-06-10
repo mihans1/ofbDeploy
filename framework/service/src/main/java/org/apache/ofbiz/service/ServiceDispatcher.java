@@ -18,6 +18,7 @@
  *******************************************************************************/
 package org.apache.ofbiz.service;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -63,13 +64,13 @@ import com.googlecode.concurrentlinkedhashmap.ConcurrentLinkedHashMap;
  * The global service dispatcher. This is the "engine" part of the
  * Service Engine.
  */
-public class ServiceDispatcher {
+public final class ServiceDispatcher {
 
     public static final String module = ServiceDispatcher.class.getName();
     public static final int lruLogSize = 200;
     public static final int LOCK_RETRIES = 3;
 
-    protected static final Map<RunningService, ServiceDispatcher> runLog = new ConcurrentLinkedHashMap.Builder<RunningService, ServiceDispatcher>().maximumWeightedCapacity(lruLogSize).build();
+    private static final Map<RunningService, ServiceDispatcher> runLog = new ConcurrentLinkedHashMap.Builder<RunningService, ServiceDispatcher>().maximumWeightedCapacity(lruLogSize).build();
     private static ConcurrentHashMap<String, ServiceDispatcher> dispatchers = new ConcurrentHashMap<>();
     // FIXME: These fields are not thread-safe. They are modified by EntityDataLoadContainer.
     // We need a better design - like have this class query EntityDataLoadContainer if data is being loaded.
@@ -77,15 +78,15 @@ public class ServiceDispatcher {
     private static boolean enableJMS = UtilProperties.getPropertyAsBoolean("service", "enableJMS", true);
     private static boolean enableSvcs = true;
 
-    protected Delegator delegator = null;
-    protected GenericEngineFactory factory = null;
-    protected Security security = null;
-    protected Map<String, DispatchContext> localContext = new HashMap<>();
-    protected Map<String, List<GenericServiceCallback>> callbacks = new HashMap<>();
-    protected JobManager jm = null;
-    protected JmsListenerFactory jlf = null;
+    private Delegator delegator = null;
+    private GenericEngineFactory factory = null;
+    private Security security = null;
+    private Map<String, DispatchContext> localContext = new HashMap<>();
+    private Map<String, List<GenericServiceCallback>> callbacks = new HashMap<>();
+    private JobManager jm = null;
+    private JmsListenerFactory jlf = null;
 
-    protected ServiceDispatcher(Delegator delegator, boolean enableJM, boolean enableJMS) {
+    private ServiceDispatcher(Delegator delegator, boolean enableJM, boolean enableJMS) {
         factory = new GenericEngineFactory(this);
         ServiceGroupReader.readConfig();
         ServiceEcaUtil.readConfig();
@@ -131,7 +132,7 @@ public class ServiceDispatcher {
         }
     }
 
-    protected ServiceDispatcher(Delegator delegator) {
+    private ServiceDispatcher(Delegator delegator) {
         this(delegator, enableJM, enableJMS);
     }
 
@@ -201,17 +202,28 @@ public class ServiceDispatcher {
         }
     }
 
+    /**
+     * Registers a callback by associating it to a service.
+     *
+     * @param serviceName the name of the service to associate the callback with
+     * @param cb the callback to register
+     */
     public synchronized void registerCallback(String serviceName, GenericServiceCallback cb) {
-        List<GenericServiceCallback> callBackList = callbacks.get(serviceName);
-        if (callBackList == null) {
-            callBackList = new LinkedList<>();
-        }
-        callBackList.add(cb);
-        callbacks.put(serviceName, callBackList);
+        callbacks.computeIfAbsent(serviceName, x -> new LinkedList<>()).add(cb);
     }
 
+    /**
+     * Provides a list of the enabled callbacks corresponding to a service.
+     *
+     * As a side effect, disabled callbacks are removed.
+     *
+     * @param serviceName the name of service whose callbacks should be called
+     * @return a list of callbacks corresponding to {@code serviceName}
+     */
     public List<GenericServiceCallback> getCallbacks(String serviceName) {
-        return callbacks.get(serviceName);
+        List<GenericServiceCallback> res = callbacks.getOrDefault(serviceName, Collections.emptyList());
+        res.removeIf(gsc -> !gsc.isEnabled());
+        return res;
     }
 
     /**
@@ -282,7 +294,7 @@ public class ServiceDispatcher {
                 context.putAll(params);
             }
             // check the locale
-            Locale locale = this.checkLocale(context);
+            Locale locale = checkLocale(context);
 
             // set up the running service log
             rs = this.logService(localName, modelService, GenericEngine.SYNC_MODE);
@@ -380,6 +392,8 @@ public class ServiceDispatcher {
                     // validate the context
                     if (modelService.validate && !isError && !isFailure) {
                         try {
+                            // FIXME without this line all simple test failed
+                            context = ctx.makeValidContext(modelService.name, ModelService.IN_PARAM, context);
                             modelService.validate(context, ModelService.IN_PARAM, locale);
                         } catch (ServiceValidationException e) {
                             Debug.logError(e, "Incoming context (in runSync : " + modelService.name + ") does not match expected requirements", module);
@@ -490,6 +504,7 @@ public class ServiceDispatcher {
                         ServiceEcaUtil.evalRules(modelService.name, eventMap, "out-validate", ctx, ecaContext, result, isError, isFailure);
                     }
                     try {
+                        result = ctx.makeValidContext(modelService.name, ModelService.OUT_PARAM, result);
                         modelService.validate(result, ModelService.OUT_PARAM, locale);
                     } catch (ServiceValidationException e) {
                         rs.setEndStamp();
@@ -577,11 +592,7 @@ public class ServiceDispatcher {
         } finally {
             if (lock != null) {
                 // release the semaphore lock
-                try {
-                    lock.release();
-                } catch (GenericServiceException e) {
-                    Debug.logWarning(e, "Exception thrown while unlocking semaphore: ", module);
-                }
+                lock.release();
             }
 
             // resume the parent transaction
@@ -659,7 +670,7 @@ public class ServiceDispatcher {
         this.logService(localName, service, GenericEngine.ASYNC_MODE);
 
         // check the locale
-        Locale locale = this.checkLocale(context);
+        Locale locale = checkLocale(context);
 
         // setup the engine and context
         DispatchContext ctx = localContext.get(localName);
@@ -868,7 +879,7 @@ public class ServiceDispatcher {
         return localContext.containsKey(name);
     }
 
-    protected void shutdown() throws GenericServiceException {
+    private void shutdown() throws GenericServiceException {
         Debug.logImportant("Shutting down the service engine...", module);
         if (jlf != null) {
             // shutdown JMS listeners
@@ -879,6 +890,7 @@ public class ServiceDispatcher {
     // checks if parameters were passed for authentication
     private Map<String, Object> checkAuth(String localName, Map<String, Object> context, ModelService origService) throws ServiceAuthException, GenericServiceException {
         String service = null;
+        Locale locale = (Locale) context.get("locale");
         try {
             service = ServiceConfigUtil.getServiceEngine().getAuthorization().getServiceName();
         } catch (GenericConfigException e) {
@@ -899,11 +911,10 @@ public class ServiceDispatcher {
 
             if (UtilValidate.isNotEmpty(context.get("login.password"))) {
                 String password = (String) context.get("login.password");
-
-                context.put("userLogin", getLoginObject(service, localName, username, password, (Locale) context.get("locale")));
+                context.put("userLogin", getLoginObject(service, localName, username, password, null, locale));
                 context.remove("login.password");
             } else {
-                context.put("userLogin", getLoginObject(service, localName, username, null, (Locale) context.get("locale")));
+                context.put("userLogin", getLoginObject(service, localName, username, null, (String) context.get("login.token"), locale));
             }
             context.remove("login.username");
         } else {
@@ -937,36 +948,26 @@ public class ServiceDispatcher {
 
         // evaluate permissions for the service or throw exception if fail.
         DispatchContext dctx = this.getLocalContext(localName);
-        if (UtilValidate.isNotEmpty(origService.permissionServiceName)) {
-            Map<String, Object> permResp = origService.evalPermission(dctx, context);
-            Boolean hasPermission = (Boolean) permResp.get("hasPermission");
-            if (hasPermission == null) {
-                throw new ServiceAuthException("ERROR: the permission-service [" + origService.permissionServiceName + "] did not return a result. Not running the service [" + origService.name + "]");
-            }
-            if (hasPermission.booleanValue()) {
-                context.putAll(permResp);
-            } else {
-                String message = (String) permResp.get("failMessage");
-                if (UtilValidate.isEmpty(message)) {
-                    message = ServiceUtil.getErrorMessage(permResp);
-                }
-                if (UtilValidate.isEmpty(message)) {
-                    message = "You do not have permission to invoke the service [" + origService.name + "]";
-                }
-                throw new ServiceAuthException(message);
+        Map<String, Object> permResp = null;
+        if (origService.modelPermission != null) {
+            permResp = origService.evalPermission(dctx, context);
+            if (ServiceUtil.isSuccess(permResp)) {
+                //Ok the service have authorization to run, complete the context with the permission response map
+                context.putAll(origService.makeValid(permResp, ModelService.IN_PARAM));
             }
         } else {
-            if (!origService.evalPermissions(dctx, context)) {
-                throw new ServiceAuthException("You do not have permission to invoke the service [" + origService.name + "]");
-            }
+            permResp = origService.evalPermissions(dctx, context);
         }
-
+        if (ServiceUtil.isFailure(permResp) || ServiceUtil.isError(permResp)) {
+            throw new ServiceAuthException(UtilProperties.getMessage("ServiceErrorUiLabels", "ServicePermissionError",
+                    UtilMisc.toMap("serviceName", origService.name, "failMessage", ServiceUtil.getErrorMessage(permResp)), locale));
+        }
         return origService.makeValid(context, ModelService.IN_PARAM);
     }
 
     // gets a value object from name/password pair
-    private GenericValue getLoginObject(String service, String localName, String username, String password, Locale locale) throws GenericServiceException {
-        Map<String, Object> context = UtilMisc.toMap("login.username", username, "login.password", password, "isServiceAuth", true, "locale", locale);
+    private GenericValue getLoginObject(String service, String localName, String username, String password, String jwtToken, Locale locale) throws GenericServiceException {
+        Map<String, Object> context = UtilMisc.toMap("login.username", username, "login.password", password, "login.token", jwtToken, "isServiceAuth", true, "locale", locale);
 
         if (Debug.verboseOn()) Debug.logVerbose("[ServiceDispathcer.authenticate] : Invoking UserLogin Service", module);
 
@@ -983,7 +984,7 @@ public class ServiceDispatcher {
     }
 
     // checks the locale object in the context
-    private Locale checkLocale(Map<String, Object> context) {
+    private static Locale checkLocale(Map<String, Object> context) {
         Object locale = context.get("locale");
         Locale newLocale = null;
 

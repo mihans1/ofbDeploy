@@ -57,16 +57,6 @@ public class GroovyUtil {
             groovyClassLoader = new GroovyClassLoader(GroovyUtil.class.getClassLoader(), conf);
         }
         groovyScriptClassLoader = groovyClassLoader;
-        /*
-         *  With the implementation of @BaseScript annotations (introduced with Groovy 2.3.0) something was broken
-         *  in the CompilerConfiguration.setScriptBaseClass method and an error is thrown when our scripts are executed;
-         *  the workaround is to execute at startup a script containing the @BaseScript annotation.
-         */
-        try {
-            GroovyUtil.runScriptAtLocation("ofbizhome://framework/base/config/GroovyInit.groovy", null, null);
-        } catch (Exception e) {
-            Debug.logWarning("The following error occurred during the initialization of Groovy: " + e.getMessage(), module);
-        }
     }
 
     /**
@@ -155,11 +145,7 @@ public class GroovyUtil {
                 if (scriptUrl == null) {
                     throw new GeneralException("Script not found at location [" + location + "]");
                 }
-                if (groovyScriptClassLoader != null) {
-                    scriptClass = parseClass(scriptUrl.openStream(), location, groovyScriptClassLoader);
-                } else {
-                    scriptClass = parseClass(scriptUrl.openStream(), location);
-                }
+                scriptClass = parseClass(scriptUrl.openStream(), location);
                 Class<?> scriptClassCached = parsedScripts.putIfAbsent(location, scriptClass);
                 if (scriptClassCached == null) { // putIfAbsent returns null if the class is added to the cache
                     if (Debug.verboseOn()) {
@@ -178,21 +164,27 @@ public class GroovyUtil {
         }
     }
 
-    public static Class<?> loadClass(String path) throws ClassNotFoundException, IOException {
-        GroovyClassLoader groovyClassLoader = new GroovyClassLoader();
-        Class<?> classLoader = groovyClassLoader.loadClass(path);
-        groovyClassLoader.close();
-        return classLoader;
-    }
-
-    public static Class<?> parseClass(InputStream in, String location) throws IOException {
-        GroovyClassLoader groovyClassLoader = new GroovyClassLoader();
-        Class<?> classLoader = groovyClassLoader.parseClass(UtilIO.readString(in), location);
-        groovyClassLoader.close();
-        return classLoader;
-    }
-    public static Class<?> parseClass(InputStream in, String location, GroovyClassLoader groovyClassLoader) throws IOException {
-        return groovyClassLoader.parseClass(UtilIO.readString(in), location);
+    /**
+     * Parses a Groovy class from an input stream.
+     * <p>
+     * This method is useful for parsing a Groovy script referenced by
+     * a flexible location like {@code component://myComponent/script.groovy}.
+     *
+     * @param in  the input stream containing the class source code
+     * @param location  the file name to associate with this class
+     * @return the corresponding class object
+     * @throws IOException when parsing fails
+     */
+    private static Class<?> parseClass(InputStream in, String location) throws IOException {
+        String classText = UtilIO.readString(in);
+        if (groovyScriptClassLoader != null) {
+            return groovyScriptClassLoader.parseClass(classText, location);
+        } else {
+            GroovyClassLoader classLoader = new GroovyClassLoader();
+            Class<?> klass = classLoader.parseClass(classText, location);
+            classLoader.close();
+            return klass;
+        }
     }
 
     public static Class<?> parseClass(String text) throws IOException {
@@ -202,15 +194,25 @@ public class GroovyUtil {
         return classLoader;
     }
 
-    public static Object runScriptAtLocation(String location, String methodName, Map<String, Object> context) throws GeneralException {
+    /**
+     * Runs a Groovy script with a context argument.
+     * <p>
+     * A Groovy script can be either a stand-alone script or a method embedded in a script.
+     *
+     * @param location  the location of the script file
+     * @param methodName  the name of the method inside the script to be run,
+     *                    if it is {@code null} consider the script as stand-alone
+     * @param context  the context of execution which is in the case
+     *                 of a method inside a script passed as an argument
+     * @return the invocation result
+     * @throws GeneralException when the script is not properly located
+     */
+    public static Object runScriptAtLocation(String location, String methodName, Map<String, Object> context)
+            throws GeneralException {
         Script script = InvokerHelper.createScript(getScriptClassFromLocation(location), getBinding(context));
-        Object result = null;
-        if (UtilValidate.isEmpty(methodName)) {
-            result = script.run();
-        } else {
-            result = script.invokeMethod(methodName, new Object[] { context });
-        }
-        return result;
+        return UtilValidate.isEmpty(methodName)
+                ? script.run()
+                : script.invokeMethod(methodName, new Object[] { context });
     }
 
     private GroovyUtil() {}

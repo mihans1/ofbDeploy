@@ -40,7 +40,7 @@ public final class FlexibleLocation {
     private static final Map<String, LocationResolver> locationResolvers;
 
     static {
-        Map<String, LocationResolver> resolverMap = new HashMap<String, LocationResolver>(8);
+        Map<String, LocationResolver> resolverMap = new HashMap<>(8);
         LocationResolver standardUrlResolver = new StandardUrlLocationResolver();
         resolverMap.put("http", standardUrlResolver);
         resolverMap.put("https", standardUrlResolver);
@@ -62,7 +62,7 @@ public final class FlexibleLocation {
                     String locationType = (String) entry.getKey();
                     String locationResolverName = (String) entry.getValue();
                     Class<?> lClass = classLoader.loadClass(locationResolverName);
-                    resolverMap.put(locationType, (LocationResolver) lClass.newInstance());
+                    resolverMap.put(locationType, (LocationResolver) lClass.getDeclaredConstructor().newInstance());
                 }
             }
         } catch (Throwable e) {

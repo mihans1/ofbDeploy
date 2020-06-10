@@ -33,7 +33,6 @@ import org.apache.ofbiz.base.util.UtilCodec;
 import org.apache.ofbiz.base.util.UtilHttp;
 import org.apache.ofbiz.base.util.UtilValidate;
 import org.apache.ofbiz.base.util.collections.MapStack;
-import org.apache.ofbiz.entity.Delegator;
 import org.apache.ofbiz.webapp.view.AbstractViewHandler;
 import org.apache.ofbiz.webapp.view.ViewHandlerException;
 import org.apache.ofbiz.widget.model.ModelTheme;
@@ -54,6 +53,7 @@ public class MacroScreenViewHandler extends AbstractViewHandler {
 
     protected ServletContext servletContext = null;
 
+    @Override
     public void init(ServletContext context) throws ViewHandlerException {
         this.servletContext = context;
     }
@@ -83,12 +83,12 @@ public class MacroScreenViewHandler extends AbstractViewHandler {
         return screenStringRenderer;
     }
 
+    @Override
     public void render(String name, String page, String info, String contentType, String encoding, HttpServletRequest request, HttpServletResponse response) throws ViewHandlerException {
         try {
             Writer writer = response.getWriter();
             VisualTheme visualTheme = UtilHttp.getVisualTheme(request);
             ModelTheme modelTheme = visualTheme.getModelTheme();
-            Delegator delegator = (Delegator) request.getAttribute("delegator");
             // compress output if configured to do so
             if (UtilValidate.isEmpty(encoding)) {
                 encoding = modelTheme.getEncoding(getName());

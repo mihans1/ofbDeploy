@@ -19,7 +19,7 @@ under the License.
 
 
 <!-- TODO : Need formatting -->
-<script type="text/javascript">
+<script type="application/javascript">
 //<![CDATA[
 function submitForm(form, mode, value) {
     if ("DN" == mode) {
@@ -56,31 +56,6 @@ function submitForm(form, mode, value) {
         form.submit();
 }
 //]]>
-$(document).ready(function(){
-var issuerId = "";
-    if ($('#checkOutPaymentId_IDEAL').attr('checked') == true) {
-        $('#issuers').show();
-        issuerId = $('#issuer').val();
-        $('#issuerId').val(issuerId);
-    } else {
-        $('#issuers').hide();
-        $('#issuerId').val('');
-    }
-    $('input:radio').click(function(){
-        if ($(this).val() == "EXT_IDEAL") {
-            $('#issuers').show();
-            issuerId = $('#issuer').val();
-            $('#issuerId').val(issuerId);
-        } else {
-            $('#issuers').hide();
-            $('#issuerId').val('');
-        }
-    });
-    $('#issuer').change(function(){
-        issuerId = $(this).val();
-        $('#issuerId').val(issuerId);
-    });
-});
 </script>
 
  

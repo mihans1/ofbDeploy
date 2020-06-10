@@ -56,6 +56,7 @@ public class JsLanguageFileMappingCreator {
         Map<String, String> dateJsLocaleFile = new LinkedHashMap<>();
         Map<String, String> validationLocaleFile = new LinkedHashMap<>();
         Map<String, String> dateTimePickerLocaleFile = new LinkedHashMap<>();
+        Map<String, String> select2LocaleFile = new LinkedHashMap<>();
 
         // setup some variables to locate the js files
         String componentRoot = "component://common-theme/webapp";
@@ -63,6 +64,7 @@ public class JsLanguageFileMappingCreator {
         String dateJsLocaleRelPath = "/common/js/jquery/plugins/datejs/";
         String validateRelPath = "/common/js/jquery/plugins/validate/localization/";
         String dateTimePickerJsLocaleRelPath = "/common/js/jquery/plugins/datetimepicker/i18n/";
+        String select2LocaleRelPath = "/common/js/jquery/plugins/select2/js/i18n/";
         String jsFilePostFix = ".js";
         String dateJsLocalePrefix = "date-";
         String validateLocalePrefix = "messages_";
@@ -180,16 +182,38 @@ public class JsLanguageFileMappingCreator {
                 }
             }
             dateTimePickerLocaleFile.put(displayCountry, fileUrl);
+
+            /*
+             * Try to open the Select 2 language file
+             */
+            fileName = componentRoot + select2LocaleRelPath + strippedLocale + jsFilePostFix;
+            file = FileUtil.getFile(fileName);
+
+            if (file.exists()) {
+                fileUrl = select2LocaleRelPath + strippedLocale + jsFilePostFix;
+            } else {
+                // Try to guess a language
+                fileName = componentRoot + select2LocaleRelPath + modifiedDisplayCountry + jsFilePostFix;
+                file = FileUtil.getFile(fileName);
+                if (file.exists()) {
+                    fileUrl = select2LocaleRelPath + modifiedDisplayCountry + jsFilePostFix;
+                } else {
+                    // use default language en as fallback
+                    fileUrl = select2LocaleRelPath + defaultLocaleJquery + jsFilePostFix;
+                }
+            }
+            select2LocaleFile.put(displayCountry, fileUrl);
         }
 
         // check the template file
-        String template = "themes/common/template/JsLanguageFilesMapping.ftl";
+        String template = "themes/common-theme/template/JsLanguageFilesMapping.ftl";
         String output = "framework/common/src/main/java/org/apache/ofbiz/common/JsLanguageFilesMapping.java";
         Map<String, Object> mapWrapper = new HashMap<>();
         mapWrapper.put("datejs", dateJsLocaleFile);
         mapWrapper.put("jquery", jQueryLocaleFile);
         mapWrapper.put("validation", validationLocaleFile);
         mapWrapper.put("dateTime", dateTimePickerLocaleFile);
+        mapWrapper.put("select2", select2LocaleFile);
 
         // some magic to create a new java file: render it as FTL
         Writer writer = new StringWriter();

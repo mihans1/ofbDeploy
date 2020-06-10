@@ -33,7 +33,7 @@ under the License.
                                 <if-has-permission permission="WEBTOOLS" action="_VIEW"/>
                             </condition>
                             <widgets>
-                                <include-menu location="component://webtools/widget/Menus.xml" name="LoggingTabBar"/>
+                                <include-menu name="LoggingTabBar" location="component://webtools/widget/Menus.xml"/>
                             </widgets>
                         </section>
                     </decorator-section>
@@ -99,7 +99,7 @@ under the License.
                  <set field="titleProperty" value="PageTitleLogView"/>
                  <set field="tabButtonItem" value="logView"/>
                  <property-to-field field="parameters.logFileName" resource="debug" property="log4j.appender.css.defaultFile" default="ofbiz.log" no-locale="true"/>
-                 <script location="component://webtools/groovyScripts/log/FetchLogs.groovy"/>
+                 <script location="component://webtools/src/main/groovy/org/apache/ofbiz/webtools/log/FetchLogs.groovy"/>
              </actions>
              <widgets>
                  <decorator-screen name="log-decorator">
@@ -130,7 +130,7 @@ under the License.
              <actions>
                  <set field="titleProperty" value="PageTitleFetchLogs"/>
                  <set field="tabButtonItem" value="fetchLogs"/>
-                 <script location="component://webtools/groovyScripts/log/FetchLogs.groovy"/>
+                 <script location="component://webtools/src/main/groovy/org/apache/ofbiz/webtools/log/FetchLogs.groovy"/>
              </actions>
              <widgets>
                  <decorator-screen name="log-decorator">

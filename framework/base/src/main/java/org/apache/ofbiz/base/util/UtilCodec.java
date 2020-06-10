@@ -44,6 +44,7 @@ import org.owasp.html.HtmlPolicyBuilder;
 import org.owasp.html.PolicyFactory;
 import org.owasp.html.Sanitizers;
 
+@SuppressWarnings("rawtypes")
 public class UtilCodec {
     private static final String module = UtilCodec.class.getName();
     private static final HtmlEncoder htmlEncoder = new HtmlEncoder();
@@ -88,6 +89,7 @@ public class UtilCodec {
         /**
          * @deprecated Use {@link #sanitize(String,String)} instead
          */
+        @Deprecated
         public String sanitize(String outString); // Only really useful with HTML, else it simply calls encode() method
         public String sanitize(String outString, String contentTypeId); // Only really useful with HTML, else it simply calls encode() method
     }
@@ -99,6 +101,7 @@ public class UtilCodec {
     public static class HtmlEncoder implements SimpleEncoder {
         private static final char[] IMMUNE_HTML = {',', '.', '-', '_', ' ', ':'};
         private HTMLEntityCodec htmlCodec = new HTMLEntityCodec();
+        @Override
         public String encode(String original) {
             if (original == null) {
                 return null;
@@ -108,6 +111,8 @@ public class UtilCodec {
         /**
          * @deprecated Use {@link #sanitize(String,String)} instead
          */
+        @Override
+        @Deprecated
         public String sanitize(String original) {
             return sanitize(original, null);
         }
@@ -119,12 +124,13 @@ public class UtilCodec {
          * "sanitizer.permissive.policy" and "sanitizer.custom.permissive.policy.class". 
          * The custom policy has to implement
          * {@link org.apache.ofbiz.base.html.SanitizerCustomPolicy}.
-         * 
+         *
          * @param original
          * @param contentTypeId
          * @return sanitized HTML-Code if enabled, original HTML-Code when disabled
          * @see org.apache.ofbiz.base.html.CustomPermissivePolicy
          */
+        @Override
         public String sanitize(String original, String contentTypeId) {
             if (original == null) {
                 return null;
@@ -144,7 +150,7 @@ public class UtilCodec {
                     try {
                         Class<?> customPolicyClass = Class.forName(UtilProperties.getPropertyValue("owasp",
                                 "sanitizer.custom.permissive.policy.class"));
-                        Object obj = customPolicyClass.newInstance();
+                        Object obj = customPolicyClass.getConstructor().newInstance();
                         if (SanitizerCustomPolicy.class.isAssignableFrom(customPolicyClass)) {
                             Method meth = customPolicyClass.getMethod("getSanitizerPolicy");
                             policy = (PolicyFactory) meth.invoke(obj);
@@ -171,8 +177,10 @@ public class UtilCodec {
 
         // Given as an example based on rendering cmssite as it was before using the sanitizer.
         // To use the PERMISSIVE_POLICY set sanitizer.permissive.policy to true.
-        // Note that I was unable to render </html> and </body>. I guess because <html> and <body> are not sanitized in 1st place (else the sanitizer makes some damages I found)
-        // You might even want to adapt the PERMISSIVE_POLICY to your needs... Be sure to check https://www.owasp.org/index.php/XSS_Filter_Evasion_Cheat_Sheet before...
+        // Note that I was unable to render </html> and </body>. I guess because <html> and <body> 
+        // are not sanitized in 1st place (else the sanitizer makes some damages I found)
+        // You might even want to adapt the PERMISSIVE_POLICY to your needs... 
+        // Be sure to check https://www.owasp.org/index.php/XSS_Filter_Evasion_Cheat_Sheet before...
         // And https://github.com/OWASP/java-html-sanitizer/blob/master/docs/getting_started.md for examples.
         // If you want another example: https://android.googlesource.com/platform/packages/apps/UnifiedEmail/+/ec0fa48/src/com/android/mail/utils/HtmlSanitizer.java
         public static final PolicyFactory PERMISSIVE_POLICY = new HtmlPolicyBuilder()
@@ -185,7 +193,8 @@ public class UtilCodec {
 
         // This is the PolicyFactory used for the Birt Report Builder usage feature. ("FLEXIBLE_REPORT" contentTypeId)
         // It allows to use the OOTB Birt Report Builder example.
-        // You might need to enhance it for your needs (when using a new REPORT_MASTER) but normally you should not. See PERMISSIVE_POLICY above for documentation and examples
+        // You might need to enhance it for your needs (when using a new REPORT_MASTER) but normally you should not. 
+        // See PERMISSIVE_POLICY above for documentation and examples
         public static final PolicyFactory BIRT_FLEXIBLE_REPORT_POLICY = new HtmlPolicyBuilder()
                 .allowWithoutAttributes("html", "body")
                 .allowElements("form", "div", "span", "table", "tr", "td", "input", "textarea", "label", "select", "option")
@@ -195,13 +204,15 @@ public class UtilCodec {
                 .allowAttributes("cols", "rows").onElements("textarea")
                 .allowAttributes("class").onElements("td")
                 .allowAttributes("method").onElements("form")
-                .allowAttributes("accept", "action", "accept-charset", "autocomplete", "enctype", "method", "name", "novalidate", "target").onElements("form")
+                .allowAttributes("accept", "action", "accept-charset", "autocomplete", "enctype", "method", 
+                        "name", "novalidate", "target").onElements("form")
                 .toFactory();
     }
 
     public static class XmlEncoder implements SimpleEncoder {
         private static final char[] IMMUNE_XML = {',', '.', '-', '_', ' '};
         private XMLEntityCodec xmlCodec = new XMLEntityCodec();
+        @Override
         public String encode(String original) {
             if (original == null) {
                 return null;
@@ -211,15 +222,19 @@ public class UtilCodec {
         /**
          * @deprecated Use {@link #sanitize(String,String)} instead
          */
+        @Override
+        @Deprecated
         public String sanitize(String original) {
             return sanitize(original, null);
         }
+        @Override
         public String sanitize(String original, String contentTypeId) {
             return encode(original);
         }
     }
 
     public static class UrlCodec implements SimpleEncoder, SimpleDecoder {
+        @Override
         public String encode(String original) {
             try {
                 return URLEncoder.encode(original, "UTF-8");
@@ -231,13 +246,17 @@ public class UtilCodec {
         /**
          * @deprecated Use {@link #sanitize(String,String)} instead
          */
+        @Override
+        @Deprecated
         public String sanitize(String original) {
             return sanitize(original, null);
         }
+        @Override
         public String sanitize(String original, String contentTypeId) {
             return encode(original);
         }
 
+        @Override
         public String decode(String original) {
             try {
                 canonicalize(original);
@@ -250,6 +269,7 @@ public class UtilCodec {
     }
 
     public static class StringEncoder implements SimpleEncoder {
+        @Override
         public String encode(String original) {
             if (original != null) {
                 original = original.replace("\"", "\\\"");
@@ -259,9 +279,12 @@ public class UtilCodec {
         /**
          * @deprecated Use {@link #sanitize(String,String)} instead
          */
+        @Override
+        @Deprecated
         public String sanitize(String original) {
             return sanitize(original, null);
         }
+        @Override
         public String sanitize(String original, String contentTypeId) {
             return encode(original);
         }
@@ -354,6 +377,8 @@ public class UtilCodec {
      * Uses a black-list approach for necessary characters for HTML.
      * Does not allow various characters (after canonicalization), including
      * "&lt;", "&gt;", "&amp;" and "%" (if not followed by a space).
+     * 
+     * Also does not allow js events as in OFBIZ-10054
      *
      * @param valueName field name checked
      * @param value value checked
@@ -447,7 +472,7 @@ public class UtilCodec {
             customPolicyClass = Class.forName(UtilProperties.getPropertyValue("owasp",
                     "sanitizer.custom.safe.policy.class"));
             }
-            Object obj = customPolicyClass.newInstance();
+            Object obj = customPolicyClass.getConstructor().newInstance();
             if (SanitizerCustomPolicy.class.isAssignableFrom(customPolicyClass)) {
                 Method meth = customPolicyClass.getMethod("getSanitizerPolicy");
                 policy = (PolicyFactory) meth.invoke(obj);
@@ -503,10 +528,15 @@ public class UtilCodec {
             this.encoder = null;
         }
 
+        @Override
         public int size() { return this.internalMap.size(); }
+        @Override
         public boolean isEmpty() { return this.internalMap.isEmpty(); }
+        @Override
         public boolean containsKey(Object key) { return this.internalMap.containsKey(key); }
+        @Override
         public boolean containsValue(Object value) { return this.internalMap.containsValue(value); }
+        @Override
         public Object get(Object key) {
             Object theObject = this.internalMap.get(key);
             if (theObject instanceof String) {
@@ -515,16 +545,23 @@ public class UtilCodec {
                 }
                 return UtilCodec.getEncoder("html").encode((String) theObject);
             } else if (theObject instanceof Map<?, ?>) {
-                return HtmlEncodingMapWrapper.getHtmlEncodingMapWrapper(UtilGenerics.<K, Object>checkMap(theObject), this.encoder);
+                return HtmlEncodingMapWrapper.getHtmlEncodingMapWrapper(UtilGenerics.cast(theObject), this.encoder);
             }
             return theObject;
         }
+        @Override
         public Object put(K key, Object value) { return this.internalMap.put(key, value); }
+        @Override
         public Object remove(Object key) { return this.internalMap.remove(key); }
+        @Override
         public void putAll(Map<? extends K, ? extends Object> arg0) { this.internalMap.putAll(arg0); }
+        @Override
         public void clear() { this.internalMap.clear(); }
+        @Override
         public Set<K> keySet() { return this.internalMap.keySet(); }
+        @Override
         public Collection<Object> values() { return this.internalMap.values(); }
+        @Override
         public Set<Map.Entry<K, Object>> entrySet() { return this.internalMap.entrySet(); }
         @Override
         public String toString() { return this.internalMap.toString(); }

@@ -83,6 +83,7 @@ public class PartyContentWrapper implements ContentWrapper {
         return getPartyContentAsText(party, contentTypeId, locale, mimeTypeId, party.getDelegator(), dispatcher, useCache, encoderType);
     }
 
+    @Override
     public StringUtil.StringWrapper get(String contentTypeId, String encoderType) {
         return StringUtil.makeStringWrapper(get(contentTypeId, true, encoderType));
     }
@@ -214,7 +215,7 @@ public class PartyContentWrapper implements ContentWrapper {
         }
         if (partyContent != null) {
             // when rendering the product content, always include the Product and ProductContent records that this comes from
-            Map<String, Object> inContext = new HashMap<String, Object>();
+            Map<String, Object> inContext = new HashMap<>();
             inContext.put("party", party);
             inContext.put("partyContent", partyContent);
             ContentWorker.renderContentAsText(dispatcher, partyContent.getString("contentId"), outWriter, inContext, locale, mimeTypeId, null, null, cache);
@@ -264,11 +265,11 @@ public class PartyContentWrapper implements ContentWrapper {
                 .filterByDate()
                 .queryList();
 
-        List<String> contentList = new LinkedList<String>();
+        List<String> contentList = new LinkedList<>();
         if (partyContentList != null) {
             for (GenericValue partyContent: partyContentList) {
                 StringWriter outWriter = new StringWriter();
-                Map<String, Object> inContext = new HashMap<String, Object>();
+                Map<String, Object> inContext = new HashMap<>();
                 inContext.put("party", party);
                 inContext.put("partyContent", partyContent);
                 ContentWorker.renderContentAsText(dispatcher, partyContent.getString("contentId"), outWriter, inContext, locale, mimeTypeId, null, null, false);

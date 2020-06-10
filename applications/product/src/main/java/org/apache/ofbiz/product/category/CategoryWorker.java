@@ -30,7 +30,6 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpSession;
 
 import org.apache.ofbiz.base.util.Debug;
-import org.apache.ofbiz.base.util.UtilDateTime;
 import org.apache.ofbiz.base.util.UtilFormatOut;
 import org.apache.ofbiz.base.util.UtilGenerics;
 import org.apache.ofbiz.base.util.UtilHttp;
@@ -41,7 +40,6 @@ import org.apache.ofbiz.entity.Delegator;
 import org.apache.ofbiz.entity.GenericEntityException;
 import org.apache.ofbiz.entity.GenericValue;
 import org.apache.ofbiz.entity.condition.EntityCondition;
-import org.apache.ofbiz.entity.condition.EntityOperator;
 import org.apache.ofbiz.entity.util.EntityQuery;
 import org.apache.ofbiz.entity.util.EntityUtil;
 import org.apache.ofbiz.product.product.ProductWorker;
@@ -86,7 +84,7 @@ public final class CategoryWorker {
 
     public static void getCategoriesWithNoParent(ServletRequest request, String attributeName) {
         Delegator delegator = (Delegator) request.getAttribute("delegator");
-        Collection<GenericValue> results = new LinkedList<GenericValue>();
+        Collection<GenericValue> results = new LinkedList<>();
 
         try {
             Collection<GenericValue> allCategories = EntityQuery.use(delegator).from("ProductCategory").queryList();
@@ -140,7 +138,7 @@ public final class CategoryWorker {
     }
 
     public static List<GenericValue> getRelatedCategoriesRet(Delegator delegator, String attributeName, String parentId, boolean limitView, boolean excludeEmpty, boolean recursive) {
-        List<GenericValue> categories = new LinkedList<GenericValue>();
+        List<GenericValue> categories = new LinkedList<>();
 
         if (Debug.verboseOn()) Debug.logVerbose("[CategoryWorker.getRelatedCategories] ParentID: " + parentId, module);
 
@@ -224,21 +222,6 @@ public final class CategoryWorker {
         return count;
     }
 
-    private static EntityCondition buildCountCondition(String fieldName, String fieldValue) {
-        List<EntityCondition> orCondList = new LinkedList<EntityCondition>();
-        orCondList.add(EntityCondition.makeCondition("thruDate", EntityOperator.GREATER_THAN, UtilDateTime.nowTimestamp()));
-        orCondList.add(EntityCondition.makeCondition("thruDate", EntityOperator.EQUALS, null));
-        EntityCondition orCond = EntityCondition.makeCondition(orCondList, EntityOperator.OR);
-
-        List<EntityCondition> andCondList = new LinkedList<EntityCondition>();
-        andCondList.add(EntityCondition.makeCondition("fromDate", EntityOperator.LESS_THAN, UtilDateTime.nowTimestamp()));
-        andCondList.add(EntityCondition.makeCondition(fieldName, EntityOperator.EQUALS, fieldValue));
-        andCondList.add(orCond);
-        EntityCondition andCond = EntityCondition.makeCondition(andCondList, EntityOperator.AND);
-
-        return andCond;
-    }
-
     public static void setTrail(ServletRequest request, String currentCategory) {
         Map<String, Object> requestParameters = UtilHttp.getParameterMap((HttpServletRequest) request);
         String previousCategory = (String) requestParameters.get("pcategory");
@@ -260,7 +243,7 @@ public final class CategoryWorker {
     }
 
     public static List<String> adjustTrail(List<String> origTrail, String currentCategoryId, String previousCategoryId) {
-        List<String> trail = new LinkedList<String>();
+        List<String> trail = new LinkedList<>();
         if (origTrail != null) {
             trail.addAll(origTrail);
         }
@@ -313,7 +296,7 @@ public final class CategoryWorker {
 
     public static List<String> getTrail(ServletRequest request) {
         HttpSession session = ((HttpServletRequest) request).getSession();
-        List<String> crumb = UtilGenerics.checkList(session.getAttribute("_BREAD_CRUMB_TRAIL_"));
+        List<String> crumb = UtilGenerics.cast(session.getAttribute("_BREAD_CRUMB_TRAIL_"));
         return crumb;
     }
 
@@ -325,12 +308,7 @@ public final class CategoryWorker {
 
     public static boolean checkTrailItem(ServletRequest request, String category) {
         List<String> crumb = getTrail(request);
-
-        if (crumb != null && crumb.contains(category)) {
-            return true;
-        } else {
-            return false;
-        }
+        return crumb != null && crumb.contains(category);
     }
 
     public static String lastTrailItem(ServletRequest request) {
@@ -376,7 +354,7 @@ public final class CategoryWorker {
     }
 
     public static List<GenericValue> filterProductsInCategory(Delegator delegator, List<GenericValue> valueObjects, String productCategoryId, String productIdFieldName) throws GenericEntityException {
-        List<GenericValue> newList = new LinkedList<GenericValue>();
+        List<GenericValue> newList = new LinkedList<>();
 
         if (productCategoryId == null) return newList;
         if (valueObjects == null) return null;
@@ -423,17 +401,17 @@ public final class CategoryWorker {
      * @param context Map containing the input parameters
      * @return Map organized trail from root point to categoryId.
      * */
-    public static Map getCategoryTrail(DispatchContext dctx, Map context) {
+    public static Map<String, Object> getCategoryTrail(DispatchContext dctx, Map<String, Object> context) {
         String productCategoryId = (String) context.get("productCategoryId");
         Map<String, Object> results = ServiceUtil.returnSuccess();
         Delegator delegator = dctx.getDelegator();
-        List<String> trailElements = new LinkedList<String>();
+        List<String> trailElements = new LinkedList<>();
         trailElements.add(productCategoryId);
         String parentProductCategoryId = productCategoryId;
         while (UtilValidate.isNotEmpty(parentProductCategoryId)) {
             // find product category rollup
             try {
-                List<EntityCondition> rolllupConds = new LinkedList<EntityCondition>();
+                List<EntityCondition> rolllupConds = new LinkedList<>();
                 rolllupConds.add(EntityCondition.makeCondition("productCategoryId", parentProductCategoryId));
                 rolllupConds.add(EntityUtil.getFilterByDateExpr());
                 List<GenericValue> productCategoryRollups = EntityQuery.use(delegator).from("ProductCategoryRollup").where(rolllupConds).orderBy("sequenceNum").cache(true).queryList();

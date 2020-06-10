@@ -17,7 +17,7 @@ specific language governing permissions and limitations
 under the License.
 -->
 
-<script language="JavaScript" type="text/javascript">
+<script type="application/javascript">
     function paginateOrderList(viewSize, viewIndex) {
         document.paginationForm.viewSize.value = viewSize;
         document.paginationForm.viewIndex.value = viewIndex;
@@ -75,7 +75,7 @@ under the License.
           <#assign orderItems = EntityQuery.use(delegator).from("OrderItem").where("orderId", order.orderId!, "productId", productId!).queryList()!/>
           <#list orderItems as orderItem>
             <tr>
-              <td><a href="/ordermgr/control/orderview?orderId=${orderItem.orderId}" class='buttontext'>${orderItem.orderId}</a></td>
+              <td><a href="<@ofbizUrl controlPath="/ordermgr/control">orderview?orderId=${orderItem.orderId}</@ofbizUrl>" class='buttontext'>${orderItem.orderId}</a></td>
               <#assign currentItemStatus = orderItem.getRelatedOne("StatusItem", false)/>
               <td>${currentItemStatus.get("description",locale)?default(currentItemStatus.statusId)}</td>
               <td>${orderItem.orderItemSeqId}</td>

@@ -98,12 +98,11 @@ under the License.
                   </td>
                   <td>&nbsp;</td>
                   <td width="80%">
-                    <input type="image" src="<@ofbizContentUrl>/images/spacer.gif</@ofbizContentUrl>" onclick="javascript:document.routeForm.submit();" />
                   </td>
                 </tr>
               </table>
             </form>
-            <script language="JavaScript" type="text/javascript">
+            <script type="application/javascript">
               document.routeForm.carrierPartyId.focus();
             </script>
           <#else>
@@ -140,13 +139,12 @@ under the License.
               <tr>
                 <td colspan="2">&nbsp;</td>
                 <td width="80%">
-                  <input type="image" src="<@ofbizContentUrl>/images/spacer.gif</@ofbizContentUrl>" onclick="javascript:document.weightForm.submit();"/>
                   <a href="javascript:document.weightForm.submit();" class="buttontext">${uiLabelMap.ProductSetWeight}</a>
                 </td>
               </tr>
             </table>
           </form>
-          <script language="JavaScript" type="text/javascript">
+          <script type="application/javascript">
             document.weightForm.weight.focus();
           </script>
         </#if>
@@ -178,13 +176,12 @@ under the License.
         <tr>
           <td colspan="2">&nbsp;</td>
           <td colspan="2">
-            <input type="image" src="<@ofbizContentUrl>/images/spacer.gif</@ofbizContentUrl>" onclick="javascript:document.selectOrderForm.submit();" />
             <a href="javascript:document.selectOrderForm.submit();" class="buttontext">${uiLabelMap.ProductShipOrder}</a>
           </td>
         </tr>
       </table>
     </form>
-    <script language="JavaScript" type="text/javascript">
+    <script type="application/javascript">
         document.selectOrderForm.orderId.focus();
     </script>
   </#if>

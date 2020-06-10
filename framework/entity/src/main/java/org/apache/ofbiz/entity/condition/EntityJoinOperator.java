@@ -37,7 +37,7 @@ import org.apache.ofbiz.entity.model.ModelEntity;
  *
  */
 @SuppressWarnings("serial")
-public class EntityJoinOperator extends EntityOperator<EntityCondition, EntityCondition, Boolean> {
+public class EntityJoinOperator extends EntityOperator<EntityCondition, EntityCondition> {
 
     protected boolean shortCircuitValue;
 
@@ -96,20 +96,6 @@ public class EntityJoinOperator extends EntityOperator<EntityCondition, EntityCo
         return EntityCondition.makeCondition(newList, this);
     }
 
-    public void visit(EntityConditionVisitor visitor, List<? extends EntityCondition> conditionList) {
-        if (UtilValidate.isNotEmpty(conditionList)) {
-            for (EntityCondition condition: conditionList) {
-                visitor.visit(condition);
-            }
-        }
-    }
-
-    @Override
-    public void visit(EntityConditionVisitor visitor, EntityCondition lhs, EntityCondition rhs) {
-        lhs.visit(visitor);
-        visitor.visit(rhs);
-    }
-
     public Boolean eval(GenericEntity entity, EntityCondition lhs, EntityCondition rhs) {
         return entityMatches(entity, lhs, rhs) ? Boolean.TRUE : Boolean.FALSE;
     }
@@ -130,10 +116,7 @@ public class EntityJoinOperator extends EntityOperator<EntityCondition, EntityCo
 
     @Override
     public boolean entityMatches(GenericEntity entity, EntityCondition lhs, EntityCondition rhs) {
-        if (lhs.entityMatches(entity) == shortCircuitValue) {
-            return shortCircuitValue;
-        }
-        if (rhs.entityMatches(entity) == shortCircuitValue) {
+        if (lhs.entityMatches(entity) == shortCircuitValue || rhs.entityMatches(entity) == shortCircuitValue) {
             return shortCircuitValue;
         }
         return !shortCircuitValue;
@@ -144,22 +127,19 @@ public class EntityJoinOperator extends EntityOperator<EntityCondition, EntityCo
     }
 
     public Boolean eval(Delegator delegator, Map<String, ? extends Object> map, EntityCondition lhs, EntityCondition rhs) {
-        return castBoolean(mapMatches(delegator, map, lhs, rhs));
+        return mapMatches(delegator, map, lhs, rhs);
     }
 
     @Override
     public boolean mapMatches(Delegator delegator, Map<String, ? extends Object> map, EntityCondition lhs, EntityCondition rhs) {
-        if (lhs.mapMatches(delegator, map) == shortCircuitValue) {
-            return shortCircuitValue;
-        }
-        if (rhs.mapMatches(delegator, map) == shortCircuitValue) {
+        if (lhs.mapMatches(delegator, map) == shortCircuitValue || rhs.mapMatches(delegator, map) == shortCircuitValue) {
             return shortCircuitValue;
         }
         return !shortCircuitValue;
     }
 
     public Boolean eval(Delegator delegator, Map<String, ? extends Object> map, List<? extends EntityCondition> conditionList) {
-        return castBoolean(mapMatches(delegator, map, conditionList));
+        return mapMatches(delegator, map, conditionList);
     }
 
     public boolean mapMatches(Delegator delegator, Map<String, ? extends Object> map, List<? extends EntityCondition> conditionList) {

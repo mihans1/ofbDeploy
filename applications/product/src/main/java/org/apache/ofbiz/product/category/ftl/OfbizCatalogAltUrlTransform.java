@@ -51,7 +51,7 @@ import freemarker.template.TemplateTransformModel;
 public class OfbizCatalogAltUrlTransform implements TemplateTransformModel {
     public final static String module = OfbizCatalogUrlTransform.class.getName();
 
-    public String getStringArg(Map args, String key) {
+    public String getStringArg(Map<?, ?> args, String key) {
         Object o = args.get(key);
         if (o instanceof SimpleScalar) {
             return ((SimpleScalar) o).getAsString();
@@ -65,38 +65,37 @@ public class OfbizCatalogAltUrlTransform implements TemplateTransformModel {
         return null;
     }
 
-    public boolean checkArg(Map args, String key, boolean defaultValue) {
+    public boolean checkArg(Map<?, ?> args, String key, boolean defaultValue) {
         if (!args.containsKey(key)) {
             return defaultValue;
-        } else {
-            Object o = args.get(key);
-            if (o instanceof SimpleScalar) {
-                SimpleScalar s = (SimpleScalar) o;
-                return "true".equalsIgnoreCase(s.getAsString());
-            }
-            return defaultValue;
         }
+        Object o = args.get(key);
+        if (o instanceof SimpleScalar) {
+            SimpleScalar s = (SimpleScalar) o;
+            return "true".equalsIgnoreCase(s.getAsString());
+        }
+        return defaultValue;
     }
 
     @Override
-    public Writer getWriter(final Writer out, final Map args)
+    public Writer getWriter(Writer out, @SuppressWarnings("rawtypes") Map args)
             throws TemplateModelException, IOException {
         final StringBuilder buf = new StringBuilder();
         final boolean fullPath = checkArg(args, "fullPath", false);
         final boolean secure = checkArg(args, "secure", false);
 
         return new Writer(out) {
-            
+
             @Override
             public void write(char[] cbuf, int off, int len) throws IOException {
                 buf.append(cbuf, off, len);
             }
-            
+
             @Override
             public void flush() throws IOException {
                 out.flush();
             }
-            
+
             @Override
             public void close() throws IOException {
                 try {
@@ -106,7 +105,7 @@ public class OfbizCatalogAltUrlTransform implements TemplateTransformModel {
                     String productCategoryId = getStringArg(args, "productCategoryId");
                     String productId = getStringArg(args, "productId");
                     String url = "";
-                    
+
                     Object prefix = env.getVariable("urlPrefix");
                     String viewSize = getStringArg(args, "viewSize");
                     String viewIndex = getStringArg(args, "viewIndex");
@@ -144,11 +143,7 @@ public class OfbizCatalogAltUrlTransform implements TemplateTransformModel {
                     } else {
                         out.write(buf.toString());
                     }
-                } catch (TemplateModelException e) {
-                    throw new IOException(e.getMessage());
-                } catch (GenericEntityException e) {
-                    throw new IOException(e.getMessage());
-                } catch (WebAppConfigurationException e) {
+                } catch (TemplateModelException |GenericEntityException | WebAppConfigurationException e) {
                     throw new IOException(e.getMessage());
                 }
             }

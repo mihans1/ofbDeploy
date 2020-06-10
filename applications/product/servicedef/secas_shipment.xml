@@ -151,12 +151,24 @@ under the License.
         <action service="updatePurchaseShipmentFromReceipt" mode="sync"/>
     </eca>
 
+    <eca service="createShipmentRouteSegment" event="commit">
+        <action service="ensureRouteSegPackage" mode="sync"/>
+    </eca>
+    <eca service="updateShipmentRouteSegment" event="commit">
+        <action service="ensureRouteSegPackage" mode="sync"/>
+    </eca>
+
     <eca service="createShipmentPackageContent" event="in-validate">
         <condition field-name="shipmentPackageSeqId" operator="equals" value="New"/>
         <action service="createShipmentPackage" mode="sync"/>
     </eca>
 
     <!-- picking ecas -->
+    <eca service="updatePicklist" event="commit">
+        <set field-name="statusIdTo" env-name="statusId"/>
+        <set field-name="statusId" env-name="oldStatusId"/>
+        <action service="createPicklistStatus" mode="sync"/>
+    </eca>
     <eca service="updatePicklistItem" event="commit">
         <condition-field field-name="itemStatusId" operator="not-equals" to-field-name="oldItemStatusId"/>
         <action service="checkPicklistBinItemStatuses" mode="sync"/>

@@ -20,21 +20,18 @@
 import static java.util.stream.Collectors.toList
 import static org.apache.ofbiz.base.util.UtilMisc.availableLocales
 
-import org.apache.ofbiz.base.util.UtilValidate as Uv
-
 // Check that `a` contains `b` when ignoring case.
 boolean contains(String a, String b) {
-    Uv.isNotEmpty(b) && a.toUpperCase().contains(b.toUpperCase())
+    b && a.toUpperCase().contains(b.toUpperCase())
 }
 
-hasNoFilters = Uv.isEmpty(parameters.localeString) &&
-    Uv.isEmpty(parameters.localeName)
+hasFilter = parameters.with { localeString || localeName }
 
 context.locales = availableLocales()
     .stream()
     .map { [localeName: it.getDisplayName(it), localeString: it.toString()] }
     .filter {
-        hasNoFilters ||
+        !hasFilter ||
         contains(it.localeString, parameters.localeString) ||
         contains(it.localeName, parameters.localeName)
     }

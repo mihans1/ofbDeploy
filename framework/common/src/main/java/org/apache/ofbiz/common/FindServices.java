@@ -18,39 +18,13 @@
  *******************************************************************************/
 package org.apache.ofbiz.common;
 
-import static org.apache.ofbiz.base.util.UtilGenerics.checkList;
-import static org.apache.ofbiz.base.util.UtilGenerics.checkMap;
-
-import java.sql.Timestamp;
-import java.util.Collection;
-import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Set;
-import java.util.TimeZone;
-
-import org.apache.ofbiz.base.util.Debug;
-import org.apache.ofbiz.base.util.ObjectType;
-import org.apache.ofbiz.base.util.StringUtil;
-import org.apache.ofbiz.base.util.UtilDateTime;
-import org.apache.ofbiz.base.util.UtilGenerics;
-import org.apache.ofbiz.base.util.UtilHttp;
-import org.apache.ofbiz.base.util.UtilMisc;
-import org.apache.ofbiz.base.util.UtilProperties;
-import org.apache.ofbiz.base.util.UtilValidate;
+import org.apache.commons.lang.math.NumberUtils;
+import org.apache.ofbiz.base.util.*;
 import org.apache.ofbiz.entity.Delegator;
 import org.apache.ofbiz.entity.GenericEntity;
 import org.apache.ofbiz.entity.GenericEntityException;
 import org.apache.ofbiz.entity.GenericValue;
-import org.apache.ofbiz.entity.condition.EntityComparisonOperator;
-import org.apache.ofbiz.entity.condition.EntityCondition;
-import org.apache.ofbiz.entity.condition.EntityConditionList;
-import org.apache.ofbiz.entity.condition.EntityFunction;
-import org.apache.ofbiz.entity.condition.EntityOperator;
+import org.apache.ofbiz.entity.condition.*;
 import org.apache.ofbiz.entity.model.ModelEntity;
 import org.apache.ofbiz.entity.model.ModelField;
 import org.apache.ofbiz.entity.util.EntityListIterator;
@@ -61,6 +35,13 @@ import org.apache.ofbiz.service.DispatchContext;
 import org.apache.ofbiz.service.GenericServiceException;
 import org.apache.ofbiz.service.LocalDispatcher;
 import org.apache.ofbiz.service.ServiceUtil;
+
+import java.sql.Timestamp;
+import java.util.*;
+import java.util.Map.Entry;
+
+import static org.apache.ofbiz.base.util.UtilGenerics.checkCollection;
+import static org.apache.ofbiz.base.util.UtilGenerics.checkMap;
 
 /**
  * FindServices Class
@@ -218,11 +199,19 @@ public class FindServices {
         Set<String> processed = new LinkedHashSet<>();
         Set<String> keys = new LinkedHashSet<>();
         Map<String, ModelField> fieldMap = new LinkedHashMap<>();
+        /**
+         * When inputFields contains several xxxx_grp, yyyy_grp ... values,
+         * Corresponding conditions will grouped by an {@link EntityOperator.AND} then all added to final
+         * condition grouped by an {@link EntityOperator.OR}
+         * That will allow union of search criteria, instead of default intersection.
+         */
+        Map<String, List<EntityCondition>> savedGroups = new LinkedHashMap<>();
         for (ModelField modelField : fieldList) {
             fieldMap.put(modelField.getName(), modelField);
         }
         List<EntityCondition> result = new LinkedList<>();
         for (Map.Entry<String, ? extends Object> entry : parameters.entrySet()) {
+            String currentGroup = null;
             String parameterName = entry.getKey();
             if (processed.contains(parameterName)) {
                 continue;
@@ -237,7 +226,15 @@ public class FindServices {
             } else if (parameterName.endsWith("_value")) {
                 fieldName = parameterName.substring(0, parameterName.length() - 6);
             }
-            String key = fieldName.concat("_ic");
+
+            String key = fieldName.concat("_grp");
+            if (parameters.containsKey(key)) {
+                if (parameters.containsKey(key)) {
+                    keys.add(key);
+                }
+                currentGroup = (String) parameters.get(key);
+            }
+            key = fieldName.concat("_ic");
             if (parameters.containsKey(key)) {
                 keys.add(key);
                 ignoreCase = "Y".equals(parameters.get(key));
@@ -252,7 +249,7 @@ public class FindServices {
                 keys.add(key);
                 fieldValue = parameters.get(key);
             }
-            if (fieldName.endsWith("_fld0") || fieldName.endsWith("_fld1")) {
+            if (fieldName.indexOf("_fld", fieldName.length() - 6) == (fieldName.length() - 5) && NumberUtils.isNumber(fieldName.substring(fieldName.length() - 1))) {
                 if (parameters.containsKey(fieldName)) {
                     keys.add(fieldName);
                 }
@@ -272,11 +269,28 @@ public class FindServices {
             if (ObjectType.isEmpty(fieldValue) && !"empty".equals(operation)) {
                 continue;
             }
-            result.add(createSingleCondition(modelField, operation, fieldValue, ignoreCase, delegator, context));
+            if (UtilValidate.isNotEmpty(currentGroup)){
+                List<EntityCondition> groupedConditions = new LinkedList<>();
+                if(savedGroups.get(currentGroup) != null) {
+                    groupedConditions.addAll(savedGroups.get(currentGroup));
+                }
+                groupedConditions.add(createSingleCondition(modelField, operation, fieldValue, ignoreCase, delegator, context));
+                savedGroups.put(currentGroup, groupedConditions);
+            } else {
+                result.add(createSingleCondition(modelField, operation, fieldValue, ignoreCase, delegator, context));
+            }
+
             for (String mapKey : keys) {
                 queryStringMap.put(mapKey, parameters.get(mapKey));
             }
         }
+        //Add OR-grouped conditions
+        List<EntityCondition> orConditions = new LinkedList<>();
+        for (String groupedConditions : savedGroups.keySet()) {
+            orConditions.add(EntityCondition.makeCondition(savedGroups.get(groupedConditions)));
+        }
+        if (orConditions.size() > 0) result.add(EntityCondition.makeCondition(orConditions, EntityOperator.OR));
+
         return result;
     }
 
@@ -333,7 +347,8 @@ public class FindServices {
                 fieldOp = entityOperators.get(operation);
             }
         } else {
-            if (UtilValidate.isNotEmpty(UtilGenerics.toList(fieldValue))) {
+            List<Object> fieldList = (fieldValue instanceof List) ? UtilGenerics.cast(fieldValue) : null;
+            if (UtilValidate.isNotEmpty(fieldList)) {
                 fieldOp = EntityOperator.IN;
             } else {
                 fieldOp = EntityOperator.EQUALS;
@@ -431,18 +446,18 @@ public class FindServices {
     public static Map<String, Object> performFindList(DispatchContext dctx, Map<String, Object> context) {
         Integer viewSize = (Integer) context.get("viewSize");
         if (viewSize == null) {
-            viewSize = Integer.valueOf(20);       // default
+            viewSize = 20;       // default
         }
         context.put("viewSize", viewSize);
         Integer viewIndex = (Integer) context.get("viewIndex");
         if (viewIndex == null) {
-            viewIndex = Integer.valueOf(0);  // default
+            viewIndex = 0;  // default
         }
         context.put("viewIndex", viewIndex);
 
         Map<String, Object> result = performFind(dctx,context);
 
-        int start = viewIndex.intValue() * viewSize.intValue();
+        int start = viewIndex * viewSize;
         List<GenericValue> list = null;
         Integer listSize = 0;
         try (EntityListIterator it = (EntityListIterator) result.get("listIt")) {
@@ -470,7 +485,7 @@ public class FindServices {
         Map<String, ?> inputFields = checkMap(context.get("inputFields"), String.class, Object.class); // Input
         String noConditionFind = (String) context.get("noConditionFind");
         String distinct = (String) context.get("distinct");
-        List<String> fieldList =  UtilGenerics.<String>checkList(context.get("fieldList"));
+        List<String> fieldList =  UtilGenerics.cast(context.get("fieldList"));
         GenericValue userLogin = (GenericValue) context.get("userLogin");
         Locale locale = (Locale) context.get("locale");
         Delegator delegator = dctx.getDelegator();
@@ -518,7 +533,7 @@ public class FindServices {
             return ServiceUtil.returnError(UtilProperties.getMessage(resource, "CommonFindErrorPreparingConditions", UtilMisc.toMap("errorString", gse.getMessage()), locale));
         }
         EntityConditionList<EntityCondition> exprList = UtilGenerics.cast(prepareResult.get("entityConditionList"));
-        List<String> orderByList = checkList(prepareResult.get("orderByList"), String.class);
+        List<String> orderByList = checkCollection(prepareResult.get("orderByList"), String.class);
 
         Map<String, Object> executeResult = null;
         try {
@@ -634,14 +649,14 @@ public class FindServices {
     public static Map<String, Object> executeFind(DispatchContext dctx, Map<String, ?> context) {
         String entityName = (String) context.get("entityName");
         EntityConditionList<EntityCondition> entityConditionList = UtilGenerics.cast(context.get("entityConditionList"));
-        List<String> orderByList = checkList(context.get("orderByList"), String.class);
+        List<String> orderByList = checkCollection(context.get("orderByList"), String.class);
         boolean noConditionFind = "Y".equals(context.get("noConditionFind"));
         boolean distinct = "Y".equals(context.get("distinct"));
-        List<String> fieldList =  UtilGenerics.checkList(context.get("fieldList"));
+        List<String> fieldList =  UtilGenerics.cast(context.get("fieldList"));
         Locale locale = (Locale) context.get("locale");
         Set<String> fieldSet = null;
         if (fieldList != null) {
-            fieldSet = UtilMisc.makeSetWritable(fieldList);
+            fieldSet = new LinkedHashSet<>(fieldList);
         }
         Integer maxRows = (Integer) context.get("maxRows");
         maxRows = maxRows != null ? maxRows : -1;

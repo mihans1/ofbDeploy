@@ -50,6 +50,7 @@ public class ControlEventListener implements HttpSessionListener {
 
     public ControlEventListener() {}
 
+    @Override
     public void sessionCreated(HttpSessionEvent event) {
         HttpSession session = event.getSession();
 
@@ -66,6 +67,7 @@ public class ControlEventListener implements HttpSessionListener {
         Debug.logInfo("Creating session: " + ControlActivationEventListener.showSessionId(session), module);
     }
 
+    @Override
     public void sessionDestroyed(HttpSessionEvent event) {
         HttpSession session = event.getSession();
 
@@ -200,7 +202,7 @@ public class ControlEventListener implements HttpSessionListener {
         totalPassiveSessions--;
     }
 
-    private String getUserLoginSession(HttpSession session) {
+    private static String getUserLoginSession(HttpSession session) {
         Map<String, ?> userLoginSession = UtilGenerics.cast(session.getAttribute("userLoginSession"));
 
         String sessionData = null;

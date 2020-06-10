@@ -35,7 +35,7 @@ under the License.
                     <decorator-section name="body">
                         <container style="no-clear">
                             <screenlet title="${uiLabelMap.SfaFindOpportunities}">
-                                <container><link target="EditSalesOpportunity" text="${uiLabelMap.CommonCreateNew}" style="buttontext"/></container>
+                                <container><link target="EditSalesOpportunity" text="${uiLabelMap.CommonCreate}" style="buttontext"/></container>
                                 <include-form name="FindSalesOpportunity" location="component://marketing/widget/sfa/forms/OpportunityForms.xml"/>
                             </screenlet>
                             <screenlet title="${uiLabelMap.SfaFindResults}">
@@ -148,8 +148,8 @@ under the License.
             <widgets>
                 <decorator-screen name="CommonOpportunityDecorator" location="${parameters.mainDecoratorLocation}">
                     <decorator-section name="body">
-                        <include-menu location="component://party/widget/partymgr/PartyMenus.xml" name="CommEventTabBar"/>
-                        <include-menu location="component://party/widget/partymgr/PartyMenus.xml" name="CommSubTabBar"/>
+                        <include-menu name="CommEventTabBar" location="component://party/widget/partymgr/PartyMenus.xml"/>
+                        <include-menu name="CommSubTabBar" location="component://party/widget/partymgr/PartyMenus.xml"/>
                         <screenlet title="${uiLabelMap.PageTitleListCommunications} ${partyId}">
                             <include-form name="ListCommEvents" location="component://party/widget/partymgr/CommunicationEventForms.xml"/>
                         </screenlet>
